@@ -1,26 +1,110 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-brand-primary: var(--primary);
+  --color-brand-secondary: var(--secondary);
+  --color-brand-dark: var(--primary-dark);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-card: var(--radius-card);
+  --radius-button: var(--radius-button);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* PhuketTours Approved Design System Palette */
+  --primary: #2B9BA8;
+  --primary-foreground: #FFFFFF;
+  --primary-dark: #176779;
+
+  --secondary: #12B8C4;
+  --secondary-foreground: #FFFFFF;
+
+  --background: #FFFFFF;
+  --foreground: #263238;
+
+  --muted: #F5F8F9;
+  --muted-foreground: #74818A;
+
+  --border: #E5EAED;
+  --input: #E5EAED;
+  --ring: #2B9BA8;
+
+  --card: #FFFFFF;
+  --card-foreground: #263238;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #263238;
+
+  --destructive: #E53935;
+  --destructive-foreground: #FFFFFF;
+
+  --radius-card: 0.75rem;
+  --radius-button: 999px;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #0f1719;
+  --foreground: #f0f4f5;
+
+  --card: #141f22;
+  --card-foreground: #f0f4f5;
+
+  --popover: #141f22;
+  --popover-foreground: #f0f4f5;
+
+  --primary: #2B9BA8;
+  --primary-foreground: #FFFFFF;
+  --primary-dark: #176779;
+
+  --secondary: #12B8C4;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #1a272b;
+  --muted-foreground: #94a3a8;
+
+  --border: #23353a;
+  --input: #23353a;
+  --ring: #2B9BA8;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #FFFFFF;
+}
+
+@layer base {
+  * {
+    @apply border-border;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold text-foreground;
+  }
 }
