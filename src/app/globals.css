@@ -35,7 +35,16 @@
   --radius-button: var(--radius-button);
 }
 
+@utility min-h-hero {
+  min-height: calc(100vh - var(--navbar-height, 5rem));
+  min-height: calc(100dvh - var(--navbar-height, 5rem));
+  min-height: calc(100svh - var(--navbar-height, 5rem));
+}
+
 :root {
+  /* Navbar Rendered Height Token */
+  --navbar-height: 5rem; /* 80px */
+
   /* PhuketTours Approved Design System Palette */
   --primary: #2B9BA8;
   --primary-foreground: #FFFFFF;

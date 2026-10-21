@@ -64,7 +64,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E5EAED] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all">
-      <Container className="flex h-20 items-center justify-between">
+      <Container className="flex h-[var(--navbar-height,5rem)] items-center justify-between">
         {/* Left: Official PhuketTours Logo */}
         <Link
           href="/"

@@ -1,112 +1,21 @@
 import Link from "next/link";
+import { HeroSection } from "@/components/sections/hero-section";
+import { Container } from "@/components/layout/container";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Compass,
   CalendarCheck2,
   ShieldCheck,
   CheckCircle2,
   ArrowRight,
-  Search,
-  MapPin,
-  Clock,
-  Sparkles,
 } from "lucide-react";
-import { Container } from "@/components/layout/container";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default function HomePage() {
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#14262b] via-[#174853] to-[#2B9BA8] py-24 text-white lg:py-32">
-        {/* Decorative background blurs */}
-        <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-secondary/30 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-primary-dark/40 blur-3xl pointer-events-none" />
-
-        <Container className="relative z-10 text-center">
-          <Badge
-            variant="secondary"
-            className="mb-6 inline-flex items-center gap-2 border-white/20 bg-white/10 px-4 py-1.5 text-xs text-white backdrop-blur-md"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-secondary" />
-            <span>Official Phuket Excursions & Andaman Sea Adventures</span>
-          </Badge>
-
-          <h1 className="mx-auto max-w-4xl text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:leading-tight">
-            Discover Paradise with <br />
-            <span className="bg-gradient-to-r from-white via-teal-100 to-[#12B8C4] bg-clip-text text-transparent">
-              Phuket’s Premier Tour Operator
-            </span>
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-teal-50/90 sm:text-xl leading-relaxed">
-            Curated speedboats, catamaran island-hopping to Phi Phi & James Bond Island,
-            snorkeling adventures, and ethical wildlife sanctuaries.
-          </p>
-
-          {/* Quick Search Preview Bar */}
-          <div className="mx-auto mt-10 max-w-3xl rounded-3xl bg-white/95 p-3 shadow-2xl backdrop-blur-md transition-all sm:rounded-full">
-            <div className="flex flex-col items-center gap-3 sm:flex-row">
-              <div className="flex flex-1 items-center gap-3 px-4 py-2 w-full">
-                <MapPin className="h-5 w-5 text-primary shrink-0" />
-                <div className="text-left">
-                  <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Destination / Tour
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="e.g., Phi Phi Island, Phang Nga, Similan..."
-                    className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-gray-400"
-                    readOnly
-                  />
-                </div>
-              </div>
-
-              <div className="hidden h-8 w-px bg-border sm:block" />
-
-              <div className="flex items-center gap-3 px-4 py-2 w-full sm:w-auto">
-                <Clock className="h-5 w-5 text-primary shrink-0" />
-                <div className="text-left">
-                  <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Duration
-                  </span>
-                  <span className="text-sm font-medium text-foreground">
-                    Full Day & Half Day
-                  </span>
-                </div>
-              </div>
-
-              <Button asChild size="default" className="w-full sm:w-auto shrink-0 shadow-lg shadow-primary/30">
-                <Link href="/tours">
-                  <Search className="mr-1.5 h-4 w-4" />
-                  Search Tours
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* Quick stats / highlights */}
-          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-2 gap-4 text-center sm:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xs">
-              <div className="text-2xl font-bold text-white">40+</div>
-              <div className="text-xs text-teal-100">Handpicked Tours</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xs">
-              <div className="text-2xl font-bold text-white">4.9 ★</div>
-              <div className="text-xs text-teal-100">12,000+ Reviews</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xs">
-              <div className="text-2xl font-bold text-white">100%</div>
-              <div className="text-xs text-teal-100">Verified Local Guides</div>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xs">
-              <div className="text-2xl font-bold text-white">24/7</div>
-              <div className="text-xs text-teal-100">Customer Support</div>
-            </div>
-          </div>
-        </Container>
-      </section>
+      {/* PhuketTours Hero Section */}
+      <HeroSection />
 
       {/* Phase 1 Foundation & Architecture Verification Section */}
       <section className="bg-muted py-16">
