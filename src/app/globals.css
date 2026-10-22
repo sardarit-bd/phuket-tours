@@ -31,8 +31,24 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --font-sans: var(--font-sans), sans-serif;
+  --font-outfit: var(--font-outfit), sans-serif;
+
   --radius-card: var(--radius-card);
   --radius-button: var(--radius-button);
+}
+
+@utility font-outfit {
+  font-family: var(--font-outfit), sans-serif;
+}
+
+@media (min-width: 600px) and (max-width: 1023px) {
+  .tablet-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tablet-col-span-2 {
+    grid-column: span 2 / span 2;
+  }
 }
 
 @utility min-h-hero {
