@@ -44,10 +44,10 @@
 
 @media (min-width: 600px) and (max-width: 1023px) {
   .tablet-grid-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
   .tablet-col-span-2 {
-    grid-column: span 2 / span 2;
+    grid-column: span 2 / span 2 !important;
   }
 }
 
