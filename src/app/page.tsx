@@ -4,6 +4,7 @@ import { FeaturedToursSection } from "@/components/sections/featured-tours-secti
 import { BookingProcessSection } from "@/components/sections/booking-process-section";
 import { KnowBeforeYouGoSection } from "@/components/sections/know-before-you-go-section";
 import { FaqSection } from "@/components/sections/faq-section";
+import { CtaSection } from "@/components/sections/cta-section";
 
 export default function HomePage() {
   return (
@@ -25,6 +26,9 @@ export default function HomePage() {
 
       {/* Frequently Asked Questions (FAQ) Section */}
       <FaqSection />
+
+      {/* Ready to Explore Phuket CTA Section */}
+      <CtaSection />
     </div>
   );
 }
