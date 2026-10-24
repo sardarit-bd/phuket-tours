@@ -51,6 +51,22 @@
   }
 }
 
+.tour-detail-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 0.25rem;
+  align-items: start;
+}
+
+@media (min-width: 540px) {
+  .tour-detail-row {
+    grid-template-columns: 140px 1fr;
+    column-gap: 1.25rem;
+    row-gap: 0;
+    align-items: start;
+  }
+}
+
 @utility min-h-hero {
   min-height: calc(100vh - var(--navbar-height, 5rem));
   min-height: calc(100dvh - var(--navbar-height, 5rem));
