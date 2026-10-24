@@ -22,7 +22,7 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/15 to-transparent pointer-events-none" />
 
       {/* Hero Content Constrained by Shared Container with upper-middle mobile placement */}
-      <Container className="relative z-10 pt-8 pb-14 sm:pt-10 sm:pb-16 md:pt-12 md:pb-20 lg:py-24">
+      <Container className="max-w-[1320px] lg:px-0 relative z-10 pt-8 pb-14 sm:pt-10 sm:pb-16 md:pt-12 md:pb-20 lg:py-24">
         {/* Content Frame close to Figma frame */}
         <div className="max-w-[820px]">
           {/* Outlined Badge with Compact Responsive Spacing */}

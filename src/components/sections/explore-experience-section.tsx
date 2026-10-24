@@ -11,7 +11,7 @@ import { experiencesData, type ExperienceItem } from "@/features/experiences/dat
 export function ExploreExperienceSection() {
   return (
     <section className="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="experience-heading">
-      <Container className="max-w-[1320px]">
+      <Container className="max-w-[1320px] lg:px-0">
         {/* Heading Block: ~120px tall on desktop, 12px gap in text stack, right-aligned CTA */}
         <div className="mb-6 flex flex-col justify-between gap-5 sm:gap-6 lg:min-h-[120px] md:flex-row md:items-end">
           {/* Left Text Stack */}

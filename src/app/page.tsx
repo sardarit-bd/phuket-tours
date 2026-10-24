@@ -3,6 +3,7 @@ import { ExploreExperienceSection } from "@/components/sections/explore-experien
 import { FeaturedToursSection } from "@/components/sections/featured-tours-section";
 import { BookingProcessSection } from "@/components/sections/booking-process-section";
 import { KnowBeforeYouGoSection } from "@/components/sections/know-before-you-go-section";
+import { FaqSection } from "@/components/sections/faq-section";
 
 export default function HomePage() {
   return (
@@ -21,6 +22,9 @@ export default function HomePage() {
 
       {/* Know Before You Go (Tour Details) Section */}
       <KnowBeforeYouGoSection />
+
+      {/* Frequently Asked Questions (FAQ) Section */}
+      <FaqSection />
     </div>
   );
 }

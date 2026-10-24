@@ -11,7 +11,7 @@ import { featuredToursData, type FeaturedTourItem } from "@/features/tours/data/
 export function FeaturedToursSection() {
   return (
     <section className="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="featured-tours-heading">
-      <Container className="max-w-[1320px]">
+      <Container className="max-w-[1320px] lg:px-0">
         {/* Section Heading Block */}
         <div className="mb-8 sm:mb-10 lg:mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           {/* Left Text Column */}

@@ -13,7 +13,7 @@ export function Footer() {
     <footer className="border-t border-border bg-[#0f1719] text-gray-300">
       {/* Trust & Guarantee Banner */}
       <div className="border-b border-gray-800/80 bg-[#142024] py-8">
-        <Container>
+        <Container className="max-w-[1320px] lg:px-0">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/20 text-secondary">
@@ -56,7 +56,7 @@ export function Footer() {
 
       {/* Main Footer Content */}
       <div className="py-16">
-        <Container>
+        <Container className="max-w-[1320px] lg:px-0">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
             {/* Brand column */}
             <div className="lg:col-span-2 space-y-5">
@@ -155,7 +155,7 @@ export function Footer() {
 
       {/* Bottom Bar */}
       <div className="border-t border-gray-800/80 py-6 text-xs text-gray-500">
-        <Container className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <Container className="max-w-[1320px] lg:px-0 flex flex-col items-center justify-between gap-4 sm:flex-row">
           <p>© 2026 PhuketTours Co., Ltd. All rights reserved.</p>
           <div className="flex gap-6">
             {footerNav.support.map((item) => (

@@ -10,7 +10,7 @@ export function BookingProcessSection() {
       className="bg-white py-16 sm:py-20 lg:py-24"
       aria-labelledby="booking-process-heading"
     >
-      <Container className="max-w-[1320px]">
+      <Container className="max-w-[1320px] lg:px-0">
         {/* Section Heading: Eyebrow + Main Title */}
         <div className="flex flex-col items-center text-center">
           {/* Eyebrow */}
