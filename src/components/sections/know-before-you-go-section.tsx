@@ -28,16 +28,16 @@ export function KnowBeforeYouGoSection({
       aria-labelledby="know-before-you-go-heading"
     >
       <Container className="max-w-[1320px] lg:px-0">
-        <div className="flex flex-col lg:flex-row items-start max-w-[1320px] mx-auto">
-          {/* Left column — Tour image (Figma: 528 × 506px, no card frame/shadow/gradient overlay) */}
-          <div className="w-full max-w-[528px] mx-auto lg:mx-0 shrink-0">
+        <div className="flex flex-col lg:flex-row items-start max-w-[1320px] mx-auto gap-8 sm:gap-10 lg:gap-0">
+          {/* Left column — Tour image (Figma: 528 × 506px, constrained on mobile/tablet) */}
+          <div className="w-full max-w-[360px] sm:max-w-[420px] lg:max-w-[528px] mx-auto lg:mx-0 shrink-0">
             <div className="relative aspect-[528/506] w-full overflow-hidden bg-[#EEF4F6]">
               {!imgError ? (
                 <Image
                   src={imageSrc}
                   alt={imageAlt}
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 528px, 528px"
+                  sizes="(max-width: 640px) 360px, (max-width: 1024px) 420px, 528px"
                   className="object-cover"
                   onError={() => setImgError(true)}
                 />
@@ -62,7 +62,7 @@ export function KnowBeforeYouGoSection({
           {/* Right column — Content (Figma: 792px frame with 56px padding, 680 Fill content) */}
           <div className="w-full lg:w-[792px] lg:h-[506px] flex flex-col justify-start lg:pt-[56px] lg:pl-[56px] lg:pr-[56px] shrink-0">
             {/* Header Box (Figma: 680 Fill 80 Hug) */}
-            <div className="w-full lg:h-[80px] flex flex-col justify-between shrink-0">
+            <div className="w-full lg:h-[80px] flex flex-col gap-3 sm:gap-3.5 lg:gap-0 lg:justify-between shrink-0">
               {/* Eyebrow */}
               <span className="font-outfit text-xs sm:text-[14px] font-semibold uppercase leading-[16px] tracking-[2.4px] text-[#3297A3]">
                 TOUR DETAILS
@@ -78,7 +78,7 @@ export function KnowBeforeYouGoSection({
             </div>
 
             {/* Information Rows (Figma: 370px vertical space) */}
-            <div className="mt-8 lg:mt-[48px] flex flex-col gap-6 sm:gap-7 lg:gap-[32px]">
+            <div className="mt-7 sm:mt-8 lg:mt-[48px] flex flex-col gap-7 lg:gap-[32px]">
               {items.map((item) => (
                 <TourDetailRow key={item.id} item={item} />
               ))}
@@ -94,7 +94,7 @@ function TourDetailRow({ item }: { item: TourDetailItem }) {
   return (
     <div className="tour-detail-row">
       {/* Left Column: Fixed-width teal uppercase label */}
-      <div className="pt-0.5">
+      <div className="pt-0 sm:pt-0.5">
         <span className="font-outfit text-xs sm:text-[13px] font-semibold uppercase tracking-[1.8px] text-[#3297A3] leading-[1.3] block">
           {item.label === "WHAT’S INCLUDED" ||
           item.label === "WHAT'S INCLUDED" ? (
@@ -113,7 +113,7 @@ function TourDetailRow({ item }: { item: TourDetailItem }) {
         <h3 className="font-outfit text-base sm:text-[17px] font-bold text-[#18282A] leading-snug">
           {item.title}
         </h3>
-        <p className="mt-1.5 font-outfit text-sm sm:text-[14px] leading-relaxed text-[#74818A]">
+        <p className="mt-2 font-outfit text-sm sm:text-[14px] leading-relaxed text-[#74818A]">
           {item.description}
         </p>
       </div>
