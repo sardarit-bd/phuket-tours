@@ -30,6 +30,9 @@ export interface TourItineraryItem {
   description: string;
 }
 
+export type TourBadgeType = "Popular" | "Bestseller" | "New";
+export type TourBadgeVariant = "popular" | "bestseller" | "new";
+
 export interface Tour {
   id: string;
   slug: string;
@@ -40,10 +43,15 @@ export interface Tour {
   categoryName?: string;
   images: string[];
   featuredImage?: string;
-  duration?: string;
+  duration: string; // e.g., "Full Day", "Half Day", "Evening"
+  durationCategory: "half-day" | "full-day" | "multi-day";
+  destination: string; // e.g., "Phi Phi Islands", "Similan Islands", "Phuket"
+  destinationCategory: string; // e.g., "phuket", "phi-phi-islands", "similan-islands", "james-bond-island", "krabi"
+  tourType: string; // e.g., "island-tours", "adventure", "water-activities", "cultural-sightseeing", "shows-entertainment"
   groupSize?: string;
   languages?: string[];
-  badge?: string;
+  badge?: TourBadgeType;
+  badgeVariant?: TourBadgeVariant;
   isFeatured?: boolean;
   price: TourPrice;
   availability?: TourAvailability;
@@ -55,13 +63,60 @@ export interface Tour {
   excluded?: string[];
 }
 
+export type TourSortOption =
+  | "most-popular"
+  | "price-asc"
+  | "price-desc"
+  | "highest-rated"
+  | "duration";
+
+export interface TourFilterState {
+  search: string;
+  category: string;
+  destinations: string[];
+  tourTypes: string[];
+  durations: string[];
+  minPrice: number;
+  maxPrice: number;
+  sortBy: TourSortOption;
+}
+
+export interface TourCategory {
+  id: string;
+  name: string;
+  icon: string;
+  count?: number;
+}
+
+export interface FilterOption {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface FilterGroup {
+  id: string;
+  title: string;
+  options: FilterOption[];
+}
+
 export interface TourFilterParams {
   category?: string;
   search?: string;
-  duration?: string;
+  destinations?: string[];
+  tourTypes?: string[];
+  durations?: string[];
   minPrice?: number;
   maxPrice?: number;
-  sortBy?: "featured" | "price-asc" | "price-desc" | "rating";
+  sortBy?: TourSortOption;
   page?: number;
   limit?: number;
+}
+
+export interface ToursResponse {
+  data: Tour[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
