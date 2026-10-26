@@ -4,8 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ArrowRight, Menu, X } from "lucide-react";
-import { mainNav, type DropdownItem } from "@/config/navigation";
+import { ArrowRight, Menu, X } from "lucide-react";
+import { mainNav } from "@/config/navigation";
 import { Button } from "@/components/ui/button";
 import { Container } from "./container";
 import { cn } from "@/lib/utils";
@@ -14,53 +14,17 @@ export function Header() {
   const rawPathname = usePathname();
   const pathname = rawPathname ?? "/";
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const [mobileToursOpen, setMobileToursOpen] = React.useState(false);
-
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
-  const dropdownTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  // Close dropdown on outside click
-  React.useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   // Handle escape key
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setDropdownOpen(false);
         setMobileMenuOpen(false);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  const handleMouseEnter = () => {
-    if (dropdownTimeoutRef.current) {
-      clearTimeout(dropdownTimeoutRef.current);
-    }
-    setDropdownOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    dropdownTimeoutRef.current = setTimeout(() => {
-      setDropdownOpen(false);
-    }, 150);
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E5EAED] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all">
@@ -87,97 +51,10 @@ export function Header() {
           aria-label="Main Navigation"
         >
           {mainNav.map((item) => {
-            const isTours = item.title === "Tours";
             const isActive =
               item.href === "/"
                 ? pathname === "/"
                 : pathname.startsWith(item.href);
-
-            if (isTours && item.dropdown) {
-              return (
-                <div
-                  key={item.title}
-                  ref={dropdownRef}
-                  className="relative flex items-center"
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "text-[15px] font-medium transition-colors py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md",
-                      isActive
-                        ? "text-primary font-semibold"
-                        : "text-[#263238] hover:text-primary"
-                    )}
-                  >
-                    {item.title}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setDropdownOpen((prev) => !prev)}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setDropdownOpen((prev) => !prev);
-                      }
-                    }}
-                    aria-expanded={dropdownOpen}
-                    aria-haspopup="true"
-                    aria-label="Toggle Tours dropdown menu"
-                    aria-controls="tours-dropdown-menu"
-                    className="p-1 -ml-0.5 text-[#263238] hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md cursor-pointer"
-                  >
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform duration-200 stroke-[2.2]",
-                        dropdownOpen ? "rotate-180 text-primary" : "text-[#263238]"
-                      )}
-                      aria-hidden="true"
-                    />
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {dropdownOpen && (
-                    <div
-                      id="tours-dropdown-menu"
-                      role="menu"
-                      aria-orientation="vertical"
-                      className="absolute left-1/2 top-full -translate-x-1/2 mt-2 w-80 rounded-2xl border border-[#E5EAED] bg-white p-3 shadow-xl ring-1 ring-black/5 animate-in fade-in-0 zoom-in-95 duration-150 z-50"
-                    >
-                      <div className="space-y-1">
-                        {item.dropdown.map((dropItem: DropdownItem) => {
-                          const isDropActive = pathname === dropItem.href;
-                          return (
-                            <Link
-                              key={dropItem.href}
-                              href={dropItem.href}
-                              role="menuitem"
-                              onClick={() => setDropdownOpen(false)}
-                              className={cn(
-                                "block rounded-xl px-4 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                                isDropActive
-                                  ? "bg-primary/10 text-primary"
-                                  : "text-[#263238] hover:bg-muted hover:text-primary"
-                              )}
-                            >
-                              <div className="text-sm font-semibold leading-snug">
-                                {dropItem.title}
-                              </div>
-                              {dropItem.description && (
-                                <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
-                                  {dropItem.description}
-                                </p>
-                              )}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            }
 
             return (
               <Link
@@ -231,49 +108,10 @@ export function Header() {
         <div className="border-b border-[#E5EAED] bg-white px-4 py-6 shadow-xl lg:hidden animate-in slide-in-from-top-2 duration-150">
           <nav className="flex flex-col space-y-2">
             {mainNav.map((item) => {
-              const isTours = item.title === "Tours";
               const isActive =
                 item.href === "/"
                   ? pathname === "/"
                   : pathname.startsWith(item.href);
-
-              if (isTours && item.dropdown) {
-                return (
-                  <div key={item.title} className="rounded-xl border border-border/60 p-2">
-                    <button
-                      type="button"
-                      onClick={() => setMobileToursOpen(!mobileToursOpen)}
-                      className="flex w-full items-center justify-between px-3 py-2 text-base font-medium text-[#263238] hover:text-primary"
-                      aria-expanded={mobileToursOpen}
-                    >
-                      <span className={isActive ? "text-primary font-semibold" : ""}>
-                        {item.title}
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          "h-5 w-5 transition-transform duration-200",
-                          mobileToursOpen && "rotate-180 text-primary"
-                        )}
-                      />
-                    </button>
-
-                    {mobileToursOpen && (
-                      <div className="mt-2 space-y-1 border-t border-border/60 pt-2 pl-3">
-                        {item.dropdown.map((dropItem: DropdownItem) => (
-                          <Link
-                            key={dropItem.href}
-                            href={dropItem.href}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="block rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-                          >
-                            {dropItem.title}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
 
               return (
                 <Link
