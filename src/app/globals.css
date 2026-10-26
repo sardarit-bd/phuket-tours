@@ -31,8 +31,40 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --font-sans: var(--font-sans), sans-serif;
+  --font-outfit: var(--font-outfit), sans-serif;
+
   --radius-card: var(--radius-card);
   --radius-button: var(--radius-button);
+}
+
+@utility font-outfit {
+  font-family: var(--font-outfit), sans-serif;
+}
+
+@media (min-width: 600px) and (max-width: 1023px) {
+  .tablet-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .tablet-col-span-2 {
+    grid-column: span 2 / span 2 !important;
+  }
+}
+
+.tour-detail-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 0.5rem;
+  align-items: start;
+}
+
+@media (min-width: 540px) {
+  .tour-detail-row {
+    grid-template-columns: 140px 1fr;
+    column-gap: 1.25rem;
+    row-gap: 0;
+    align-items: start;
+  }
 }
 
 @utility min-h-hero {
