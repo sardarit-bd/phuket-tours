@@ -18,33 +18,6 @@ export const mainNav: NavItem[] = [
   {
     title: "Tours",
     href: "/tours",
-    dropdown: [
-      {
-        title: "All Tours & Excursions",
-        href: "/tours",
-        description: "Browse all curated Andaman day trips and island tours",
-      },
-      {
-        title: "Island Hopping",
-        href: "/tours?category=island-hopping",
-        description: "Speedboat & catamaran trips to Phi Phi & James Bond",
-      },
-      {
-        title: "Snorkeling & Diving",
-        href: "/tours?category=snorkeling",
-        description: "Similan, Coral & Racha islands clear water adventures",
-      },
-      {
-        title: "Sunset Charters",
-        href: "/tours?category=sunset-cruises",
-        description: "Romantic evening cruises with panoramic sea views",
-      },
-      {
-        title: "Cultural & City Sightseeing",
-        href: "/tours?category=cultural",
-        description: "Big Buddha, Old Phuket Town & heritage discovery",
-      },
-    ],
   },
   {
     title: "About",

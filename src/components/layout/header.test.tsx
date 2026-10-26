@@ -27,41 +27,25 @@ describe("Header / Navbar component", () => {
     expect(bookNowLink).toHaveAttribute("href", "/tours");
   });
 
-  it("opens the Tours dropdown menu on hover and closes on Escape", async () => {
+  it("renders Tours as a normal link pointing to /tours without dropdown toggles", async () => {
     const user = userEvent.setup();
     render(<Header />);
 
-    const toggleButton = screen.getByRole("button", {
-      name: /toggle tours dropdown menu/i,
-    });
-    expect(toggleButton).toHaveAttribute("aria-expanded", "false");
+    const toursLink = screen.getByRole("link", { name: /^tours$/i });
+    expect(toursLink).toBeInTheDocument();
+    expect(toursLink).toHaveAttribute("href", "/tours");
 
-    // Hover to reveal dropdown
-    await user.hover(toggleButton);
-    expect(toggleButton).toHaveAttribute("aria-expanded", "true");
+    // Verify there is no dropdown toggle button
+    expect(
+      screen.queryByRole("button", { name: /toggle tours dropdown menu/i })
+    ).not.toBeInTheDocument();
 
-    const allToursLink = screen.getByRole("menuitem", {
-      name: /all tours & excursions/i,
-    });
-    expect(allToursLink).toBeInTheDocument();
-    expect(allToursLink).toHaveAttribute("href", "/tours");
-
-    // Pressing Escape should close dropdown
-    await user.keyboard("{Escape}");
-    expect(toggleButton).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("opens the Tours dropdown on keyboard Enter", async () => {
-    const user = userEvent.setup();
-    render(<Header />);
-
-    const toggleButton = screen.getByRole("button", {
-      name: /toggle tours dropdown menu/i,
-    });
-
-    toggleButton.focus();
-    await user.keyboard("{Enter}");
-    expect(toggleButton).toHaveAttribute("aria-expanded", "true");
+    // Hovering over Tours does not display a dropdown menu or category links
+    await user.hover(toursLink);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /all tours & excursions/i })
+    ).not.toBeInTheDocument();
   });
 
   it("renders and toggles mobile menu", async () => {
