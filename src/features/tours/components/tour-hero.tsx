@@ -8,7 +8,7 @@ interface TourHeroProps {
   totalCount?: number;
 }
 
-export function TourHero({ totalCount = 462 }: TourHeroProps) {
+export function TourHero({ totalCount = 441 }: TourHeroProps) {
   return (
     <section className="relative w-full overflow-hidden min-h-[220px] sm:min-h-[260px] md:min-h-[290px] flex items-center">
       {/* Background Hero Image */}

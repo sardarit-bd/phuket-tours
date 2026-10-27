@@ -16,7 +16,9 @@ describe("ToursPage", () => {
     expect(
       screen.getByRole("heading", { name: "Tours & Experiences", level: 1 })
     ).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: /breadcrumb/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: /breadcrumb/i })
+    ).toBeInTheDocument();
   });
 
   it("renders search bar, category navigation tabs, and filter sidebar", () => {
@@ -27,7 +29,9 @@ describe("ToursPage", () => {
     );
 
     expect(
-      screen.getByPlaceholderText(/search tours by name, destination or activity/i)
+      screen.getByPlaceholderText(
+        /search tours by name, destination or activity/i
+      )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /search/i })).toBeInTheDocument();
     expect(screen.getByText("All Tours")).toBeInTheDocument();
@@ -35,7 +39,7 @@ describe("ToursPage", () => {
     expect(screen.getAllByText("Filter Tours").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders tour cards with titles, ratings, and prices asynchronously", async () => {
+  it("renders client-provided tour cards asynchronously from dummy data", async () => {
     render(
       <StoreProvider>
         <ToursPage />
@@ -43,16 +47,16 @@ describe("ToursPage", () => {
     );
 
     expect(
-      await screen.findByText("Phi Phi Islands Day Trip")
+      await screen.findByText("Siam Niramit Show Silver")
     ).toBeInTheDocument();
     expect(
       await screen.findByText("Similan Islands Day Trip")
     ).toBeInTheDocument();
     expect(
-      await screen.findByText("James Bond Island Tour")
+      await screen.findByText("Phi Phi Islands Tour")
     ).toBeInTheDocument();
     expect(
-      await screen.findByText("Elephant Bathing Experience")
+      await screen.findByText("Beach Elephant Bathing Phuket")
     ).toBeInTheDocument();
   });
 });

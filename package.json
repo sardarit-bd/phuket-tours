@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node api.js && next dev",
-    "build": "node api.js && next build",
+    "build": "node api.js && next build --webpack",
     "start": "node api.js && next start",
     "lint": "eslint",
     "test": "vitest run",

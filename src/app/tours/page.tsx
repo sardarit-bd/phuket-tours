@@ -6,7 +6,7 @@ import { TOTAL_TOURS_CATALOG_COUNT } from "@/features/tours/data/tours-data";
 export const metadata: Metadata = {
   title: "Tours & Experiences",
   description:
-    "Discover 462+ amazing tours, activities and experiences across Phuket and nearby islands. Book island hopping, snorkeling, and day trips.",
+    "Discover 440+ amazing tours, activities and experiences across Phuket and nearby islands. Book island hopping, snorkeling, and day trips.",
 };
 
 export default function ToursPage() {
