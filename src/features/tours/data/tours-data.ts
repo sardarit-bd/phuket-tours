@@ -4,8 +4,11 @@ import {
   FilterGroup,
   TourSortOption,
 } from "../types/tour";
+import { clientDummyTours } from "./client-tours-data";
 
-export const TOTAL_TOURS_CATALOG_COUNT = 462;
+export { clientDummyTours };
+export const mockTours: Tour[] = clientDummyTours;
+export const TOTAL_TOURS_CATALOG_COUNT = clientDummyTours.length;
 
 export const tourCategories: TourCategory[] = [
   { id: "all", name: "All Tours", icon: "grid" },
@@ -17,41 +20,123 @@ export const tourCategories: TourCategory[] = [
   { id: "transfers", name: "Transfers", icon: "transfers" },
 ];
 
+function computeFilterCounts(tours: Tour[]) {
+  const destCounts: Record<string, number> = {};
+  const typeCounts: Record<string, number> = {};
+  const durCounts: Record<string, number> = {};
+
+  tours.forEach((tour) => {
+    destCounts[tour.destinationCategory] =
+      (destCounts[tour.destinationCategory] || 0) + 1;
+    typeCounts[tour.tourType] = (typeCounts[tour.tourType] || 0) + 1;
+    durCounts[tour.durationCategory] =
+      (durCounts[tour.durationCategory] || 0) + 1;
+  });
+
+  return { destCounts, typeCounts, durCounts };
+}
+
+const { destCounts, typeCounts, durCounts } = computeFilterCounts(clientDummyTours);
+
 export const filterGroups: FilterGroup[] = [
   {
     id: "destination",
     title: "Destination",
     options: [
-      { id: "phuket", label: "Phuket", count: 128 },
-      { id: "phi-phi-islands", label: "Phi Phi Islands", count: 42 },
-      { id: "similan-islands", label: "Similan Islands", count: 18 },
-      { id: "james-bond-island", label: "James Bond Island", count: 24 },
-      { id: "krabi", label: "Krabi", count: 36 },
-      { id: "racha-island", label: "Racha Island", count: 14 },
-      { id: "phang-nga-bay", label: "Phang Nga Bay", count: 22 },
-      { id: "coral-island", label: "Coral Island", count: 16 },
+      { id: "phuket", label: "Phuket", count: destCounts["phuket"] || 0 },
+      {
+        id: "phi-phi-islands",
+        label: "Phi Phi Islands",
+        count: destCounts["phi-phi-islands"] || 0,
+      },
+      {
+        id: "similan-islands",
+        label: "Similan Islands",
+        count: destCounts["similan-islands"] || 0,
+      },
+      {
+        id: "james-bond-island",
+        label: "James Bond Island",
+        count: destCounts["james-bond-island"] || 0,
+      },
+      { id: "krabi", label: "Krabi", count: destCounts["krabi"] || 0 },
+      {
+        id: "racha-island",
+        label: "Racha Island",
+        count: destCounts["racha-island"] || 0,
+      },
+      {
+        id: "phang-nga-bay",
+        label: "Phang Nga Bay",
+        count: destCounts["phang-nga-bay"] || 0,
+      },
+      {
+        id: "coral-island",
+        label: "Coral Island",
+        count: destCounts["coral-island"] || 0,
+      },
     ],
   },
   {
     id: "tour-type",
     title: "Tour Type",
     options: [
-      { id: "island-tours", label: "Island Tours", count: 156 },
-      { id: "adventure", label: "Adventure", count: 64 },
-      { id: "water-activities", label: "Water Activities", count: 72 },
-      { id: "cultural-sightseeing", label: "Cultural & Sightseeing", count: 48 },
-      { id: "shows-entertainment", label: "Shows & Entertainment", count: 28 },
-      { id: "cruises", label: "Sunset & Dinner Cruises", count: 34 },
-      { id: "transfers", label: "Speedboat & Ferry Transfers", count: 24 },
+      {
+        id: "island-tours",
+        label: "Island Tours",
+        count: typeCounts["island-tours"] || 0,
+      },
+      {
+        id: "adventure",
+        label: "Adventure",
+        count: typeCounts["adventure"] || 0,
+      },
+      {
+        id: "water-activities",
+        label: "Water Activities",
+        count: typeCounts["water-activities"] || 0,
+      },
+      {
+        id: "cultural-sightseeing",
+        label: "Cultural & Sightseeing",
+        count: typeCounts["cultural-sightseeing"] || 0,
+      },
+      {
+        id: "shows-entertainment",
+        label: "Shows & Entertainment",
+        count: typeCounts["shows-entertainment"] || 0,
+      },
+      {
+        id: "cruises",
+        label: "Sunset & Dinner Cruises",
+        count: typeCounts["cruises"] || 0,
+      },
+      {
+        id: "transfers",
+        label: "Speedboat & Ferry Transfers",
+        count: typeCounts["transfers"] || 0,
+      },
     ],
   },
   {
     id: "duration",
     title: "Duration",
     options: [
-      { id: "half-day", label: "Half Day (1–4 hours)", count: 120 },
-      { id: "full-day", label: "Full Day (6–10 hours)", count: 280 },
-      { id: "multi-day", label: "Multi-day", count: 20 },
+      {
+        id: "half-day",
+        label: "Half Day (1–4 hours)",
+        count: durCounts["half-day"] || 0,
+      },
+      {
+        id: "full-day",
+        label: "Full Day (6–10 hours)",
+        count: durCounts["full-day"] || 0,
+      },
+      {
+        id: "multi-day",
+        label: "Multi-day",
+        count: durCounts["multi-day"] || 0,
+      },
     ],
   },
 ];
@@ -62,397 +147,4 @@ export const sortOptions: { value: TourSortOption; label: string }[] = [
   { value: "price-desc", label: "Price: High to Low" },
   { value: "highest-rated", label: "Highest Rated" },
   { value: "duration", label: "Duration" },
-];
-
-export const mockTours: Tour[] = [
-  {
-    id: "phi-phi-islands-day-trip",
-    slug: "phi-phi-islands-day-trip",
-    title: "Phi Phi Islands Day Trip",
-    subtitle: "Full-day speedboat excursion to Maya Bay, Monkey Beach, and Pileh Lagoon",
-    description:
-      "Cruise through emerald Andaman waters, swim in crystal lagoons, and explore the famous limestone cliffs of Koh Phi Phi.",
-    categoryId: "island-tours",
-    categoryName: "Island Tours",
-    images: ["/images/featured-tours/khai-islands-tour-premium.jpg"],
-    featuredImage: "/images/featured-tours/khai-islands-tour-premium.jpg",
-    duration: "Full Day",
-    durationCategory: "full-day",
-    destination: "Phi Phi Islands",
-    destinationCategory: "phi-phi-islands",
-    tourType: "island-tours",
-    badge: "Popular",
-    badgeVariant: "popular",
-    isFeatured: true,
-    price: {
-      amount: 89,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.8,
-      reviewCount: 1245,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Rassada Pier",
-    },
-  },
-  {
-    id: "similan-islands-day-trip",
-    slug: "similan-islands-day-trip",
-    title: "Similan Islands Day Trip",
-    subtitle: "Pristine white sand beaches and premier marine snorkeling adventure",
-    description:
-      "Visit Thailand’s crown jewel national park with powdery beaches, giant granite boulders, and sea turtles.",
-    categoryId: "island-tours",
-    categoryName: "Island Tours",
-    images: ["/images/featured-tours/similan-islands-one-day-snorkelling.jpg"],
-    featuredImage: "/images/featured-tours/similan-islands-one-day-snorkelling.jpg",
-    duration: "Full Day",
-    durationCategory: "full-day",
-    destination: "Similan Islands",
-    destinationCategory: "similan-islands",
-    tourType: "island-tours",
-    badge: "Bestseller",
-    badgeVariant: "bestseller",
-    isFeatured: true,
-    price: {
-      amount: 120,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.9,
-      reviewCount: 892,
-    },
-    location: {
-      city: "Khao Lak / Phuket",
-      country: "Thailand",
-      departurePoint: "Thap Lamu Pier",
-    },
-  },
-  {
-    id: "james-bond-island-tour",
-    slug: "james-bond-island-tour",
-    title: "James Bond Island Tour",
-    subtitle: "Phang Nga Bay sightseeing, sea canoeing, and floating Muslim village",
-    description:
-      "Paddle through hidden sea caves, see towering limestone pillars, and visit Koh Panyee floating village.",
-    categoryId: "island-tours",
-    categoryName: "Island Tours",
-    images: ["/images/experiences/islands-tours.png"],
-    featuredImage: "/images/experiences/islands-tours.png",
-    duration: "Full Day",
-    durationCategory: "full-day",
-    destination: "James Bond Island",
-    destinationCategory: "james-bond-island",
-    tourType: "island-tours",
-    isFeatured: true,
-    price: {
-      amount: 75,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.7,
-      reviewCount: 640,
-    },
-    location: {
-      city: "Phang Nga",
-      country: "Thailand",
-      departurePoint: "Ao Po Grand Marina",
-    },
-  },
-  {
-    id: "elephant-bathing-experience",
-    slug: "elephant-bathing-experience",
-    title: "Elephant Bathing Experience",
-    subtitle: "Ethical sanctuary visit, mud spa, and bathing in natural waters",
-    description:
-      "Feed, bathe, and connect with rescued Asian elephants in an ethical, cruelty-free rainforest sanctuary.",
-    categoryId: "adventure",
-    categoryName: "Adventure",
-    images: ["/images/experiences/atv-land-adventures.jpg"],
-    featuredImage: "/images/experiences/atv-land-adventures.jpg",
-    duration: "Half Day",
-    durationCategory: "half-day",
-    destination: "Phuket",
-    destinationCategory: "phuket",
-    tourType: "adventure",
-    badge: "New",
-    badgeVariant: "new",
-    isFeatured: true,
-    price: {
-      amount: 65,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.8,
-      reviewCount: 521,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Kathu Valley",
-    },
-  },
-  {
-    id: "racha-coral-island-tour",
-    slug: "racha-coral-island-tour",
-    title: "Racha & Coral Island Tour",
-    subtitle: "Snorkeling in turquoise bays and relaxing on pristine shores",
-    description:
-      "A quick boat ride from southern Phuket takes you to coral reefs filled with colorful tropical fish and calm waters.",
-    categoryId: "snorkeling-diving",
-    categoryName: "Snorkeling & Diving",
-    images: ["/images/experiences/snorkelling-adventures.jpg"],
-    featuredImage: "/images/experiences/snorkelling-adventures.jpg",
-    duration: "Half Day",
-    durationCategory: "half-day",
-    destination: "Racha Island",
-    destinationCategory: "racha-island",
-    tourType: "water-activities",
-    isFeatured: true,
-    price: {
-      amount: 70,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.7,
-      reviewCount: 412,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Chalong Pier",
-    },
-  },
-  {
-    id: "hong-by-starlight-tour",
-    slug: "hong-by-starlight-tour",
-    title: "Hong by Starlight Tour",
-    subtitle: "Sea cave kayaking, sunset dinner buffet, and bioluminescent plankton",
-    description:
-      "Paddle into limestone caves, witness majestic sunset over the bay, and float handcrafted kratongs amid glowing plankton.",
-    categoryId: "adventure",
-    categoryName: "Adventure",
-    images: ["/images/featured-tours/similan-islands-2-days-1-night-tent.jpg"],
-    featuredImage: "/images/featured-tours/similan-islands-2-days-1-night-tent.jpg",
-    duration: "Full Day",
-    durationCategory: "full-day",
-    destination: "Phang Nga Bay",
-    destinationCategory: "phang-nga-bay",
-    tourType: "adventure",
-    isFeatured: true,
-    price: {
-      amount: 95,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.6,
-      reviewCount: 380,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Ao Por Pier",
-    },
-  },
-  {
-    id: "simon-cabaret-show",
-    slug: "simon-cabaret-show",
-    title: "Simon Cabaret Show",
-    subtitle: "World-famous theatrical trans-cabaret show with extravagant costumes",
-    description:
-      "Experience world-class choreography, lavish sets, glamorous costumes, and international musical hits in Patong Beach.",
-    categoryId: "shows-entertainment",
-    categoryName: "Shows & Entertainment",
-    images: ["/images/tour-details/know-before-you-go.jpg"],
-    featuredImage: "/images/tour-details/know-before-you-go.jpg",
-    duration: "Evening",
-    durationCategory: "half-day",
-    destination: "Phuket",
-    destinationCategory: "phuket",
-    tourType: "shows-entertainment",
-    badge: "Bestseller",
-    badgeVariant: "bestseller",
-    isFeatured: true,
-    price: {
-      amount: 45,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.5,
-      reviewCount: 1120,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Patong Beach Theater",
-    },
-  },
-  {
-    id: "sunset-dinner-cruise",
-    slug: "sunset-dinner-cruise",
-    title: "Sunset Dinner Cruise",
-    subtitle: "Romantic catamaran sail along Promthep Cape with gourmet Thai BBQ",
-    description:
-      "Sail aboard a luxury catamaran past Promthep Cape while sipping wine and enjoying a fresh seafood barbecue as the sun dips below the Andaman.",
-    categoryId: "transfers",
-    categoryName: "Transfers",
-    images: ["/images/experiences/yacht-boat-tours.jpg"],
-    featuredImage: "/images/experiences/yacht-boat-tours.jpg",
-    duration: "Evening",
-    durationCategory: "half-day",
-    destination: "Phuket",
-    destinationCategory: "phuket",
-    tourType: "water-activities",
-    isFeatured: true,
-    price: {
-      amount: 85,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.7,
-      reviewCount: 680,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Chalong Pier",
-    },
-  },
-  {
-    id: "krabi-four-islands-speedboat",
-    slug: "krabi-four-islands-speedboat",
-    title: "Krabi 4 Islands Speedboat Tour",
-    subtitle: "Explore Phra Nang Cave Beach, Chicken Island, and Tup Island sandbar",
-    description:
-      "Hop between Krabi's most scenic offshore islands, walk on natural sandbars, and snorkel in shallow coral gardens.",
-    categoryId: "island-tours",
-    categoryName: "Island Tours",
-    images: ["/images/experiences/islands-tours.png"],
-    featuredImage: "/images/experiences/islands-tours.png",
-    duration: "Full Day",
-    durationCategory: "full-day",
-    destination: "Krabi",
-    destinationCategory: "krabi",
-    tourType: "island-tours",
-    price: {
-      amount: 99,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.8,
-      reviewCount: 430,
-    },
-    location: {
-      city: "Krabi",
-      country: "Thailand",
-      departurePoint: "Ao Nang Beach",
-    },
-  },
-  {
-    id: "big-buddha-wat-chalong-cultural",
-    slug: "big-buddha-wat-chalong-cultural",
-    title: "Big Buddha & Wat Chalong Cultural Tour",
-    subtitle: "Panoramic 360° views, sacred temples, and Old Phuket Town heritage",
-    description:
-      "Visit Phuket's most revered landmarks, marvel at the 45-meter marble Big Buddha, and stroll Sino-Portuguese shophouses.",
-    categoryId: "cultural",
-    categoryName: "Cultural",
-    images: ["/images/experiences/atv-land-adventures.jpg"],
-    featuredImage: "/images/experiences/atv-land-adventures.jpg",
-    duration: "Half Day",
-    durationCategory: "half-day",
-    destination: "Phuket",
-    destinationCategory: "phuket",
-    tourType: "cultural-sightseeing",
-    badge: "Popular",
-    badgeVariant: "popular",
-    price: {
-      amount: 40,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.9,
-      reviewCount: 760,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Hotel Pickup",
-    },
-  },
-  {
-    id: "phuket-to-phi-phi-ferry-transfer",
-    slug: "phuket-to-phi-phi-ferry-transfer",
-    title: "Phuket to Phi Phi Speedboat Transfer",
-    subtitle: "Fast, comfortable one-way or round-trip express marine transfer",
-    description:
-      "Direct pier-to-pier premium speedboat connection between Phuket Rassada Pier and Koh Phi Phi Tonsai Pier.",
-    categoryId: "transfers",
-    categoryName: "Transfers",
-    images: ["/images/experiences/jet-ski-tours.jpg"],
-    featuredImage: "/images/experiences/jet-ski-tours.jpg",
-    duration: "Half Day",
-    durationCategory: "half-day",
-    destination: "Phi Phi Islands",
-    destinationCategory: "phi-phi-islands",
-    tourType: "transfers",
-    price: {
-      amount: 35,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.6,
-      reviewCount: 310,
-    },
-    location: {
-      city: "Phuket",
-      country: "Thailand",
-      departurePoint: "Rassada Pier",
-    },
-  },
-  {
-    id: "similan-islands-overnight-glamping",
-    slug: "similan-islands-overnight-glamping",
-    title: "Similan Islands 2D1N Island Glamping",
-    subtitle: "Overnight tent stay, sunset views, and crowd-free morning snorkeling",
-    description:
-      "Escape the day-trippers with an exclusive 2-day expedition staying under starlit skies on Island #4.",
-    categoryId: "island-tours",
-    categoryName: "Island Tours",
-    images: ["/images/featured-tours/similan-islands-2-days-1-night-tent.jpg"],
-    featuredImage: "/images/featured-tours/similan-islands-2-days-1-night-tent.jpg",
-    duration: "Multi-day",
-    durationCategory: "multi-day",
-    destination: "Similan Islands",
-    destinationCategory: "similan-islands",
-    tourType: "island-tours",
-    price: {
-      amount: 240,
-      currency: "$",
-      perPersonLabel: "per person",
-    },
-    reviews: {
-      rating: 4.9,
-      reviewCount: 185,
-    },
-    location: {
-      city: "Phang Nga",
-      country: "Thailand",
-      departurePoint: "Thap Lamu Pier",
-    },
-  },
 ];

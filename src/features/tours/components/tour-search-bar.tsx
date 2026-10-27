@@ -10,6 +10,7 @@ interface TourSearchBarProps {
   onSearch?: () => void;
   placeholder?: string;
   className?: string;
+  debounceMs?: number;
 }
 
 export function TourSearchBar({
@@ -18,13 +19,39 @@ export function TourSearchBar({
   onSearch,
   placeholder = "Search tours by name, destination or activity...",
   className = "",
+  debounceMs = 250,
 }: TourSearchBarProps) {
+  const [localValue, setLocalValue] = React.useState(value);
+  const [prevValue, setPrevValue] = React.useState(value);
+
+  // Adjust local state during render when the external value prop changes (e.g. Clear All)
+  // Recommended React 19 pattern to avoid cascading render effects
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setLocalValue(value);
+  }
+
+  // Debounced notification to parent to prevent expensive re-renders and queries on every key
+  React.useEffect(() => {
+    if (localValue === value) return;
+
+    const timer = setTimeout(() => {
+      onChange(localValue);
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [localValue, value, onChange, debounceMs]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (localValue !== value) {
+      onChange(localValue);
+    }
     if (onSearch) onSearch();
   };
 
   const handleClear = () => {
+    setLocalValue("");
     onChange("");
   };
 
@@ -42,17 +69,17 @@ export function TourSearchBar({
         />
         <input
           type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
           placeholder={placeholder}
           aria-label="Search tours input"
           className="w-full bg-transparent text-sm sm:text-[15px] text-[#18282A] placeholder:text-[#8A9A9C] focus:outline-none"
         />
-        {value ? (
+        {localValue ? (
           <button
             type="button"
             onClick={handleClear}
-            className="p-1 text-[#8A9A9C] hover:text-[#18282A] transition-colors rounded-full"
+            className="p-1 text-[#8A9A9C] hover:text-[#18282A] transition-colors rounded-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20"
             aria-label="Clear search text"
           >
             <X className="h-4 w-4" />

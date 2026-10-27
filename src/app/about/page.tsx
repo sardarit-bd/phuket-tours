@@ -1,55 +1,48 @@
-import { Container } from "@/components/layout/container";
-import { SectionHeader } from "@/components/shared/section-header";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
+import { AboutHero } from "@/features/about/components/about-hero";
+import { AboutStory } from "@/features/about/components/about-story";
+import { AboutMission } from "@/features/about/components/about-mission";
+import { WhyChooseUs } from "@/features/about/components/why-choose-us";
+import { AboutExperiences } from "@/features/about/components/about-experiences";
+import { CtaSection } from "@/components/sections/cta-section";
 
-export const metadata = {
-  title: "About Us",
-  description: "Learn more about PhuketTours, our experienced crew, and our marine safety standards.",
+export const metadata: Metadata = {
+  title: "About Us | PhuketTours",
+  description:
+    "Learn about PhuketTours — connecting travelers with licensed local boat captains, vetted tour operators, and unforgettable Andaman Sea excursions.",
+  openGraph: {
+    title: "About PhuketTours — Island Excursions & Marine Adventures",
+    description:
+      "Locally rooted, globally trusted. Discover authentic and sustainable island tours across Phuket, Krabi, and Phang Nga Bay.",
+  },
 };
 
 export default function AboutPage() {
   return (
-    <div className="py-12 sm:py-16">
-      <Container>
-        <div className="mb-6">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Home
-            </Link>
-          </Button>
-        </div>
+    <div className="flex flex-col w-full">
+      {/* 1. About Hero Section with breadcrumbs */}
+      <AboutHero />
 
-        <SectionHeader
-          badge="About PhuketTours"
-          title="Locally Rooted, Globally Trusted"
-          subtitle="We specialize in authentic, sustainable, and unforgettable excursions across Phuket, Krabi, and Phang Nga Bay."
-          align="left"
-        />
+      {/* 2. Our Story Section with verified facts & local boat photo */}
+      <AboutStory />
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-            <h3 className="text-lg font-semibold text-foreground">Experienced Guides</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Licensed local captains and multilingual trip coordinators dedicated to your comfort and safety.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-            <h3 className="text-lg font-semibold text-foreground">Premium Fleet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Modern catamarans and twin/triple engine speedboats maintained to highest maritime safety standards.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-            <h3 className="text-lg font-semibold text-foreground">Eco-Friendly Tourism</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Reef-safe protocols, responsible wildlife viewing, and zero single-use plastic on select charters.
-            </p>
-          </div>
-        </div>
-      </Container>
+      {/* 3. Our Mission & Safety/Sustainability Standards */}
+      <AboutMission />
+
+      {/* 4. Why Choose PhuketTours Benefits Grid */}
+      <WhyChooseUs />
+
+      {/* 5. Our Experiences Highlight Grid */}
+      <AboutExperiences />
+
+      {/* 6. Call to Action Section */}
+      <CtaSection
+        eyebrow="YOUR PHUKET JOURNEY STARTS HERE"
+        title="Ready to Experience the Andaman Sea?"
+        description="Explore 440+ verified tours, private charters, and authentic island excursions curated with local Phuket expertise."
+        buttonText="Browse All Tours"
+        buttonHref="/tours"
+      />
     </div>
   );
 }

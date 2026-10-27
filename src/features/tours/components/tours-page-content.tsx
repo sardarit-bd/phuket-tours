@@ -9,6 +9,7 @@ import {
   TourMobileFilterDrawer,
   TourResultsHeader,
   TourGrid,
+  TourPagination,
 } from "./index";
 import { useTourFilters } from "../hooks/use-tour-filters";
 import { useGetToursQuery } from "../api/tours-api";
@@ -23,6 +24,7 @@ export function ToursPageContent() {
     toggleDuration,
     setPriceRange,
     setSortBy,
+    setPage,
     clearAllFilters,
     resetEverything,
     activeFilterCount,
@@ -30,7 +32,7 @@ export function ToursPageContent() {
     favorites,
   } = useTourFilters();
 
-  // Query tours via RTK Query with local mock fallback
+  // Query tours via RTK Query with local mock provider and server-ready pagination
   const { data, isLoading } = useGetToursQuery({
     search: filters.search,
     category: filters.category,
@@ -40,10 +42,15 @@ export function ToursPageContent() {
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
     sortBy: filters.sortBy,
+    page: filters.page,
+    limit: filters.limit,
   });
 
   const tours = data?.data ?? [];
   const total = data?.total ?? 0;
+  const currentPage = data?.page ?? filters.page;
+  const totalPages = data?.totalPages ?? 1;
+  const limit = data?.limit ?? filters.limit;
 
   return (
     <div className="py-8 sm:py-10 lg:py-12 bg-white">
@@ -62,8 +69,11 @@ export function ToursPageContent() {
           </div>
 
           {/* Right Main Content Area */}
-          <main className="flex-1 min-w-0 space-y-5 sm:space-y-6">
-            {/* Search Bar */}
+          <main
+            id="tours-results-section"
+            className="flex-1 min-w-0 space-y-5 sm:space-y-6"
+          >
+            {/* Search Bar with Debounce & Clear */}
             <TourSearchBar
               value={filters.search}
               onChange={setSearch}
@@ -75,9 +85,11 @@ export function ToursPageContent() {
               onSelectCategory={setCategory}
             />
 
-            {/* Results Count & Sort Dropdown */}
+            {/* Results Count, Range & Sort Dropdown */}
             <TourResultsHeader
               count={total}
+              page={currentPage}
+              limit={limit}
               sortBy={filters.sortBy}
               onSortChange={setSortBy}
               mobileFilterSlot={
@@ -94,13 +106,20 @@ export function ToursPageContent() {
               }
             />
 
-            {/* Tour Cards Grid */}
+            {/* Tour Cards Grid (Renders only active paginated page: 12 cards) */}
             <TourGrid
               tours={tours}
               isLoading={isLoading}
               onResetFilters={resetEverything}
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
+            />
+
+            {/* Accessible Pagination Navigation */}
+            <TourPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setPage}
             />
           </main>
         </div>

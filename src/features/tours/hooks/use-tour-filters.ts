@@ -12,6 +12,8 @@ export const initialFilterState: TourFilterState = {
   minPrice: 0,
   maxPrice: 500,
   sortBy: "most-popular",
+  page: 1,
+  limit: 12,
 };
 
 export function useTourFilters() {
@@ -48,11 +50,11 @@ export function useTourFilters() {
   );
 
   const setSearch = useCallback((search: string) => {
-    setFilters((prev) => ({ ...prev, search }));
+    setFilters((prev) => (prev.search === search ? prev : { ...prev, search, page: 1 }));
   }, []);
 
   const setCategory = useCallback((category: string) => {
-    setFilters((prev) => ({ ...prev, category }));
+    setFilters((prev) => (prev.category === category ? prev : { ...prev, category, page: 1 }));
   }, []);
 
   const toggleDestination = useCallback((destinationId: string) => {
@@ -61,7 +63,7 @@ export function useTourFilters() {
       const destinations = exists
         ? prev.destinations.filter((d) => d !== destinationId)
         : [...prev.destinations, destinationId];
-      return { ...prev, destinations };
+      return { ...prev, destinations, page: 1 };
     });
   }, []);
 
@@ -71,7 +73,7 @@ export function useTourFilters() {
       const tourTypes = exists
         ? prev.tourTypes.filter((t) => t !== tourTypeId)
         : [...prev.tourTypes, tourTypeId];
-      return { ...prev, tourTypes };
+      return { ...prev, tourTypes, page: 1 };
     });
   }, []);
 
@@ -81,24 +83,36 @@ export function useTourFilters() {
       const durations = exists
         ? prev.durations.filter((d) => d !== durationId)
         : [...prev.durations, durationId];
-      return { ...prev, durations };
+      return { ...prev, durations, page: 1 };
     });
   }, []);
 
   const setPriceRange = useCallback((min: number, max: number) => {
-    setFilters((prev) => ({ ...prev, minPrice: min, maxPrice: max }));
+    setFilters((prev) => {
+      if (prev.minPrice === min && prev.maxPrice === max) return prev;
+      return { ...prev, minPrice: min, maxPrice: max, page: 1 };
+    });
   }, []);
 
   const setSortBy = useCallback((sortBy: TourSortOption) => {
-    setFilters((prev) => ({ ...prev, sortBy }));
+    setFilters((prev) => (prev.sortBy === sortBy ? prev : { ...prev, sortBy, page: 1 }));
+  }, []);
+
+  const setPage = useCallback((page: number) => {
+    setFilters((prev) => (prev.page === page ? prev : { ...prev, page }));
+  }, []);
+
+  const setLimit = useCallback((limit: number) => {
+    setFilters((prev) => (prev.limit === limit ? prev : { ...prev, limit, page: 1 }));
   }, []);
 
   const clearAllFilters = useCallback(() => {
-    setFilters({
+    setFilters((prev) => ({
       ...initialFilterState,
-      category: filters.category, // keep selected category tab or reset
-    });
-  }, [filters.category]);
+      category: prev.category, // keep selected category tab or reset
+      page: 1,
+    }));
+  }, []);
 
   const resetEverything = useCallback(() => {
     setFilters(initialFilterState);
@@ -124,6 +138,8 @@ export function useTourFilters() {
     toggleDuration,
     setPriceRange,
     setSortBy,
+    setPage,
+    setLimit,
     clearAllFilters,
     resetEverything,
     activeFilterCount,

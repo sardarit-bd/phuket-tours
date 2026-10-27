@@ -3,7 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useTourFilters } from "./use-tour-filters";
 
 describe("useTourFilters hook", () => {
-  it("initializes with default filters", () => {
+  it("initializes with default filters and pagination", () => {
     const { result } = renderHook(() => useTourFilters());
 
     expect(result.current.filters.search).toBe("");
@@ -14,6 +14,8 @@ describe("useTourFilters hook", () => {
     expect(result.current.filters.minPrice).toBe(0);
     expect(result.current.filters.maxPrice).toBe(500);
     expect(result.current.filters.sortBy).toBe("most-popular");
+    expect(result.current.filters.page).toBe(1);
+    expect(result.current.filters.limit).toBe(12);
     expect(result.current.activeFilterCount).toBe(0);
   });
 
@@ -40,6 +42,46 @@ describe("useTourFilters hook", () => {
       result.current.clearAllFilters();
     });
     expect(result.current.filters.destinations).toHaveLength(0);
+  });
+
+  it("updates pagination page and resets page to 1 when filters or search change", () => {
+    const { result } = renderHook(() => useTourFilters());
+
+    // Advance to page 3
+    act(() => {
+      result.current.setPage(3);
+    });
+    expect(result.current.filters.page).toBe(3);
+
+    // Filter change should reset page to 1
+    act(() => {
+      result.current.setCategory("adventure");
+    });
+    expect(result.current.filters.page).toBe(1);
+
+    // Advance to page 4
+    act(() => {
+      result.current.setPage(4);
+    });
+    expect(result.current.filters.page).toBe(4);
+
+    // Search change should reset page to 1
+    act(() => {
+      result.current.setSearch("Similan");
+    });
+    expect(result.current.filters.page).toBe(1);
+
+    // Advance to page 2
+    act(() => {
+      result.current.setPage(2);
+    });
+    expect(result.current.filters.page).toBe(2);
+
+    // Clear all filters should reset page to 1
+    act(() => {
+      result.current.clearAllFilters();
+    });
+    expect(result.current.filters.page).toBe(1);
   });
 
   it("toggles favorites", () => {
