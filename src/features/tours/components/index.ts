@@ -8,4 +8,5 @@ export * from "./tour-mobile-filter-drawer";
 export * from "./tour-results-header";
 export * from "./tour-card";
 export * from "./tour-grid";
+export * from "./tour-pagination";
 export * from "./tours-page-content";

@@ -7,6 +7,8 @@ import { TourSortOption } from "../types/tour";
 
 interface TourResultsHeaderProps {
   count: number;
+  page?: number;
+  limit?: number;
   sortBy: TourSortOption;
   onSortChange: (sortBy: TourSortOption) => void;
   mobileFilterSlot?: React.ReactNode;
@@ -14,17 +16,27 @@ interface TourResultsHeaderProps {
 
 export function TourResultsHeader({
   count,
+  page,
+  limit,
   sortBy,
   onSortChange,
   mobileFilterSlot,
 }: TourResultsHeaderProps) {
+  let resultLabel = `${count} ${count === 1 ? "tour found" : "tours found"}`;
+
+  if (page !== undefined && limit !== undefined && count > 0) {
+    const start = (page - 1) * limit + 1;
+    const end = Math.min(page * limit, count);
+    resultLabel = `${start}–${end} of ${count} tours`;
+  }
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-2">
-      {/* Left: Result Count */}
+      {/* Left: Result Count / Range */}
       <div className="flex items-center gap-3">
         {mobileFilterSlot}
         <p className="text-sm sm:text-[15px] font-semibold text-[#18282A]">
-          {count} {count === 1 ? "tour found" : "tours found"}
+          {resultLabel}
         </p>
       </div>
 

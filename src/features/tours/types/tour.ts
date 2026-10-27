@@ -79,6 +79,8 @@ export interface TourFilterState {
   minPrice: number;
   maxPrice: number;
   sortBy: TourSortOption;
+  page: number;
+  limit: number;
 }
 
 export interface TourCategory {

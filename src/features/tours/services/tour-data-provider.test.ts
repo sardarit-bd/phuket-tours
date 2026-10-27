@@ -92,11 +92,35 @@ describe("TourDataProvider & Client Dummy Data Verification", () => {
     // 2. Search by title keyword
     const byTitle = await mockTourDataProvider.getTours({ search: "Similan" });
     expect(byTitle.data.length).toBeGreaterThanOrEqual(1);
-    expect(byTitle.data.every((t) => t.title.toLowerCase().includes("similan") || t.destination.toLowerCase().includes("similan"))).toBe(true);
+    expect(
+      byTitle.data.every(
+        (t) =>
+          t.title.toLowerCase().includes("similan") ||
+          t.destination.toLowerCase().includes("similan")
+      )
+    ).toBe(true);
 
     // 3. Search by destination keyword
     const byDest = await mockTourDataProvider.getTours({ search: "Phi Phi" });
     expect(byDest.data.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("tolerates minor typos with fuzzy search (e.g. 'similn', 'catameran')", async () => {
+    const fuzzySimilan = await mockTourDataProvider.getTours({ search: "similn" });
+    expect(fuzzySimilan.total).toBeGreaterThan(0);
+    expect(
+      fuzzySimilan.data.some((t) => t.title.includes("Similan"))
+    ).toBe(true);
+
+    const fuzzyCatamaran = await mockTourDataProvider.getTours({
+      search: "catameran",
+    });
+    expect(fuzzyCatamaran.total).toBeGreaterThan(0);
+    expect(
+      fuzzyCatamaran.data.some((t) =>
+        t.title.toLowerCase().includes("catamaran")
+      )
+    ).toBe(true);
   });
 
   it("supports category tab filtering", async () => {
@@ -156,14 +180,20 @@ describe("TourDataProvider & Client Dummy Data Verification", () => {
   });
 
   it("supports sorting by price ascending, price descending, and duration", async () => {
-    const asc = await mockTourDataProvider.getTours({ sortBy: "price-asc" });
+    const asc = await mockTourDataProvider.getTours({
+      sortBy: "price-asc",
+      limit: 100,
+    });
     for (let i = 0; i < asc.data.length - 1; i++) {
       expect(asc.data[i].price.amount).toBeLessThanOrEqual(
         asc.data[i + 1].price.amount
       );
     }
 
-    const desc = await mockTourDataProvider.getTours({ sortBy: "price-desc" });
+    const desc = await mockTourDataProvider.getTours({
+      sortBy: "price-desc",
+      limit: 100,
+    });
     for (let i = 0; i < desc.data.length - 1; i++) {
       expect(desc.data[i].price.amount).toBeGreaterThanOrEqual(
         desc.data[i + 1].price.amount
@@ -171,16 +201,36 @@ describe("TourDataProvider & Client Dummy Data Verification", () => {
     }
   });
 
-  it("returns total catalog count when unfiltered and exact matched count when filtered", async () => {
-    const unfiltered = await mockTourDataProvider.getTours();
-    expect(unfiltered.total).toBe(441);
-    expect(unfiltered.data.length).toBe(441);
+  it("implements server-ready pagination with 12 items per page by default", async () => {
+    const page1 = await mockTourDataProvider.getTours({ page: 1, limit: 12 });
+    expect(page1.total).toBe(441);
+    expect(page1.page).toBe(1);
+    expect(page1.limit).toBe(12);
+    expect(page1.totalPages).toBe(Math.ceil(441 / 12));
+    expect(page1.data).toHaveLength(12);
 
-    const filtered = await mockTourDataProvider.getTours({
-      search: "Similan",
+    const page2 = await mockTourDataProvider.getTours({ page: 2, limit: 12 });
+    expect(page2.page).toBe(2);
+    expect(page2.data).toHaveLength(12);
+    // Ensure page 2 data does not overlap with page 1
+    expect(page1.data[0].id).not.toBe(page2.data[0].id);
+
+    // Last page
+    const lastPage = await mockTourDataProvider.getTours({
+      page: page1.totalPages,
+      limit: 12,
     });
-    expect(filtered.total).toBe(filtered.data.length);
-    expect(filtered.total).toBeLessThan(441);
+    expect(lastPage.page).toBe(page1.totalPages);
+    const expectedLastPageCount = 441 % 12 || 12;
+    expect(lastPage.data).toHaveLength(expectedLastPageCount);
+  });
+
+  it("clamps invalid or out-of-bounds page numbers", async () => {
+    const negativePage = await mockTourDataProvider.getTours({ page: -5 });
+    expect(negativePage.page).toBe(1);
+
+    const overflowPage = await mockTourDataProvider.getTours({ page: 9999 });
+    expect(overflowPage.page).toBe(overflowPage.totalPages);
   });
 
   it("allows clearing all filters and resetting to complete catalog", () => {

@@ -47,7 +47,7 @@ describe("ToursPage", () => {
     );
 
     expect(
-      await screen.findByText("Siam Niramit Show Silver")
+      await screen.findByText("James Bond Islands Tour")
     ).toBeInTheDocument();
     expect(
       await screen.findByText("Similan Islands Day Trip")

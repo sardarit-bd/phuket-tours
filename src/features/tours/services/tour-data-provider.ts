@@ -1,5 +1,12 @@
 import { Tour, TourFilterParams, ToursResponse } from "../types/tour";
 import { clientDummyTours, TOTAL_TOURS_CATALOG_COUNT } from "../data/tours-data";
+import {
+  buildTourSearchIndex,
+  searchAndRankTours,
+  TourSearchIndex,
+} from "./tour-search";
+
+export const DEFAULT_PAGE_SIZE = 12;
 
 /**
  * Interface defining the Tour Data Source contract.
@@ -12,27 +19,38 @@ export interface TourDataProvider {
 }
 
 /**
- * In-memory Mock Data Provider backed by the parsed client tour dataset
- * from `dummydata.txt`.
+ * High-performance In-Memory Tour Data Provider backed by the parsed
+ * client tour dataset from `dummydata.txt`.
  */
 export class MockTourDataProvider implements TourDataProvider {
   private tours: Tour[];
+  private indices: TourSearchIndex[];
 
   constructor(tours: Tour[] = clientDummyTours) {
     this.tours = tours;
+    this.indices = tours.map(buildTourSearchIndex);
   }
 
+  /**
+   * Retrieves paginated, filtered, and sorted tours.
+   */
   async getTours(params?: TourFilterParams): Promise<ToursResponse> {
     const { filtered, total } = this.filterAndSort(this.tours, params);
-    const limit = params?.limit ?? filtered.length;
-    const page = params?.page ?? 1;
+    
+    const limit = Math.max(1, params?.limit ?? DEFAULT_PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+    const requestedPage = params?.page ?? 1;
+    const page = Math.min(Math.max(1, requestedPage), totalPages);
+
+    const startIndex = (page - 1) * limit;
+    const paginatedData = filtered.slice(startIndex, startIndex + limit);
 
     return {
-      data: filtered,
+      data: paginatedData,
       total,
       page,
       limit,
-      totalPages: Math.ceil(filtered.length / limit) || 1,
+      totalPages,
     };
   }
 
@@ -45,33 +63,34 @@ export class MockTourDataProvider implements TourDataProvider {
 
   /**
    * Pure filtering and sorting engine applied over the tour collection.
+   * Returns all matching records and the catalog total.
    */
   public filterAndSort(
     tours: Tour[],
     params?: TourFilterParams
   ): { filtered: Tour[]; total: number } {
-    let result = [...tours];
-
     if (!params) {
-      return { filtered: result, total: TOTAL_TOURS_CATALOG_COUNT };
+      return { filtered: [...tours], total: TOTAL_TOURS_CATALOG_COUNT };
     }
 
-    // 1. Search query (matches title, destination, id, subtitle, or description)
-    if (params.search && params.search.trim() !== "") {
-      const q = params.search.toLowerCase().trim();
-      result = result.filter(
-        (tour) =>
-          tour.title.toLowerCase().includes(q) ||
-          tour.destination.toLowerCase().includes(q) ||
-          tour.id.includes(q) ||
-          (tour.subtitle && tour.subtitle.toLowerCase().includes(q)) ||
-          tour.description.toLowerCase().includes(q)
-      );
+    const hasActiveSearch = Boolean(params.search && params.search.trim() !== "");
+    let candidates: { tour: Tour; score: number }[];
+
+    // 1. Search filter with relevance ranking and typo tolerance
+    if (hasActiveSearch) {
+      const searchIndices =
+        tours === this.tours
+          ? this.indices
+          : tours.map(buildTourSearchIndex);
+
+      candidates = searchAndRankTours(searchIndices, params.search!.trim());
+    } else {
+      candidates = tours.map((tour) => ({ tour, score: 0 }));
     }
 
     // 2. Category tab
     if (params.category && params.category !== "all") {
-      result = result.filter((tour) => {
+      candidates = candidates.filter(({ tour }) => {
         if (params.category === "island-tours") {
           return (
             tour.categoryId === "island-tours" ||
@@ -113,72 +132,90 @@ export class MockTourDataProvider implements TourDataProvider {
 
     // 3. Destinations checkbox filter
     if (params.destinations && params.destinations.length > 0) {
-      result = result.filter((tour) =>
+      candidates = candidates.filter(({ tour }) =>
         params.destinations?.includes(tour.destinationCategory)
       );
     }
 
     // 4. Tour Types checkbox filter
     if (params.tourTypes && params.tourTypes.length > 0) {
-      result = result.filter((tour) =>
+      candidates = candidates.filter(({ tour }) =>
         params.tourTypes?.includes(tour.tourType)
       );
     }
 
     // 5. Durations checkbox filter
     if (params.durations && params.durations.length > 0) {
-      result = result.filter((tour) =>
+      candidates = candidates.filter(({ tour }) =>
         params.durations?.includes(tour.durationCategory)
       );
     }
 
     // 6. Price range
-    if (params.minPrice !== undefined) {
-      result = result.filter(
-        (tour) => tour.price.amount >= (params.minPrice ?? 0)
+    if (params.minPrice !== undefined && params.minPrice > 0) {
+      candidates = candidates.filter(
+        ({ tour }) => tour.price.amount >= (params.minPrice ?? 0)
       );
     }
     if (params.maxPrice !== undefined && params.maxPrice < 500) {
-      result = result.filter(
-        (tour) => tour.price.amount <= (params.maxPrice ?? 500)
+      candidates = candidates.filter(
+        ({ tour }) => tour.price.amount <= (params.maxPrice ?? 500)
       );
     }
 
     // 7. Sorting
-    if (params.sortBy) {
+    if (params.sortBy && params.sortBy !== "most-popular") {
       switch (params.sortBy) {
         case "price-asc":
-          result.sort((a, b) => a.price.amount - b.price.amount);
+          candidates.sort((a, b) => a.tour.price.amount - b.tour.price.amount);
           break;
         case "price-desc":
-          result.sort((a, b) => b.price.amount - a.price.amount);
+          candidates.sort((a, b) => b.tour.price.amount - a.tour.price.amount);
           break;
         case "highest-rated":
-          result.sort(
-            (a, b) => (b.reviews?.rating ?? 0) - (a.reviews?.rating ?? 0)
+          candidates.sort(
+            (a, b) =>
+              (b.tour.reviews?.rating ?? 0) - (a.tour.reviews?.rating ?? 0)
           );
           break;
         case "duration":
-          result.sort((a, b) => a.duration.localeCompare(b.duration));
+          candidates.sort((a, b) =>
+            a.tour.duration.localeCompare(b.tour.duration)
+          );
           break;
-        case "most-popular":
-        default:
-          result.sort((a, b) => {
-            const countDiff =
-              (b.reviews?.reviewCount ?? 0) - (a.reviews?.reviewCount ?? 0);
-            if (countDiff !== 0) return countDiff;
-            const ratingDiff =
-              (b.reviews?.rating ?? 0) - (a.reviews?.rating ?? 0);
-            if (ratingDiff !== 0) return ratingDiff;
-            return a.title.localeCompare(b.title);
-          });
-          break;
+      }
+    } else {
+      // Default / most-popular sort:
+      // If search is active, maintain search relevance score ranking!
+      // If search is inactive, sort by reviews and ratings.
+      if (hasActiveSearch) {
+        candidates.sort((a, b) => {
+          const scoreDiff = b.score - a.score;
+          if (scoreDiff !== 0) return scoreDiff;
+          return (
+            (b.tour.reviews?.reviewCount ?? 0) -
+            (a.tour.reviews?.reviewCount ?? 0)
+          );
+        });
+      } else {
+        candidates.sort((a, b) => {
+          const countDiff =
+            (b.tour.reviews?.reviewCount ?? 0) -
+            (a.tour.reviews?.reviewCount ?? 0);
+          if (countDiff !== 0) return countDiff;
+          const ratingDiff =
+            (b.tour.reviews?.rating ?? 0) - (a.tour.reviews?.rating ?? 0);
+          if (ratingDiff !== 0) return ratingDiff;
+          return a.tour.title.localeCompare(b.tour.title);
+        });
       }
     }
 
+    const filtered = candidates.map((c) => c.tour);
+
     // Calculate total: if no filters applied, reflect total catalog count
     const hasActiveFilters =
-      Boolean(params.search?.trim()) ||
+      hasActiveSearch ||
       (params.category && params.category !== "all") ||
       (params.destinations && params.destinations.length > 0) ||
       (params.tourTypes && params.tourTypes.length > 0) ||
@@ -186,20 +223,14 @@ export class MockTourDataProvider implements TourDataProvider {
       (params.minPrice !== undefined && params.minPrice > 0) ||
       (params.maxPrice !== undefined && params.maxPrice < 500);
 
-    const total = hasActiveFilters ? result.length : TOTAL_TOURS_CATALOG_COUNT;
+    const total = hasActiveFilters ? filtered.length : TOTAL_TOURS_CATALOG_COUNT;
 
-    return { filtered: result, total };
+    return { filtered, total };
   }
 }
 
-/**
- * Singleton instance of the mock tour data provider.
- */
 export const mockTourDataProvider = new MockTourDataProvider();
 
-/**
- * Standalone helper for local filtering and sorting.
- */
 export function filterAndSortToursLocally(
   tours: Tour[],
   params?: TourFilterParams
