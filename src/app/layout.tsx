@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import { siteConfig } from "@/config/site";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import { StoreProvider } from "@/store/provider";
+import { PublicShell } from "@/components/layout/public-shell";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -64,9 +63,7 @@ export default function RootLayout({
     <html lang="en" className={`${jakarta.variable} ${outfit.variable}`}>
       <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased selection:bg-primary/20 selection:text-primary">
         <StoreProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <PublicShell>{children}</PublicShell>
         </StoreProvider>
       </body>
     </html>
