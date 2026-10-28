@@ -24,7 +24,7 @@ export function KnowBeforeYouGoSection({
 
   return (
     <section
-      className="bg-white py-16 sm:py-20 lg:py-24"
+      className="bg-white pt-16 pb-12 sm:pt-20 sm:pb-14 lg:pt-24 lg:pb-16"
       aria-labelledby="know-before-you-go-heading"
     >
       <Container className="max-w-[1320px] lg:px-0">

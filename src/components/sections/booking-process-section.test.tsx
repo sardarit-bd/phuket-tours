@@ -48,4 +48,10 @@ describe("BookingProcessSection component", () => {
     });
     expect(heading).toHaveAttribute("id", "booking-process-heading");
   });
+
+  it("applies the reference background color #FAFEFF", () => {
+    const { container } = render(<BookingProcessSection />);
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("bg-[#FAFEFF]");
+  });
 });

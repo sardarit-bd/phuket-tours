@@ -7,7 +7,7 @@ import { bookingStepsData } from "@/features/booking/data/booking-steps";
 export function BookingProcessSection() {
   return (
     <section
-      className="bg-white py-16 sm:py-20 lg:py-24"
+      className="bg-[#FAFEFF] py-12 sm:py-14 lg:py-16"
       aria-labelledby="booking-process-heading"
     >
       <Container className="max-w-[1320px] lg:px-0">
@@ -30,7 +30,7 @@ export function BookingProcessSection() {
         {/* ============================================================== */}
         {/* Desktop Timeline (≥1024px): 4 steps in a horizontal row        */}
         {/* ============================================================== */}
-        <div className="hidden lg:block mt-16 lg:mt-20">
+        <div className="hidden lg:block mt-10 lg:mt-12">
           <div className="relative">
             {/* Horizontal Dashed Connector Line connecting centers of Step 1 to Step 4 */}
             <div
@@ -53,7 +53,7 @@ export function BookingProcessSection() {
                   </div>
 
                   {/* Step Label */}
-                  <p className="mt-8 font-outfit text-[18px] lg:text-[20px] font-bold leading-[26px] text-[#18282A] max-w-[210px]">
+                  <p className="mt-6 font-outfit text-[18px] lg:text-[20px] font-bold leading-[26px] text-[#18282A] max-w-[210px]">
                     {item.label}
                   </p>
                 </div>
@@ -65,8 +65,8 @@ export function BookingProcessSection() {
         {/* ============================================================== */}
         {/* Tablet Timeline (600px - 1023px): 2x2 grid with connectors      */}
         {/* ============================================================== */}
-        <div className="hidden sm:block lg:hidden mt-12 sm:mt-16">
-          <div className="max-w-[560px] mx-auto flex flex-col gap-12">
+        <div className="hidden sm:block lg:hidden mt-8 sm:mt-10">
+          <div className="max-w-[560px] mx-auto flex flex-col gap-8">
             {/* Row 1: Steps 01 and 02 */}
             <div className="relative">
               <div
@@ -84,7 +84,7 @@ export function BookingProcessSection() {
                         {item.step}
                       </span>
                     </div>
-                    <p className="mt-6 font-outfit text-lg font-bold leading-[24px] text-[#18282A] max-w-[200px]">
+                    <p className="mt-4 font-outfit text-lg font-bold leading-[24px] text-[#18282A] max-w-[200px]">
                       {item.label}
                     </p>
                   </div>
@@ -109,7 +109,7 @@ export function BookingProcessSection() {
                         {item.step}
                       </span>
                     </div>
-                    <p className="mt-6 font-outfit text-lg font-bold leading-[24px] text-[#18282A] max-w-[200px]">
+                    <p className="mt-4 font-outfit text-lg font-bold leading-[24px] text-[#18282A] max-w-[200px]">
                       {item.label}
                     </p>
                   </div>
@@ -122,7 +122,7 @@ export function BookingProcessSection() {
         {/* ============================================================== */}
         {/* Mobile Timeline (<600px): Clean vertical sequence               */}
         {/* ============================================================== */}
-        <div className="block sm:hidden mt-10">
+        <div className="block sm:hidden mt-8">
           <div className="flex flex-col items-center">
             {bookingStepsData.map((item, index) => (
               <React.Fragment key={item.step}>
