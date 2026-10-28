@@ -100,4 +100,10 @@ describe("FaqSection component", () => {
     expect(panel).toHaveAttribute("role", "region");
     expect(panel).toHaveAttribute("aria-labelledby", button1.id);
   });
+
+  it("applies the subtle cool light-blue-tinted background color #FAFEFF", () => {
+    const { container } = render(<FaqSection />);
+    const section = container.querySelector("section");
+    expect(section).toHaveClass("bg-[#FAFEFF]");
+  });
 });
