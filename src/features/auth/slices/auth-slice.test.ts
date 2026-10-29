@@ -4,8 +4,10 @@ import {
   setCredentials,
   clearCredentials,
   setAuthStatus,
+  setInitialized,
   selectCurrentUser,
   selectIsAuthenticated,
+  selectIsAuthInitialized,
   selectAuthStatus,
   type AuthState,
 } from "./auth-slice";
@@ -17,6 +19,7 @@ describe("authSlice", () => {
   const initialAuthState: AuthState = {
     user: null,
     isAuthenticated: false,
+    isInitialized: false,
     status: "idle",
   };
 
@@ -52,6 +55,7 @@ describe("authSlice", () => {
     const nextState = authReducer(initialAuthState, setCredentials(sampleUser));
     expect(nextState.user).toEqual(sampleUser);
     expect(nextState.isAuthenticated).toBe(true);
+    expect(nextState.isInitialized).toBe(true);
     expect(nextState.status).toBe("succeeded");
   });
 
@@ -59,12 +63,14 @@ describe("authSlice", () => {
     const loggedInState: AuthState = {
       user: sampleUser,
       isAuthenticated: true,
+      isInitialized: true,
       status: "succeeded",
     };
 
     const nextState = authReducer(loggedInState, clearCredentials());
     expect(nextState.user).toBeNull();
     expect(nextState.isAuthenticated).toBe(false);
+    expect(nextState.isInitialized).toBe(true);
     expect(nextState.status).toBe("idle");
   });
 
@@ -73,18 +79,26 @@ describe("authSlice", () => {
     expect(nextState.status).toBe("loading");
   });
 
+  it("handles setInitialized action", () => {
+    const nextState = authReducer(initialAuthState, setInitialized(true));
+    expect(nextState.isInitialized).toBe(true);
+  });
+
   it("integrates authReducer into the Redux store created by makeStore", () => {
     const store = makeStore();
     expect(store.getState().auth).toEqual(initialAuthState);
+    expect(selectIsAuthInitialized(store.getState())).toBe(false);
 
     store.dispatch(setCredentials(sampleAdmin));
     expect(selectCurrentUser(store.getState())).toEqual(sampleAdmin);
     expect(selectIsAuthenticated(store.getState())).toBe(true);
+    expect(selectIsAuthInitialized(store.getState())).toBe(true);
     expect(selectAuthStatus(store.getState())).toBe("succeeded");
 
     store.dispatch(clearCredentials());
     expect(selectCurrentUser(store.getState())).toBeNull();
     expect(selectIsAuthenticated(store.getState())).toBe(false);
+    expect(selectIsAuthInitialized(store.getState())).toBe(true);
   });
 
   describe("extraReducers matchers", () => {
@@ -107,6 +121,7 @@ describe("authSlice", () => {
       const nextState = authReducer(initialAuthState, action);
       expect(nextState.user).toEqual(sampleUser);
       expect(nextState.isAuthenticated).toBe(true);
+      expect(nextState.isInitialized).toBe(true);
       expect(nextState.status).toBe("succeeded");
     });
 
@@ -129,7 +144,23 @@ describe("authSlice", () => {
       const nextState = authReducer(initialAuthState, action);
       expect(nextState.user).toEqual(sampleUser);
       expect(nextState.isAuthenticated).toBe(true);
+      expect(nextState.isInitialized).toBe(true);
       expect(nextState.status).toBe("succeeded");
+    });
+
+    it("sets status to loading on getMe.matchPending", () => {
+      const action = {
+        type: `${authApi.reducerPath}/executeQuery/pending`,
+        meta: {
+          arg: {
+            endpointName: "getMe",
+          },
+        },
+      };
+
+      expect(authApi.endpoints.getMe.matchPending(action)).toBe(true);
+      const nextState = authReducer(initialAuthState, action);
+      expect(nextState.status).toBe("loading");
     });
 
     it("updates auth state on getMe.matchFulfilled", () => {
@@ -151,13 +182,71 @@ describe("authSlice", () => {
       const nextState = authReducer(initialAuthState, action);
       expect(nextState.user).toEqual(sampleProfile);
       expect(nextState.isAuthenticated).toBe(true);
+      expect(nextState.isInitialized).toBe(true);
       expect(nextState.status).toBe("succeeded");
+    });
+
+    it("handles 401 unauthenticated session on getMe.matchRejected without failing status", () => {
+      const action = {
+        type: `${authApi.reducerPath}/executeQuery/rejected`,
+        payload: {
+          status: 401,
+          data: {
+            success: false,
+            message: "Authentication required",
+          },
+        },
+        meta: {
+          arg: {
+            endpointName: "getMe",
+          },
+        },
+      };
+
+      expect(authApi.endpoints.getMe.matchRejected(action)).toBe(true);
+      const nextState = authReducer(
+        { ...initialAuthState, status: "loading" },
+        action
+      );
+      expect(nextState.user).toBeNull();
+      expect(nextState.isAuthenticated).toBe(false);
+      expect(nextState.isInitialized).toBe(true);
+      expect(nextState.status).toBe("idle");
+    });
+
+    it("handles network/server errors on getMe.matchRejected by setting status to failed", () => {
+      const action = {
+        type: `${authApi.reducerPath}/executeQuery/rejected`,
+        payload: {
+          status: 500,
+          data: {
+            success: false,
+            message: "Internal server error",
+          },
+        },
+        meta: {
+          arg: {
+            endpointName: "getMe",
+          },
+        },
+      };
+
+      expect(authApi.endpoints.getMe.matchRejected(action)).toBe(true);
+      const nextState = authReducer(
+        { ...initialAuthState, status: "loading" },
+        action
+      );
+      expect(nextState.user).toBeNull();
+      expect(nextState.isAuthenticated).toBe(false);
+      expect(nextState.isInitialized).toBe(true);
+      expect(nextState.status).toBe("failed");
     });
 
     it("clears auth state on logout.matchFulfilled", () => {
       const loggedInState: AuthState = {
         user: sampleUser,
         isAuthenticated: true,
+        isInitialized: true,
         status: "succeeded",
       };
 
@@ -179,6 +268,39 @@ describe("authSlice", () => {
       const nextState = authReducer(loggedInState, action);
       expect(nextState.user).toBeNull();
       expect(nextState.isAuthenticated).toBe(false);
+      expect(nextState.isInitialized).toBe(true);
+      expect(nextState.status).toBe("idle");
+    });
+
+    it("clears auth state on logout.matchRejected for resilient cleanup", () => {
+      const loggedInState: AuthState = {
+        user: sampleUser,
+        isAuthenticated: true,
+        isInitialized: true,
+        status: "succeeded",
+      };
+
+      const action = {
+        type: `${authApi.reducerPath}/executeMutation/rejected`,
+        payload: {
+          status: 500,
+          data: {
+            success: false,
+            message: "Logout failed",
+          },
+        },
+        meta: {
+          arg: {
+            endpointName: "logout",
+          },
+        },
+      };
+
+      expect(authApi.endpoints.logout.matchRejected(action)).toBe(true);
+      const nextState = authReducer(loggedInState, action);
+      expect(nextState.user).toBeNull();
+      expect(nextState.isAuthenticated).toBe(false);
+      expect(nextState.isInitialized).toBe(true);
       expect(nextState.status).toBe("idle");
     });
   });

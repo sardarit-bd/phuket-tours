@@ -1,13 +1,23 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { Provider } from "react-redux";
 import { DashboardShell } from "./dashboard-shell";
 import { isNavItemActive, userNavConfig, adminNavConfig } from "../types/dashboard-nav";
+import { makeStore, type AppStore } from "@/store";
+import { setCredentials } from "@/features/auth/slices/auth-slice";
 
 // Mock next/navigation
 const mockPathname = vi.fn();
+const mockPush = vi.fn();
+const mockReplace = vi.fn();
+
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
+  useRouter: () => ({
+    push: mockPush,
+    replace: mockReplace,
+  }),
 }));
 
 describe("Dashboard Navigation Active Logic", () => {
@@ -42,16 +52,35 @@ describe("Dashboard Navigation Active Logic", () => {
 });
 
 describe("DashboardShell Component", () => {
+  const renderWithStore = (
+    ui: React.ReactElement,
+    role: "customer" | "admin" = "customer"
+  ) => {
+    const store: AppStore = makeStore();
+    store.dispatch(
+      setCredentials({
+        id: role === "admin" ? "admin-1" : "user-1",
+        name: role === "admin" ? "Admin Staff" : "Phuket Traveler",
+        email: role === "admin" ? "admin@phukettours.com" : "guest@phukettours.com",
+        role,
+      })
+    );
+    return render(<Provider store={store}>{ui}</Provider>);
+  };
+
   beforeEach(() => {
     mockPathname.mockReturnValue("/dashboard");
+    mockPush.mockClear();
+    mockReplace.mockClear();
     document.body.style.overflow = "";
   });
 
   it("renders the User Dashboard shell with desktop sidebar, topbar, and child content", () => {
-    render(
+    renderWithStore(
       <DashboardShell>
         <div data-testid="test-content">Dashboard Content</div>
-      </DashboardShell>
+      </DashboardShell>,
+      "customer"
     );
 
     // Main content
@@ -68,15 +97,20 @@ describe("DashboardShell Component", () => {
 
     // Brand and Back to Website links
     expect(screen.getByText("Back to Website")).toBeInTheDocument();
+
+    // User dynamic profile and initials
+    expect(screen.getAllByText("Phuket Traveler").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("PT").length).toBeGreaterThanOrEqual(1);
   });
 
   it("automatically switches to Admin navigation when pathname starts with /dashboard/admin", () => {
     mockPathname.mockReturnValue("/dashboard/admin/tours");
 
-    render(
+    renderWithStore(
       <DashboardShell>
         <div data-testid="admin-content">Admin Tours</div>
-      </DashboardShell>
+      </DashboardShell>,
+      "admin"
     );
 
     // Admin navigation items and breadcrumb
@@ -87,13 +121,18 @@ describe("DashboardShell Component", () => {
 
     // Topbar breadcrumb for admin
     expect(screen.getByText("Admin Portal")).toBeInTheDocument();
+
+    // Admin dynamic profile
+    expect(screen.getAllByText("Admin Staff").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("AS").length).toBeGreaterThanOrEqual(1);
   });
 
   it("opens mobile drawer when hamburger button is clicked and closes on close button", () => {
-    render(
+    renderWithStore(
       <DashboardShell>
         <div>Content</div>
-      </DashboardShell>
+      </DashboardShell>,
+      "customer"
     );
 
     // Mobile drawer should not be open initially
@@ -118,10 +157,11 @@ describe("DashboardShell Component", () => {
   });
 
   it("closes mobile drawer on Escape key press", () => {
-    render(
+    renderWithStore(
       <DashboardShell>
         <div>Content</div>
-      </DashboardShell>
+      </DashboardShell>,
+      "customer"
     );
 
     // Open drawer

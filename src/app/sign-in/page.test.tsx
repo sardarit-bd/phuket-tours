@@ -11,11 +11,16 @@ import {
   selectIsAuthenticated,
 } from "@/features/auth/slices/auth-slice";
 
-// Mock next/navigation router
+// Mock next/navigation router and searchParams
 const mockPush = vi.fn();
+let mockRedirectParam: string | null = null;
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
+  }),
+  useSearchParams: () => ({
+    get: (key: string) => (key === "redirect" ? mockRedirectParam : null),
   }),
 }));
 
@@ -57,10 +62,12 @@ describe("SignInPage & SignInForm", () => {
 
   beforeEach(() => {
     mockPush.mockClear();
+    mockRedirectParam = null;
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    mockRedirectParam = null;
     vi.restoreAllMocks();
   });
 
@@ -316,5 +323,83 @@ describe("SignInPage & SignInForm", () => {
     expect(submitBtn).toBeDisabled();
     expect(emailInput).toBeDisabled();
     expect(passwordInput).toBeDisabled();
+  });
+
+  it("redirects to safe return path specified by ?redirect query parameter", async () => {
+    const user = userEvent.setup();
+    mockRedirectParam = "/dashboard/bookings";
+
+    setupMockFetch(200, {
+      success: true,
+      message: "Login successful",
+      data: {
+        id: "cust-1",
+        name: "Traveler",
+        email: "traveler@example.com",
+        role: "customer",
+      },
+    });
+
+    renderWithStore(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/email address/i), "traveler@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "secret123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/bookings");
+    });
+  });
+
+  it("prevents non-admin user from redirecting to admin dashboard via redirect parameter", async () => {
+    const user = userEvent.setup();
+    mockRedirectParam = "/dashboard/admin/users";
+
+    setupMockFetch(200, {
+      success: true,
+      message: "Login successful",
+      data: {
+        id: "cust-1",
+        name: "Traveler",
+        email: "traveler@example.com",
+        role: "customer",
+      },
+    });
+
+    renderWithStore(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/email address/i), "traveler@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "secret123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+    });
+  });
+
+  it("ignores protocol-relative open-redirect URLs in redirect parameter", async () => {
+    const user = userEvent.setup();
+    mockRedirectParam = "//malicious-site.com/exploit";
+
+    setupMockFetch(200, {
+      success: true,
+      message: "Login successful",
+      data: {
+        id: "cust-1",
+        name: "Traveler",
+        email: "traveler@example.com",
+        role: "customer",
+      },
+    });
+
+    renderWithStore(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/email address/i), "traveler@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "secret123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+    });
   });
 });

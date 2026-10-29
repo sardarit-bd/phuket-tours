@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ interface FormErrors {
 
 export function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const [login, { isLoading: isMutationLoading }] = useLoginMutation();
 
@@ -74,7 +75,21 @@ export function SignInForm() {
       setSuccessMessage("Sign in successful! Redirecting...");
 
       const role = response.data.role;
-      const targetRoute = role === "admin" ? "/dashboard/admin" : "/dashboard";
+      let targetRoute = role === "admin" ? "/dashboard/admin" : "/dashboard";
+
+      const redirectParam = searchParams.get("redirect");
+      if (
+        redirectParam &&
+        redirectParam.startsWith("/") &&
+        !redirectParam.startsWith("//")
+      ) {
+        if (redirectParam.startsWith("/dashboard/admin") && role !== "admin") {
+          targetRoute = "/dashboard";
+        } else {
+          targetRoute = redirectParam;
+        }
+      }
+
       router.push(targetRoute);
     } catch (err: unknown) {
       setErrors({

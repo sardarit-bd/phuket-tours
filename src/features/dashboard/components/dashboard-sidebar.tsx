@@ -3,13 +3,21 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { ArrowLeft, ArrowRightLeft, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ArrowLeft, ArrowRightLeft, LogOut } from "lucide-react";
 import {
   DashboardNavConfig,
   isNavItemActive,
 } from "../types/dashboard-nav";
 import { cn } from "@/lib/utils";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  selectCurrentUser,
+  clearCredentials,
+} from "@/features/auth/slices/auth-slice";
+import { useLogoutMutation } from "@/features/auth/api/auth-api";
+import { baseApi } from "@/lib/api/base-api";
+import { getInitials } from "@/features/auth/utils/avatar";
 
 interface DashboardSidebarProps {
   config: DashboardNavConfig;
@@ -22,9 +30,36 @@ export function DashboardSidebar({
   onNavigate,
   className,
 }: DashboardSidebarProps) {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
   const pathname = usePathname() ?? "/dashboard";
-  const isAdmin = config.role === "admin";
-  const homeHref = isAdmin ? "/dashboard/admin" : "/dashboard";
+  const user = useAppSelector(selectCurrentUser);
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
+
+  const isUserAdmin = user?.role === "admin";
+  const isViewAdmin = config.role === "admin";
+  const homeHref = isViewAdmin ? "/dashboard/admin" : "/dashboard";
+
+  const displayName =
+    user?.name || (isViewAdmin ? "Admin Staff" : "Phuket Traveler");
+  const displayEmail =
+    user?.email || (isViewAdmin ? "admin@phukettours.com" : "guest@phukettours.com");
+  const avatarInitials = getInitials(user?.name);
+
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap();
+    } catch {
+      // Proceed with resilient local cleanup even if network request fails
+    } finally {
+      dispatch(clearCredentials());
+      dispatch(baseApi.util.resetApiState());
+      if (onNavigate) {
+        onNavigate();
+      }
+      router.push("/sign-in");
+    }
+  };
 
   return (
     <aside
@@ -54,17 +89,20 @@ export function DashboardSidebar({
         <span
           className={cn(
             "rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider",
-            isAdmin
+            isViewAdmin
               ? "bg-[#18282A] text-white"
               : "bg-[#3297A3]/10 text-[#3297A3]"
           )}
         >
-          {isAdmin ? "Admin" : "User"}
+          {isViewAdmin ? "Admin" : "User"}
         </span>
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Dashboard Menu">
+      <nav
+        className="flex-1 overflow-y-auto px-3 py-4"
+        aria-label="Dashboard Menu"
+      >
         <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-[#74818A]">
           Menu
         </div>
@@ -109,21 +147,22 @@ export function DashboardSidebar({
 
       {/* Bottom Utilities */}
       <div className="border-t border-[#E5EAED] p-3 space-y-1">
-        {/* Development Route Switcher Helper */}
-        <Link
-          href={isAdmin ? "/dashboard" : "/dashboard/admin"}
-          onClick={onNavigate}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-[#74818A] hover:bg-[#EEF4F6] hover:text-[#18282A] transition-colors"
-          title="Switch view for local development preview only"
-        >
-          <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">
-            {isAdmin ? "Switch to User Portal" : "Switch to Admin Portal"}
-          </span>
-          <span className="ml-auto text-[9px] uppercase tracking-wider bg-gray-200 text-gray-700 px-1.5 py-0.2 rounded font-mono">
-            Dev
-          </span>
-        </Link>
+        {/* Switcher Helper: Only show if user has admin privileges */}
+        {isUserAdmin && (
+          <Link
+            href={isViewAdmin ? "/dashboard" : "/dashboard/admin"}
+            onClick={onNavigate}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-[#74818A] hover:bg-[#EEF4F6] hover:text-[#18282A] transition-colors"
+            title="Switch portal view"
+          >
+            <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {isViewAdmin
+                ? "Switch to User Portal"
+                : "Switch to Admin Portal"}
+            </span>
+          </Link>
+        )}
 
         {/* Back to Public Site Link */}
         <Link
@@ -135,19 +174,36 @@ export function DashboardSidebar({
           <span>Back to Website</span>
         </Link>
 
-        {/* Profile Identity Representation */}
-        <div className="mt-2 flex items-center gap-2.5 rounded-lg border border-[#E5EAED] bg-white p-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#3297A3]/10 text-[#3297A3]">
-            <User className="h-4 w-4" />
+        {/* Dynamic Profile Identity Representation */}
+        <div className="mt-2 flex items-center justify-between rounded-lg border border-[#E5EAED] bg-white p-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-1">
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#3297A3]/10 text-[#3297A3] font-outfit text-xs font-bold"
+              aria-label="User Avatar Initials"
+            >
+              {avatarInitials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-[#18282A]">
+                {displayName}
+              </p>
+              <p className="truncate text-[10px] text-[#74818A]">
+                {displayEmail}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-[#18282A]">
-              {isAdmin ? "Admin Staff" : "Phuket Traveler"}
-            </p>
-            <p className="truncate text-[10px] text-[#74818A]">
-              {isAdmin ? "admin@phukettours.com" : "guest@phukettours.com"}
-            </p>
-          </div>
+
+          {/* Functional Sign Out Action */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#74818A] hover:bg-red-50 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive cursor-pointer disabled:opacity-50"
+            aria-label="Sign Out"
+            title="Sign Out"
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </aside>
