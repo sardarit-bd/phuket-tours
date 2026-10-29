@@ -2,10 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useLoginMutation } from "@/features/auth/api/auth-api";
+import { useAppDispatch } from "@/store/hooks";
+import { setCredentials } from "@/features/auth/slices/auth-slice";
+import { getAuthErrorMessage } from "@/features/auth/utils/auth-error";
 
 interface FormErrors {
   email?: string;
@@ -14,12 +19,18 @@ interface FormErrors {
 }
 
 export function SignInForm() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const [login, { isLoading: isMutationLoading }] = useLoginMutation();
+
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+
+  const isLoading = isSubmitting || isMutationLoading;
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -42,29 +53,35 @@ export function SignInForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isLoading) return;
+
     setSuccessMessage(null);
 
     if (!validate()) {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
+    setErrors({});
 
     try {
-      // Note: No backend authentication endpoint currently exists in the project.
-      // Simulating authentication response after realistic network latency.
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const response = await login({
+        email: email.trim(),
+        password,
+      }).unwrap();
 
-      // Demonstration of client-side validation success:
-      setSuccessMessage(
-        "Sign-in validated successfully. (UI demonstration mode — no backend auth endpoint configured)."
-      );
-    } catch {
+      dispatch(setCredentials(response.data));
+      setSuccessMessage("Sign in successful! Redirecting...");
+
+      const role = response.data.role;
+      const targetRoute = role === "admin" ? "/dashboard/admin" : "/dashboard";
+      router.push(targetRoute);
+    } catch (err: unknown) {
       setErrors({
-        general: "An unexpected error occurred. Please try again later.",
+        general: getAuthErrorMessage(err),
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -81,7 +98,7 @@ export function SignInForm() {
         </div>
       )}
 
-      {/* Success alert (for UI demonstration) */}
+      {/* Success alert */}
       {successMessage && (
         <div
           role="status"
@@ -179,6 +196,7 @@ export function SignInForm() {
               aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded cursor-pointer transition-colors"
               tabIndex={0}
+              disabled={isLoading}
             >
               {showPassword ? (
                 <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -204,7 +222,7 @@ export function SignInForm() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-11 rounded-full bg-primary hover:bg-primary-dark text-white font-semibold shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full h-11 rounded-full bg-primary hover:bg-primary-dark text-white font-semibold shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>

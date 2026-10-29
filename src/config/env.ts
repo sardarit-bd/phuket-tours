@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-const envSchema = z.object({
+export const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z
     .string()
     .url()
-    .default("http://localhost:5000/api"),
+    .default("http://localhost:5000/api/v1"),
   NEXT_PUBLIC_APP_URL: z
     .string()
     .url()
@@ -13,7 +13,7 @@ const envSchema = z.object({
 
 export const env = envSchema.parse({
   NEXT_PUBLIC_API_URL:
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
   NEXT_PUBLIC_APP_URL:
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 });
