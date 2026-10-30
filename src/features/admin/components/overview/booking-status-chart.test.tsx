@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BookingStatusChart } from "./booking-status-chart";
 import type { AdminBookingsReportData } from "../../types/admin";
+import { ADMIN_BOOKING_STATUSES } from "../../types/admin";
 
 describe("BookingStatusChart component", () => {
   const realisticBookingsFixture: AdminBookingsReportData = {
@@ -32,6 +33,57 @@ describe("BookingStatusChart component", () => {
 
     // Check percentage: 25 out of 50 = 50.0%
     expect(screen.getByTestId("status-card-COMPLETED")).toHaveTextContent("50.0%");
+  });
+
+  it("shows all seven actual backend booking statuses including zero-count categories", () => {
+    render(<BookingStatusChart bookingsData={realisticBookingsFixture} />);
+
+    // All 7 statuses must have cards
+    ADMIN_BOOKING_STATUSES.forEach((status) => {
+      const card = screen.getByTestId(`status-card-${status}`);
+      expect(card).toBeInTheDocument();
+    });
+
+    // Zero-count status check (e.g. FAILED and AWAITING_APPROVAL)
+    const failedCard = screen.getByTestId("status-card-FAILED");
+    expect(failedCard).toHaveTextContent("0");
+    expect(failedCard).toHaveTextContent("0.0%");
+
+    const awaitingCard = screen.getByTestId("status-card-AWAITING_APPROVAL");
+    expect(awaitingCard).toHaveTextContent("0");
+    expect(awaitingCard).toHaveTextContent("0.0%");
+  });
+
+  it("renders SVG donut chart with accessible role and label", () => {
+    render(<BookingStatusChart bookingsData={realisticBookingsFixture} />);
+
+    const donut = screen.getByRole("img", {
+      name: /Donut chart showing booking distribution for 50 total bookings/i,
+    });
+    expect(donut).toBeInTheDocument();
+
+    // Active slices have graphics-symbol role
+    const symbols = screen.getAllByRole("graphics-symbol");
+    expect(symbols.length).toBe(4); // 4 statuses have count > 0 in fixture
+  });
+
+  it("updates donut center display on hover/focus", () => {
+    render(<BookingStatusChart bookingsData={realisticBookingsFixture} />);
+
+    // Initially shows Total 50
+    expect(screen.getByTestId("donut-total-count")).toHaveTextContent("50");
+
+    // Hover completed slice
+    const completedSlice = screen.getByLabelText(/Completed: 25 bookings/i);
+    fireEvent.mouseEnter(completedSlice);
+
+    // Shows Completed specific percentage and label in center
+    expect(screen.getByTestId("donut-hovered-label")).toHaveTextContent("Completed");
+    expect(screen.getByTestId("donut-hovered-count")).toHaveTextContent("25");
+    expect(screen.getByTestId("donut-hovered-percentage")).toHaveTextContent("50.0%");
+
+    fireEvent.mouseLeave(completedSlice);
+    expect(screen.getByTestId("donut-total-count")).toHaveTextContent("50");
   });
 
   it("displays empty state when total bookings is 0", () => {

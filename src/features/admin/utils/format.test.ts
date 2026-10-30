@@ -4,6 +4,7 @@ import {
   formatReportCount,
   formatReportPercentage,
   BOOKING_STATUS_CONFIG,
+  getAllBookingStatusesBreakdown,
 } from "./format";
 
 describe("Admin Overview Formatting Utilities", () => {
@@ -75,7 +76,38 @@ describe("Admin Overview Formatting Utilities", () => {
         expect(BOOKING_STATUS_CONFIG[status].label).toBeTruthy();
         expect(BOOKING_STATUS_CONFIG[status].badgeClass).toBeTruthy();
         expect(BOOKING_STATUS_CONFIG[status].barColor).toBeTruthy();
+        expect(BOOKING_STATUS_CONFIG[status].hexColor).toBeTruthy();
       });
+    });
+  });
+
+  describe("getAllBookingStatusesBreakdown", () => {
+    it("ensures all 7 backend booking statuses are always returned even with partial backend rows", () => {
+      const partialData = [
+        { status: "COMPLETED" as const, count: 20, totalValue: 60000 },
+        { status: "CONFIRMED" as const, count: 10, totalValue: 30000 },
+      ];
+      const result = getAllBookingStatusesBreakdown(partialData, 30);
+
+      expect(result).toHaveLength(7);
+
+      const completed = result.find((item) => item.status === "COMPLETED");
+      expect(completed?.count).toBe(20);
+      expect(completed?.percentageString).toBe("66.7%");
+
+      const confirmed = result.find((item) => item.status === "CONFIRMED");
+      expect(confirmed?.count).toBe(10);
+      expect(confirmed?.percentageString).toBe("33.3%");
+
+      // Missing categories from backend must be safely filled with 0s without throwing
+      const failed = result.find((item) => item.status === "FAILED");
+      expect(failed?.count).toBe(0);
+      expect(failed?.totalValue).toBe(0);
+      expect(failed?.percentageString).toBe("0.0%");
+
+      const awaiting = result.find((item) => item.status === "AWAITING_APPROVAL");
+      expect(awaiting?.count).toBe(0);
+      expect(awaiting?.percentageString).toBe("0.0%");
     });
   });
 });

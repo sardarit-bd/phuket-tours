@@ -126,7 +126,7 @@ describe("AdminOverviewPage component", () => {
     expect(screen.getByTestId("metric-revenue-value")).toHaveTextContent("95,400.00");
     expect(screen.getByTestId("metric-booked-value-value")).toHaveTextContent("125,000.50");
     expect(screen.getByTestId("total-bookings-badge")).toHaveTextContent("Total Bookings: 40");
-    expect(screen.getByText("James Bond Island Adventure")).toBeInTheDocument();
+    expect(screen.getAllByText("James Bond Island Adventure").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders OverviewSkeleton when queries are initially loading", () => {

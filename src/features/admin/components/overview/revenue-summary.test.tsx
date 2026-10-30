@@ -100,7 +100,33 @@ describe("RevenueSummary component", () => {
     expect(screen.getByTestId("metric-outstanding-value")).toHaveTextContent("—");
   });
 
-  it("renders error state and triggers onRetry callback when clicked", () => {
+  it("renders compact payment comparison visualization with distinct metric definitions", () => {
+    render(
+      <RevenueSummary
+        revenueData={realisticRevenueFixture}
+        paymentsData={realisticPaymentsFixture}
+      />
+    );
+
+    const comparisonChart = screen.getByTestId("payment-comparison-chart");
+    expect(comparisonChart).toBeInTheDocument();
+
+    // Contains comparison titles and labels
+    expect(comparisonChart).toHaveTextContent("Payment Verification Comparison");
+    expect(comparisonChart).toHaveTextContent("Paid Booking Value (Invoiced Target)");
+    expect(comparisonChart).toHaveTextContent("Verified Payments (Confirmed Funds Collected)");
+    expect(comparisonChart).toHaveTextContent("Pending Verification (3 items in queue)");
+
+    // Clarification callout to protect data integrity and avoid equating incompatible values
+    expect(comparisonChart).toHaveTextContent("Metric Integrity:");
+    expect(
+      comparisonChart
+    ).toHaveTextContent(
+      "Pending Verification represents unreviewed payment proof uploads awaiting verification and is not yet counted as collected revenue."
+    );
+  });
+
+  it("handles error state and triggers onRetry callback when clicked", () => {
     const handleRetry = vi.fn();
 
     render(

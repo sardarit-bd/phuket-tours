@@ -6,6 +6,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  Info,
   RefreshCw,
 } from "lucide-react";
 import { MetricCard } from "./metric-card";
@@ -230,6 +231,135 @@ export function RevenueSummary({
                 <span className="block text-xs font-normal text-[#74818A]">
                   ({formatReportMoney(reconciliation.pendingVerificationValue, currency)})
                 </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Compact Comparison Visualization */}
+          <div
+            data-testid="payment-comparison-chart"
+            className="mt-5 rounded-lg border border-[#E5EAED] bg-[#F8FAFB] p-4"
+          >
+            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h5 className="text-xs font-semibold uppercase tracking-wider text-[#74818A]">
+                  Payment Verification Comparison
+                </h5>
+                <p className="text-[11px] text-[#74818A]">
+                  Comparing Invoiced Paid Booking Target, Confirmed Ledger Receipts, and Unverified Submissions
+                </p>
+              </div>
+              <div className="flex items-center gap-3 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#2B9BA8]" />
+                  <span className="text-[#18282A]">Paid Bookings</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="text-[#18282A]">Verified</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="text-[#18282A]">Pending</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3 Metric Comparison Bars */}
+            {(() => {
+              const maxAmount = Math.max(
+                reconciliation.paidBookingsValue,
+                reconciliation.verifiedPaymentsValue,
+                reconciliation.pendingVerificationValue,
+                1
+              );
+
+              return (
+                <div className="space-y-3">
+                  {/* Paid Bookings Target Bar */}
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium text-[#18282A]">
+                        Paid Booking Value (Invoiced Target)
+                      </span>
+                      <span className="font-outfit font-bold text-[#18282A]">
+                        {formatReportMoney(reconciliation.paidBookingsValue, currency)}
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#E5EAED]">
+                      <div
+                        className="h-full rounded-full bg-[#2B9BA8] transition-all duration-300"
+                        style={{
+                          width: `${Math.max(
+                            (reconciliation.paidBookingsValue / maxAmount) * 100,
+                            reconciliation.paidBookingsValue > 0 ? 2 : 0
+                          )}%`,
+                        }}
+                        title={`Paid Booking Value: ${formatReportMoney(reconciliation.paidBookingsValue, currency)}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Verified Payments Bar */}
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium text-emerald-800">
+                        Verified Payments (Confirmed Funds Collected)
+                      </span>
+                      <span className="font-outfit font-bold text-emerald-800">
+                        {formatReportMoney(reconciliation.verifiedPaymentsValue, currency)}
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#E5EAED]">
+                      <div
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                        style={{
+                          width: `${Math.max(
+                            (reconciliation.verifiedPaymentsValue / maxAmount) * 100,
+                            reconciliation.verifiedPaymentsValue > 0 ? 2 : 0
+                          )}%`,
+                        }}
+                        title={`Verified Payments Value: ${formatReportMoney(reconciliation.verifiedPaymentsValue, currency)}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pending Verification Bar */}
+                  <div>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium text-amber-800">
+                        Pending Verification ({reconciliation.pendingVerificationCount} items in queue)
+                      </span>
+                      <span className="font-outfit font-bold text-amber-800">
+                        {formatReportMoney(reconciliation.pendingVerificationValue, currency)}
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#E5EAED]">
+                      <div
+                        className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                        style={{
+                          width: `${Math.max(
+                            (reconciliation.pendingVerificationValue / maxAmount) * 100,
+                            reconciliation.pendingVerificationValue > 0 ? 2 : 0
+                          )}%`,
+                        }}
+                        title={`Pending Verification Value: ${formatReportMoney(reconciliation.pendingVerificationValue, currency)}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Metric definitions callout to strictly separate incompatible metrics */}
+            <div className="mt-4 flex items-start gap-2 rounded-md bg-white p-2.5 text-[11px] text-[#74818A] border border-[#E5EAED]">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#2B9BA8]" />
+              <p>
+                <strong className="font-semibold text-[#18282A]">Metric Integrity:</strong> Paid
+                Booking Value is the final price of bookings marked as paid in orders. Verified
+                Payments are confirmed physical funds received in bank/cash. Pending Verification
+                represents unreviewed payment proof uploads awaiting verification and is not yet
+                counted as collected revenue.
               </p>
             </div>
           </div>
