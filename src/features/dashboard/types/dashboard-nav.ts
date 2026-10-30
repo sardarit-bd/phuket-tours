@@ -9,6 +9,7 @@ import {
   Users,
   Tag,
   Sliders,
+  Image as ImageIcon,
 } from "lucide-react";
 
 export interface DashboardNavItem {
@@ -70,6 +71,11 @@ export const adminNavConfig: DashboardNavConfig = {
       title: "Tours Management",
       href: "/dashboard/admin/tours",
       icon: Compass,
+    },
+    {
+      title: "Media Library",
+      href: "/dashboard/admin/media",
+      icon: ImageIcon,
     },
     {
       title: "Bookings Management",
