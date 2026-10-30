@@ -402,4 +402,30 @@ describe("SignInPage & SignInForm", () => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard");
     });
   });
+
+  it("redirects admin user to /dashboard/admin when redirect parameter points to customer dashboard route", async () => {
+    const user = userEvent.setup();
+    mockRedirectParam = "/dashboard/bookings";
+
+    setupMockFetch(200, {
+      success: true,
+      message: "Login successful",
+      data: {
+        id: "admin-1",
+        name: "Admin Person",
+        email: "admin@example.com",
+        role: "admin",
+      },
+    });
+
+    renderWithStore(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/email address/i), "admin@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "secret123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard/admin");
+    });
+  });
 });

@@ -85,6 +85,13 @@ export function SignInForm() {
       ) {
         if (redirectParam.startsWith("/dashboard/admin") && role !== "admin") {
           targetRoute = "/dashboard";
+        } else if (
+          role === "admin" &&
+          (redirectParam === "/dashboard" ||
+            (redirectParam.startsWith("/dashboard/") &&
+              !redirectParam.startsWith("/dashboard/admin")))
+        ) {
+          targetRoute = "/dashboard/admin";
         } else {
           targetRoute = redirectParam;
         }

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRightLeft, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
 import {
   DashboardNavConfig,
   isNavItemActive,
@@ -36,7 +36,6 @@ export function DashboardSidebar({
   const user = useAppSelector(selectCurrentUser);
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
 
-  const isUserAdmin = user?.role === "admin";
   const isViewAdmin = config.role === "admin";
   const homeHref = isViewAdmin ? "/dashboard/admin" : "/dashboard";
 
@@ -147,23 +146,6 @@ export function DashboardSidebar({
 
       {/* Bottom Utilities */}
       <div className="border-t border-[#E5EAED] p-3 space-y-1">
-        {/* Switcher Helper: Only show if user has admin privileges */}
-        {isUserAdmin && (
-          <Link
-            href={isViewAdmin ? "/dashboard" : "/dashboard/admin"}
-            onClick={onNavigate}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-[#74818A] hover:bg-[#EEF4F6] hover:text-[#18282A] transition-colors"
-            title="Switch portal view"
-          >
-            <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
-              {isViewAdmin
-                ? "Switch to User Portal"
-                : "Switch to Admin Portal"}
-            </span>
-          </Link>
-        )}
-
         {/* Back to Public Site Link */}
         <Link
           href="/"

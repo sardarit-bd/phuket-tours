@@ -12,6 +12,9 @@ import {
 } from "../types/dashboard-nav";
 import { DashboardGuard } from "@/features/auth/components/dashboard-guard";
 
+import { useAppSelector } from "@/store/hooks";
+import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
+
 interface DashboardShellProps {
   children: React.ReactNode;
   navConfig?: DashboardNavConfig;
@@ -24,15 +27,19 @@ export function DashboardShell({
   const rawPathname = usePathname();
   const pathname = rawPathname ?? "/dashboard";
   const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false);
+  const user = useAppSelector(selectCurrentUser);
 
-  // Automatically select role config if not explicitly overridden
+  // Automatically select role config: admin accounts must use ONLY adminNavConfig
   const activeConfig = React.useMemo(() => {
+    if (user?.role === "admin") {
+      return adminNavConfig;
+    }
     if (navConfig) return navConfig;
     if (pathname.startsWith("/dashboard/admin")) {
       return adminNavConfig;
     }
     return userNavConfig;
-  }, [navConfig, pathname]);
+  }, [navConfig, pathname, user?.role]);
 
   const [prevPathname, setPrevPathname] = React.useState(pathname);
   if (prevPathname !== pathname) {

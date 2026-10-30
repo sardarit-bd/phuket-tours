@@ -175,4 +175,93 @@ describe("DashboardShell Component", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.body.style.overflow).toBe("");
   });
+
+  it("never renders 'Switch to User Portal' for admin accounts in desktop sidebar or mobile drawer", () => {
+    mockPathname.mockReturnValue("/dashboard/admin");
+
+    renderWithStore(
+      <DashboardShell>
+        <div>Admin Content</div>
+      </DashboardShell>,
+      "admin"
+    );
+
+    // Desktop check: no switcher link
+    expect(screen.queryByText(/switch to user portal/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/switch to admin portal/i)).not.toBeInTheDocument();
+
+    // Open mobile drawer
+    fireEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
+
+    // Mobile check: still no switcher link
+    expect(screen.queryByText(/switch to user portal/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/switch to admin portal/i)).not.toBeInTheDocument();
+  });
+
+  it("never renders 'Switch to Admin Portal' for customer accounts", () => {
+    mockPathname.mockReturnValue("/dashboard");
+
+    renderWithStore(
+      <DashboardShell>
+        <div>User Content</div>
+      </DashboardShell>,
+      "customer"
+    );
+
+    expect(screen.queryByText(/switch to admin portal/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/switch to user portal/i)).not.toBeInTheDocument();
+  });
+
+  it("renders authenticated admin name, email, and initials in both desktop and mobile navigation", () => {
+    mockPathname.mockReturnValue("/dashboard/admin");
+
+    const store: AppStore = makeStore();
+    store.dispatch(
+      setCredentials({
+        id: "admin-42",
+        name: "Jane Administrator",
+        email: "jane.admin@phukettours.com",
+        role: "admin",
+      })
+    );
+
+    render(
+      <Provider store={store}>
+        <DashboardShell>
+          <div>Admin Content</div>
+        </DashboardShell>
+      </Provider>
+    );
+
+    // Desktop sidebar & topbar display
+    expect(screen.getAllByText("Jane Administrator").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("jane.admin@phukettours.com").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("JA").length).toBeGreaterThanOrEqual(1);
+
+    // Open mobile drawer
+    fireEvent.click(screen.getByRole("button", { name: /open navigation menu/i }));
+
+    // Drawer displays the same authenticated profile information
+    expect(screen.getAllByText("Jane Administrator").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("jane.admin@phukettours.com").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("ensures admin sidebar does not render customer navigation items", () => {
+    mockPathname.mockReturnValue("/dashboard/admin");
+
+    renderWithStore(
+      <DashboardShell>
+        <div>Admin Content</div>
+      </DashboardShell>,
+      "admin"
+    );
+
+    // Admin items present
+    expect(screen.getByText("Tours Management")).toBeInTheDocument();
+    expect(screen.getByText("Bookings Management")).toBeInTheDocument();
+
+    // Customer items absent
+    expect(screen.queryByText("My Bookings")).not.toBeInTheDocument();
+    expect(screen.queryByText("My Favorites")).not.toBeInTheDocument();
+  });
 });

@@ -42,8 +42,14 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
   const isInitialized = useAppSelector(selectIsAuthInitialized);
   const authStatus = useAppSelector(selectAuthStatus);
 
-  const isAdminRoute = pathname.startsWith("/dashboard/admin");
-  const isAuthorized = !isAdminRoute || user?.role === "admin";
+  const isAdminRoute =
+    pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/");
+  const isUserAdmin = user?.role === "admin";
+
+  // Strict role-based authorization:
+  // - Admin is authorized ONLY on admin routes (/dashboard/admin and nested)
+  // - Non-admin is authorized ONLY on non-admin user dashboard routes
+  const isAuthorized = isUserAdmin ? isAdminRoute : !isAdminRoute;
 
   // Effect: Handle unauthenticated redirection to /sign-in with return path
   React.useEffect(() => {
@@ -58,12 +64,18 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     }
   }, [isInitialized, isAuthenticated, authStatus, pathname, router]);
 
-  // Effect: Handle non-admin access to admin routes by redirecting to /dashboard
+  // Effect: Handle strict role-based separation
+  // 1. Admin accessing customer routes (/dashboard, /dashboard/bookings, etc.) -> redirect to /dashboard/admin
+  // 2. Non-admin customer accessing admin routes (/dashboard/admin, etc.) -> redirect to /dashboard
   React.useEffect(() => {
     if (isInitialized && isAuthenticated && !isAuthorized) {
-      router.replace("/dashboard");
+      if (isUserAdmin) {
+        router.replace("/dashboard/admin");
+      } else {
+        router.replace("/dashboard");
+      }
     }
-  }, [isInitialized, isAuthenticated, isAuthorized, router]);
+  }, [isInitialized, isAuthenticated, isAuthorized, isUserAdmin, router]);
 
   // 1. Initializing or loading state
   if (!isInitialized || authStatus === "loading") {
@@ -153,13 +165,18 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     );
   }
 
-  // 4. Authenticated non-admin attempting admin route (while redirecting)
+  // 4. Role mismatch state (while redirecting)
   if (!isAuthorized) {
+    const isRedirectingAdmin = isUserAdmin && !isAdminRoute;
     return (
       <div
         className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFB]"
         role="status"
-        aria-label="Restricted access, redirecting to user dashboard"
+        aria-label={
+          isRedirectingAdmin
+            ? "Redirecting to admin portal"
+            : "Restricted access, redirecting to user dashboard"
+        }
       >
         <div className="flex flex-col items-center gap-3">
           <Loader2
@@ -167,7 +184,9 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
             aria-hidden="true"
           />
           <p className="text-sm font-medium text-[#74818A]">
-            Access restricted. Redirecting to dashboard...
+            {isRedirectingAdmin
+              ? "Redirecting to admin portal..."
+              : "Access restricted. Redirecting to dashboard..."}
           </p>
         </div>
       </div>

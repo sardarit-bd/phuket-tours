@@ -126,9 +126,26 @@ describe("DashboardGuard Component", () => {
     });
   });
 
-  describe("Role-based Authorization & Admin Route Protection", () => {
+  describe("Role-based Authorization & Strict Portal Separation", () => {
     it("allows authenticated customer access to standard user dashboard", () => {
       mockPathname.mockReturnValue("/dashboard");
+      store.dispatch(
+        setCredentials({
+          id: "cust-1",
+          name: "Somchai Customer",
+          email: "somchai@example.com",
+          role: "customer",
+        })
+      );
+
+      renderGuard();
+
+      expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("allows authenticated customer access to customer nested routes (/dashboard/bookings)", () => {
+      mockPathname.mockReturnValue("/dashboard/bookings");
       store.dispatch(
         setCredentials({
           id: "cust-1",
@@ -167,7 +184,24 @@ describe("DashboardGuard Component", () => {
       ).toBeInTheDocument();
     });
 
-    it("allows authenticated admin to access admin routes", () => {
+    it("allows authenticated admin to access /dashboard/admin root", () => {
+      mockPathname.mockReturnValue("/dashboard/admin");
+      store.dispatch(
+        setCredentials({
+          id: "admin-1",
+          name: "Admin User",
+          email: "admin@phukettours.com",
+          role: "admin",
+        })
+      );
+
+      renderGuard();
+
+      expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("allows authenticated admin to access nested admin routes (/dashboard/admin/users)", () => {
       mockPathname.mockReturnValue("/dashboard/admin/users");
       store.dispatch(
         setCredentials({
@@ -182,6 +216,89 @@ describe("DashboardGuard Component", () => {
 
       expect(screen.getByTestId("protected-content")).toBeInTheDocument();
       expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("redirects authenticated admin visiting /dashboard to /dashboard/admin", async () => {
+      mockPathname.mockReturnValue("/dashboard");
+      store.dispatch(
+        setCredentials({
+          id: "admin-1",
+          name: "Admin User",
+          email: "admin@phukettours.com",
+          role: "admin",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/admin");
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("status", { name: /redirecting to admin portal/i })
+      ).toBeInTheDocument();
+    });
+
+    it("redirects authenticated admin visiting /dashboard/bookings to /dashboard/admin", async () => {
+      mockPathname.mockReturnValue("/dashboard/bookings");
+      store.dispatch(
+        setCredentials({
+          id: "admin-1",
+          name: "Admin User",
+          email: "admin@phukettours.com",
+          role: "admin",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/admin");
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    });
+
+    it("redirects authenticated admin visiting /dashboard/favorites to /dashboard/admin", async () => {
+      mockPathname.mockReturnValue("/dashboard/favorites");
+      store.dispatch(
+        setCredentials({
+          id: "admin-1",
+          name: "Admin User",
+          email: "admin@phukettours.com",
+          role: "admin",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/admin");
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    });
+
+    it("redirects authenticated admin visiting /dashboard/settings to /dashboard/admin", async () => {
+      mockPathname.mockReturnValue("/dashboard/settings");
+      store.dispatch(
+        setCredentials({
+          id: "admin-1",
+          name: "Admin User",
+          email: "admin@phukettours.com",
+          role: "admin",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/admin");
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
     });
   });
 });
