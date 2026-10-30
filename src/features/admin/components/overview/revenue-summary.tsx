@@ -72,9 +72,23 @@ export function RevenueSummary({
   const reconciliation = paymentsData?.reconciliation;
   const isReconciled = reconciliation ? reconciliation.difference === 0 : true;
 
+  const isZeroFinancialActivity =
+    Boolean(revenueData) &&
+    revenueData?.revenue === 0 &&
+    revenueData?.bookedValue === 0 &&
+    revenueData?.collectedPayments === 0 &&
+    revenueData?.outstandingBalance === 0;
+
+  const isZeroReconciliationActivity =
+    Boolean(reconciliation) &&
+    reconciliation?.paidBookingsValue === 0 &&
+    reconciliation?.verifiedPaymentsValue === 0 &&
+    reconciliation?.pendingVerificationCount === 0 &&
+    reconciliation?.pendingVerificationValue === 0;
+
   return (
     <section aria-labelledby="revenue-summary-heading" className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3
             id="revenue-summary-heading"
@@ -83,7 +97,7 @@ export function RevenueSummary({
             Financial Totals
           </h3>
           <p className="text-xs text-[#74818A]">
-            Real-time financial aggregation based on verified booking & payment transactions.
+            Financial aggregation based on verified booking &amp; payment transactions.
           </p>
         </div>
         {currency && (
@@ -93,13 +107,30 @@ export function RevenueSummary({
         )}
       </div>
 
+      {/* Subtle contextual information when report indicates zero activity */}
+      {isZeroFinancialActivity && !isLoading && (
+        <div
+          data-testid="financial-empty-context"
+          className="flex items-center gap-2 rounded-lg border border-[#E5EAED] bg-[#F8FAFB] px-3.5 py-2 text-xs text-[#74818A]"
+        >
+          <Info className="h-4 w-4 shrink-0 text-[#2B9BA8]" />
+          <span>
+            No booking or financial activity recorded for this period. Metrics represent confirmed zero balances ({formatReportMoney(0, currency)}), not an API or network issue.
+          </span>
+        </div>
+      )}
+
       {/* 4 Core Financial Totals genuinely supported by backend */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           testId="metric-revenue"
           title="Completed Revenue"
           value={formatReportMoney(revenueData?.revenue, currency)}
-          subtitle="Final price sum of fully completed bookings"
+          subtitle={
+            isZeroFinancialActivity
+              ? "No completed bookings in this period"
+              : "Final price sum of fully completed bookings"
+          }
           icon={DollarSign}
           tone="emerald"
           badge="Completed"
@@ -111,7 +142,11 @@ export function RevenueSummary({
           testId="metric-booked-value"
           title="Booked Pipeline Value"
           value={formatReportMoney(revenueData?.bookedValue, currency)}
-          subtitle="Confirmed, in-progress & completed bookings"
+          subtitle={
+            isZeroFinancialActivity
+              ? "No active bookings in pipeline"
+              : "Confirmed, in-progress & completed bookings"
+          }
           icon={TrendingUp}
           tone="teal"
           badge="Active Pipeline"
@@ -123,7 +158,11 @@ export function RevenueSummary({
           testId="metric-collected"
           title="Collected Payments"
           value={formatReportMoney(revenueData?.collectedPayments, currency)}
-          subtitle="Total verified customer payments received"
+          subtitle={
+            isZeroFinancialActivity
+              ? "No customer payments collected"
+              : "Total verified customer payments received"
+          }
           icon={CreditCard}
           tone="blue"
           badge="Verified"
@@ -135,7 +174,11 @@ export function RevenueSummary({
           testId="metric-outstanding"
           title="Outstanding Balance"
           value={formatReportMoney(revenueData?.outstandingBalance, currency)}
-          subtitle="Unpaid amount for confirmed or active bookings"
+          subtitle={
+            isZeroFinancialActivity
+              ? "No unpaid balance (zero bookings)"
+              : "Unpaid amount for confirmed or active bookings"
+          }
           icon={AlertCircle}
           tone={
             revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
@@ -143,12 +186,16 @@ export function RevenueSummary({
               : "neutral"
           }
           badge={
-            revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
+            isZeroFinancialActivity
+              ? "Zero Balance"
+              : revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
               ? "Unpaid"
               : "Settled"
           }
           badgeTone={
-            revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
+            isZeroFinancialActivity
+              ? "default"
+              : revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
               ? "warning"
               : "default"
           }
@@ -185,7 +232,11 @@ export function RevenueSummary({
                   : "bg-amber-50 text-amber-700 border border-amber-200"
               }`}
             >
-              {isReconciled ? "Balanced" : "Discrepancy Detected"}
+              {isZeroReconciliationActivity
+                ? "Balanced"
+                : isReconciled
+                ? "Balanced"
+                : "Discrepancy Detected"}
             </span>
           </div>
 
@@ -264,6 +315,12 @@ export function RevenueSummary({
                 </div>
               </div>
             </div>
+
+            {isZeroReconciliationActivity && (
+              <div className="mb-3 rounded-md border border-[#E5EAED] bg-white p-2.5 text-xs text-[#74818A]">
+                No payment transactions recorded for reconciliation in this window. Invoiced orders, verified receipts, and pending submissions are all at zero.
+              </div>
+            )}
 
             {/* 3 Metric Comparison Bars */}
             {(() => {

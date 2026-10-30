@@ -168,8 +168,10 @@ export function BookingStatusChart({
       </div>
 
       {totalBookings === 0 ? (
-        <div className="py-6">
+        <div className="mt-4">
           <EmptyState
+            compact
+            icon={<PieChart className="h-5 w-5 text-[#2B9BA8]" />}
             title="No bookings recorded"
             description="There are currently no bookings recorded for the selected filter criteria."
           />

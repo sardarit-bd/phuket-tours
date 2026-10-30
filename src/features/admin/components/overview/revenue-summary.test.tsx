@@ -100,6 +100,30 @@ describe("RevenueSummary component", () => {
     expect(screen.getByTestId("metric-outstanding-value")).toHaveTextContent("—");
   });
 
+  it("communicates confirmed zero activity clearly without confusing it with missing data", () => {
+    const zeroRevenueFixture: AdminRevenueReportData = {
+      filters: { from: null, to: null, serviceType: null, agentId: null },
+      revenue: 0,
+      bookedValue: 0,
+      collectedPayments: 0,
+      outstandingBalance: 0,
+    };
+
+    render(<RevenueSummary revenueData={zeroRevenueFixture} />);
+
+    // Preserves actual 0.00 numeric representation
+    expect(screen.getByTestId("metric-revenue-value")).toHaveTextContent("0.00");
+    expect(screen.getByTestId("metric-booked-value-value")).toHaveTextContent("0.00");
+    expect(screen.getByTestId("metric-collected-value")).toHaveTextContent("0.00");
+    expect(screen.getByTestId("metric-outstanding-value")).toHaveTextContent("0.00");
+
+    // Displays contextual notice distinguishing confirmed zero balances from an error
+    expect(screen.getByTestId("financial-empty-context")).toBeInTheDocument();
+    expect(screen.getByTestId("financial-empty-context")).toHaveTextContent(
+      "No booking or financial activity recorded for this period"
+    );
+  });
+
   it("renders compact payment comparison visualization with distinct metric definitions", () => {
     render(
       <RevenueSummary

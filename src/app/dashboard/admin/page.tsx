@@ -87,12 +87,12 @@ export default function AdminOverviewPage() {
             <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
               Admin Overview Analytics
             </h1>
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-              Live
+            <span className="rounded-full border border-[#E5EAED] bg-[#F5F8F9] px-2.5 py-0.5 text-xs font-medium text-[#74818A]">
+              Report Overview
             </span>
           </div>
           <p className="mt-1 text-sm text-[#74818A]">
-            Real-time platform financial performance, booking volume distribution, and service metrics.
+            Aggregated platform financial performance, booking volume distribution, and service metrics.
           </p>
         </div>
 

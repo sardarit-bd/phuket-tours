@@ -192,8 +192,10 @@ export function ServicePerformanceTable({
       </div>
 
       {rawItems.length === 0 ? (
-        <div className="py-6">
+        <div className="mt-4">
           <EmptyState
+            compact
+            icon={<Compass className="h-5 w-5 text-[#2B9BA8]" />}
             title="No service records found"
             description="No service bookings have been recorded yet for the selected filters."
           />
