@@ -185,3 +185,23 @@ export function getAllBookingStatusesBreakdown(
   });
 }
 
+/**
+ * Formats an ISO date string into a consistent, readable format (e.g., "Oct 30, 2026").
+ * Returns "—" if invalid or missing.
+ */
+export function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) return "—";
+  try {
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return "—";
+  }
+}
+
+

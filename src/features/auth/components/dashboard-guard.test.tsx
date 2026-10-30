@@ -300,5 +300,58 @@ describe("DashboardGuard Component", () => {
 
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
     });
+
+    it("allows authenticated admin access to /dashboard/admin/tours", () => {
+      mockPathname.mockReturnValue("/dashboard/admin/tours");
+      store.dispatch(
+        setCredentials({
+          id: "admin-1",
+          name: "Admin User",
+          email: "admin@phukettours.com",
+          role: "admin",
+        })
+      );
+
+      renderGuard();
+
+      expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it("redirects non-admin customer attempting to access /dashboard/admin/tours to /dashboard", async () => {
+      mockPathname.mockReturnValue("/dashboard/admin/tours");
+      store.dispatch(
+        setCredentials({
+          id: "cust-1",
+          name: "Regular Customer",
+          email: "customer@example.com",
+          role: "customer",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    });
+
+    it("redirects unauthenticated visitor attempting to access /dashboard/admin/tours to login", async () => {
+      mockPathname.mockReturnValue("/dashboard/admin/tours");
+      store.dispatch(setInitialized(true));
+      store.dispatch(setAuthStatus("idle"));
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith(
+          "/sign-in?redirect=%2Fdashboard%2Fadmin%2Ftours"
+        );
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    });
   });
 });

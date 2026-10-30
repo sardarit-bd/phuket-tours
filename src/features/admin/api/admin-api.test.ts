@@ -314,4 +314,164 @@ describe("adminApi RTK Query endpoints", () => {
       }
     });
   });
+
+  describe("GET /admin/services", () => {
+    it("constructs correct query parameters for tours search, status, sort, and pagination", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Services retrieved successfully",
+        data: {
+          items: [
+            {
+              id: "t-1",
+              name: "James Bond Island Day Tour",
+              description: "Scenic boat tour",
+              type: "TOUR",
+              status: "PUBLISHED",
+              providerName: "Andaman Marine",
+              providerId: "p-1",
+              metadata: { destination: "Phang Nga Bay" },
+              createdAt: "2026-01-10T10:00:00.000Z",
+              updatedAt: "2026-01-15T10:00:00.000Z",
+              pricingSummary: {
+                currency: "THB",
+                basePrice: 2800,
+                discountedPrice: 2400,
+                taxRate: 7,
+                validFrom: null,
+                validTo: null,
+              },
+              availabilitySummary: {
+                availableDateCount: 14,
+                unavailableDateCount: 2,
+                totalCapacity: 40,
+                bookedCount: 26,
+              },
+            },
+          ],
+          pagination: {
+            page: 1,
+            limit: 25,
+            total: 1,
+            totalPages: 1,
+          },
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminServices.initiate({
+          type: "TOUR",
+          search: "james bond",
+          status: "PUBLISHED",
+          sortBy: "relevance",
+          sortOrder: "desc",
+          page: 1,
+          limit: 25,
+        })
+      );
+
+      expect(capturedRequest).toBeDefined();
+      expect(capturedRequest?.url).toContain("http://localhost:5000/api/v1/admin/services");
+      expect(capturedRequest?.url).toContain("type=TOUR");
+      expect(capturedRequest?.url).toContain("search=james+bond");
+      expect(capturedRequest?.url).toContain("status=PUBLISHED");
+      expect(capturedRequest?.url).toContain("sortBy=relevance");
+      expect(capturedRequest?.url).toContain("sortOrder=desc");
+      expect(capturedRequest?.url).toContain("page=1");
+      expect(capturedRequest?.url).toContain("limit=25");
+      expect(capturedRequest?.method).toBe("GET");
+      expect(capturedRequest?.credentials).toBe("include");
+
+      expect("data" in result).toBe(true);
+      if ("data" in result && result.data) {
+        expect(result.data.data.items).toHaveLength(1);
+        expect(result.data.data.items[0].name).toBe("James Bond Island Day Tour");
+        expect(result.data.data.items[0].pricingSummary?.basePrice).toBe(2800);
+        expect(result.data.data.items[0].availabilitySummary?.availableDateCount).toBe(14);
+      }
+    });
+  });
+
+  describe("PATCH /admin/services/:serviceId/status", () => {
+    it("sends status update with correct URL and body", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Status updated successfully",
+        data: {
+          id: "t-1",
+          name: "James Bond Island Day Tour",
+          status: "UNPUBLISHED",
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.updateAdminServiceStatus.initiate({
+          serviceId: "t-1",
+          status: "UNPUBLISHED",
+        })
+      );
+
+      expect(capturedRequest).toBeDefined();
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/services/t-1/status");
+      expect(capturedRequest?.method).toBe("PATCH");
+      expect(capturedRequest?.credentials).toBe("include");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        status: "UNPUBLISHED",
+      });
+
+      expect("data" in result).toBe(true);
+      if ("data" in result && result.data) {
+        expect(result.data.data.status).toBe("UNPUBLISHED");
+      }
+    });
+  });
+
+  describe("PATCH /admin/services/bulk-status", () => {
+    it("sends bulk status update request with service IDs and target status", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Services status updated successfully",
+        data: {
+          updatedCount: 2,
+          requestedCount: 2,
+          updatedIds: ["uuid-1", "uuid-2"],
+          notFoundIds: [],
+          status: "PUBLISHED",
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.bulkUpdateAdminServiceStatus.initiate({
+          serviceIds: ["uuid-1", "uuid-2"],
+          status: "PUBLISHED",
+        })
+      );
+
+      expect(capturedRequest).toBeDefined();
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/services/bulk-status");
+      expect(capturedRequest?.method).toBe("PATCH");
+      expect(capturedRequest?.credentials).toBe("include");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        serviceIds: ["uuid-1", "uuid-2"],
+        status: "PUBLISHED",
+      });
+
+      expect("data" in result).toBe(true);
+      if ("data" in result && result.data) {
+        expect(result.data.data.updatedCount).toBe(2);
+        expect(result.data.data.notFoundIds).toEqual([]);
+        expect(result.data.data.status).toBe("PUBLISHED");
+      }
+    });
+  });
 });
+
