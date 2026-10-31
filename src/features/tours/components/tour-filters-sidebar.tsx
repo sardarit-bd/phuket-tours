@@ -63,7 +63,7 @@ export function TourFiltersSidebar({
       )}
 
       {/* Tour Type Group */}
-      {tourTypeGroup && (
+      {/* {tourTypeGroup && (
         <TourFilterGroup
           title={tourTypeGroup.title}
           options={tourTypeGroup.options}
@@ -72,10 +72,10 @@ export function TourFiltersSidebar({
           defaultOpen={true}
           initialVisibleCount={5}
         />
-      )}
+      )} */}
 
       {/* Duration Group */}
-      {durationGroup && (
+      {/* {durationGroup && (
         <TourFilterGroup
           title={durationGroup.title}
           options={durationGroup.options}
@@ -84,7 +84,7 @@ export function TourFiltersSidebar({
           defaultOpen={true}
           initialVisibleCount={5}
         />
-      )}
+      )} */}
 
       {/* Price Range Filter */}
       <TourPriceFilter

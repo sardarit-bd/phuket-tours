@@ -12,12 +12,12 @@ export const TOTAL_TOURS_CATALOG_COUNT = clientDummyTours.length;
 
 export const tourCategories: TourCategory[] = [
   { id: "all", name: "All Tours", icon: "grid" },
-  { id: "island-tours", name: "Island Tours", icon: "island" },
-  { id: "snorkeling-diving", name: "Snorkeling & Diving", icon: "diving" },
-  { id: "adventure", name: "Adventure", icon: "adventure" },
-  { id: "shows-entertainment", name: "Shows & Entertainment", icon: "shows" },
-  { id: "cultural", name: "Cultural", icon: "cultural" },
-  { id: "transfers", name: "Transfers", icon: "transfers" },
+  // { id: "island-tours", name: "Island Tours", icon: "island" },
+  // { id: "snorkeling-diving", name: "Snorkeling & Diving", icon: "diving" },
+  // { id: "adventure", name: "Adventure", icon: "adventure" },
+  // { id: "shows-entertainment", name: "Shows & Entertainment", icon: "shows" },
+  // { id: "cultural", name: "Cultural", icon: "cultural" },
+  // { id: "transfers", name: "Transfers", icon: "transfers" },
 ];
 
 function computeFilterCounts(tours: Tour[]) {
