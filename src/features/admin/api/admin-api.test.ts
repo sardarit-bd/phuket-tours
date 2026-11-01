@@ -5,6 +5,13 @@ import {
   useGetAdminBookingsReportQuery,
   useGetAdminPaymentsReportQuery,
   useGetAdminServicesReportQuery,
+  useGetAdminUsersQuery,
+  useGetAdminUserByIdQuery,
+  useGetAdminAgentByIdQuery,
+  useCreateAdminAgentMutation,
+  useCreateAdminStaffMutation,
+  useUpdateAdminUserMutation,
+  useUpdateAdminAgentMutation,
   type AdminApiResponse,
   type AdminRevenueReportData,
   type AdminBookingsReportData,
@@ -65,11 +72,18 @@ describe("adminApi RTK Query endpoints", () => {
     vi.restoreAllMocks();
   });
 
-  it("exports all generated query hooks for admin analytics", () => {
+  it("exports all generated query hooks for admin analytics and user management", () => {
     expect(typeof useGetAdminRevenueReportQuery).toBe("function");
     expect(typeof useGetAdminBookingsReportQuery).toBe("function");
     expect(typeof useGetAdminPaymentsReportQuery).toBe("function");
     expect(typeof useGetAdminServicesReportQuery).toBe("function");
+    expect(typeof useGetAdminUsersQuery).toBe("function");
+    expect(typeof useGetAdminUserByIdQuery).toBe("function");
+    expect(typeof useGetAdminAgentByIdQuery).toBe("function");
+    expect(typeof useCreateAdminAgentMutation).toBe("function");
+    expect(typeof useCreateAdminStaffMutation).toBe("function");
+    expect(typeof useUpdateAdminUserMutation).toBe("function");
+    expect(typeof useUpdateAdminAgentMutation).toBe("function");
   });
 
   describe("GET /admin/reports/revenue", () => {
@@ -797,6 +811,289 @@ describe("adminApi RTK Query endpoints", () => {
         notes: "Approved special group discount",
       });
       expect("data" in result).toBe(true);
+    });
+  });
+
+  describe("User Management Endpoints", () => {
+    describe("GET /admin/users", () => {
+      it("fetches paginated users list with search and filters", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Users retrieved successfully",
+          data: {
+            items: [
+              {
+                id: "usr-1",
+                name: "Somchai Staff",
+                email: "somchai@qbictravel.com",
+                phone: "+66 81 234 5678",
+                role: "staff",
+                status: "active",
+                createdAt: "2026-10-15T08:00:00.000Z",
+                updatedAt: "2026-10-15T08:00:00.000Z",
+                agentProfile: null,
+              },
+            ],
+            pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.getAdminUsers.initiate({
+            page: 1,
+            limit: 10,
+            search: "Somchai",
+            role: "staff",
+            status: "active",
+          })
+        );
+
+        expect(capturedRequest?.url).toContain("/admin/users?");
+        expect(capturedRequest?.url).toContain("page=1");
+        expect(capturedRequest?.url).toContain("limit=10");
+        expect(capturedRequest?.url).toContain("search=Somchai");
+        expect(capturedRequest?.url).toContain("role=staff");
+        expect(capturedRequest?.url).toContain("status=active");
+        expect(capturedRequest?.method).toBe("GET");
+        expect("data" in result).toBe(true);
+      });
+    });
+
+    describe("GET /admin/users/:userId", () => {
+      it("retrieves single user details by ID", async () => {
+        const mockResponse = {
+          success: true,
+          message: "User retrieved successfully",
+          data: {
+            id: "usr-1",
+            name: "Somchai Staff",
+            email: "somchai@qbictravel.com",
+            phone: "+66 81 234 5678",
+            role: "staff",
+            status: "active",
+            createdAt: "2026-10-15T08:00:00.000Z",
+            updatedAt: "2026-10-15T08:00:00.000Z",
+            agentProfile: null,
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.getAdminUserById.initiate("usr-1")
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/users/usr-1"
+        );
+        expect(capturedRequest?.method).toBe("GET");
+        expect("data" in result).toBe(true);
+      });
+    });
+
+    describe("GET /admin/agents/:agentId", () => {
+      it("retrieves agent details including agentProfile", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Agent retrieved successfully",
+          data: {
+            id: "agt-1",
+            name: "Agent Smith",
+            email: "agent@travel.com",
+            phone: "+66 82 999 8888",
+            role: "agent",
+            status: "active",
+            createdAt: "2026-10-10T00:00:00.000Z",
+            updatedAt: "2026-10-10T00:00:00.000Z",
+            agentProfile: { agencyName: "Andaman Travel Co." },
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.getAdminAgentById.initiate("agt-1")
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/agents/agt-1"
+        );
+        expect(capturedRequest?.method).toBe("GET");
+        expect("data" in result).toBe(true);
+      });
+    });
+
+    describe("POST /admin/agents", () => {
+      it("creates an agent and dispatches onboarding invitation", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Agent created successfully",
+          data: {
+            id: "agt-2",
+            name: "Robert Agent",
+            email: "robert@agent.com",
+            phone: "+66 89 000 1111",
+            role: "agent",
+            status: "active",
+            createdAt: "2026-11-01T00:00:00.000Z",
+            updatedAt: "2026-11-01T00:00:00.000Z",
+            agentProfile: { agencyName: "Global Tours" },
+          },
+        };
+
+        setupMockFetch(201, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.createAdminAgent.initiate({
+            name: "Robert Agent",
+            email: "robert@agent.com",
+            phone: "+66 89 000 1111",
+            agencyName: "Global Tours",
+          })
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/agents"
+        );
+        expect(capturedRequest?.method).toBe("POST");
+        expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+          name: "Robert Agent",
+          email: "robert@agent.com",
+          phone: "+66 89 000 1111",
+          agencyName: "Global Tours",
+        });
+        expect("data" in result).toBe(true);
+      });
+    });
+
+    describe("POST /admin/staff", () => {
+      it("creates a staff member and dispatches onboarding invitation", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Staff account created successfully",
+          data: {
+            id: "stf-2",
+            name: "Niran Staff",
+            email: "niran@phukettours.com",
+            phone: "+66 88 555 4433",
+            role: "staff",
+            status: "active",
+            createdAt: "2026-11-01T00:00:00.000Z",
+            updatedAt: "2026-11-01T00:00:00.000Z",
+            agentProfile: null,
+          },
+        };
+
+        setupMockFetch(201, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.createAdminStaff.initiate({
+            name: "Niran Staff",
+            email: "niran@phukettours.com",
+            phone: "+66 88 555 4433",
+          })
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/staff"
+        );
+        expect(capturedRequest?.method).toBe("POST");
+        expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+          name: "Niran Staff",
+          email: "niran@phukettours.com",
+          phone: "+66 88 555 4433",
+        });
+        expect("data" in result).toBe(true);
+      });
+    });
+
+    describe("PATCH /admin/users/:userId", () => {
+      it("updates user name, phone, and status", async () => {
+        const mockResponse = {
+          success: true,
+          message: "User updated successfully",
+          data: {
+            id: "usr-1",
+            name: "Updated Name",
+            email: "somchai@qbictravel.com",
+            phone: "+66 81 999 0000",
+            role: "staff",
+            status: "deactivated",
+            createdAt: "2026-10-15T08:00:00.000Z",
+            updatedAt: "2026-11-01T00:00:00.000Z",
+            agentProfile: null,
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.updateAdminUser.initiate({
+            userId: "usr-1",
+            name: "Updated Name",
+            phone: "+66 81 999 0000",
+            status: "deactivated",
+          })
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/users/usr-1"
+        );
+        expect(capturedRequest?.method).toBe("PATCH");
+        expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+          name: "Updated Name",
+          phone: "+66 81 999 0000",
+          status: "deactivated",
+        });
+        expect("data" in result).toBe(true);
+      });
+    });
+
+    describe("PATCH /admin/agents/:agentId", () => {
+      it("updates agent agencyName", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Agent updated successfully",
+          data: {
+            id: "agt-1",
+            name: "Agent Smith",
+            email: "agent@travel.com",
+            phone: null,
+            role: "agent",
+            status: "active",
+            createdAt: "2026-10-10T00:00:00.000Z",
+            updatedAt: "2026-11-01T00:00:00.000Z",
+            agentProfile: { agencyName: "Updated Island Tours" },
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.updateAdminAgent.initiate({
+            agentId: "agt-1",
+            agencyName: "Updated Island Tours",
+          })
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/agents/agt-1"
+        );
+        expect(capturedRequest?.method).toBe("PATCH");
+        expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+          agencyName: "Updated Island Tours",
+        });
+        expect("data" in result).toBe(true);
+      });
     });
   });
 });

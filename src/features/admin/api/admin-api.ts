@@ -27,6 +27,13 @@ import type {
   UpdateBookingFulfillmentInput,
   ReviewBookingPriceApprovalInput,
   AdminStaffListResponse,
+  AdminUserRecord,
+  AdminUserListResponse,
+  GetAdminUsersParams,
+  CreateAdminAgentInput,
+  CreateAdminStaffInput,
+  UpdateAdminUserInput,
+  UpdateAdminAgentInput,
 } from "../types/admin";
 
 export const adminApi = baseApi.injectEndpoints({
@@ -335,6 +342,121 @@ export const adminApi = baseApi.injectEndpoints({
         "AdminReport",
       ],
     }),
+
+    // Users Management Endpoints
+    getAdminUsers: builder.query<
+      AdminApiResponse<AdminUserListResponse>,
+      GetAdminUsersParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.search && params.search.trim()) queryParams.search = params.search.trim();
+        if (params?.role) queryParams.role = params.role;
+        if (params?.status) queryParams.status = params.status;
+
+        return {
+          url: "/admin/users",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((user) => ({
+                type: "User" as const,
+                id: user.id,
+              })),
+              { type: "User" as const, id: "LIST" },
+            ]
+          : [{ type: "User" as const, id: "LIST" }],
+    }),
+
+    getAdminUserById: builder.query<
+      AdminApiResponse<AdminUserRecord>,
+      string
+    >({
+      query: (userId) => ({
+        url: `/admin/users/${userId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, userId) => [
+        { type: "User", id: userId },
+      ],
+    }),
+
+    getAdminAgentById: builder.query<
+      AdminApiResponse<AdminUserRecord>,
+      string
+    >({
+      query: (agentId) => ({
+        url: `/admin/agents/${agentId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, agentId) => [
+        { type: "User", id: agentId },
+      ],
+    }),
+
+    createAdminAgent: builder.mutation<
+      AdminApiResponse<AdminUserRecord>,
+      CreateAdminAgentInput
+    >({
+      query: (input) => ({
+        url: "/admin/agents",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: [{ type: "User", id: "LIST" }],
+    }),
+
+    createAdminStaff: builder.mutation<
+      AdminApiResponse<AdminUserRecord>,
+      CreateAdminStaffInput
+    >({
+      query: (input) => ({
+        url: "/admin/staff",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: [
+        { type: "User", id: "LIST" },
+        { type: "User", id: "STAFF_LIST" },
+      ],
+    }),
+
+    updateAdminUser: builder.mutation<
+      AdminApiResponse<AdminUserRecord>,
+      UpdateAdminUserInput
+    >({
+      query: ({ userId, ...body }) => ({
+        url: `/admin/users/${userId}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { userId }) => [
+        { type: "User", id: userId },
+        { type: "User", id: "LIST" },
+        { type: "User", id: "STAFF_LIST" },
+      ],
+    }),
+
+    updateAdminAgent: builder.mutation<
+      AdminApiResponse<AdminUserRecord>,
+      UpdateAdminAgentInput
+    >({
+      query: ({ agentId, ...body }) => ({
+        url: `/admin/agents/${agentId}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { agentId }) => [
+        { type: "User", id: agentId },
+        { type: "User", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -368,6 +490,17 @@ export const {
   useAssignBookingStaffMutation,
   useUpdateBookingFulfillmentStatusMutation,
   useReviewBookingPriceApprovalMutation,
+  // User Management Hooks
+  useGetAdminUsersQuery,
+  useLazyGetAdminUsersQuery,
+  useGetAdminUserByIdQuery,
+  useLazyGetAdminUserByIdQuery,
+  useGetAdminAgentByIdQuery,
+  useLazyGetAdminAgentByIdQuery,
+  useCreateAdminAgentMutation,
+  useCreateAdminStaffMutation,
+  useUpdateAdminUserMutation,
+  useUpdateAdminAgentMutation,
 } = adminApi;
 
 export * from "../types/admin";
