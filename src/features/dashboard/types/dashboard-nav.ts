@@ -12,12 +12,15 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
+import type { PermissionId } from "@/features/admin/types/admin-permissions";
+
 export interface DashboardNavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   exact?: boolean;
+  permission?: PermissionId;
 }
 
 export interface DashboardNavConfig {
@@ -66,36 +69,43 @@ export const adminNavConfig: DashboardNavConfig = {
       href: "/dashboard/admin",
       icon: LayoutDashboard,
       exact: true,
+      permission: "dashboard.view",
     },
     {
       title: "Tours Management",
       href: "/dashboard/admin/tours",
       icon: Compass,
+      permission: "tours.view",
     },
     {
       title: "Media Library",
       href: "/dashboard/admin/media",
       icon: ImageIcon,
+      permission: "media.view",
     },
     {
       title: "Bookings Management",
       href: "/dashboard/admin/bookings",
       icon: ClipboardList,
+      permission: "bookings.view",
     },
     {
       title: "Users Management",
       href: "/dashboard/admin/users",
       icon: Users,
+      permission: "users.view",
     },
     {
       title: "Categories",
       href: "/dashboard/admin/categories",
       icon: Tag,
+      permission: "tours.view",
     },
     {
       title: "Settings / Reports",
       href: "/dashboard/admin/settings",
       icon: Sliders,
+      permission: "reports.view",
     },
   ],
 };

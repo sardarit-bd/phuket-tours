@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   selectCurrentUser,
@@ -12,6 +12,7 @@ import {
   selectAuthStatus,
 } from "../slices/auth-slice";
 import { authApi } from "../api/auth-api";
+import { useGetEffectivePermissionsQuery } from "@/features/admin/api/admin-api";
 import { Button } from "@/components/ui/button";
 
 interface DashboardGuardProps {
@@ -45,11 +46,33 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
   const isAdminRoute =
     pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/");
   const isUserAdmin = user?.role === "admin";
+  const isUserStaff = user?.role === "staff";
+  const hasAdminPortalAccess = isUserAdmin || isUserStaff;
+
+  const { data: effectivePermsData, isLoading: isPermissionsLoading } =
+    useGetEffectivePermissionsQuery(undefined, {
+      skip: !isInitialized || !isAuthenticated || user?.role !== "staff" || !isAdminRoute,
+    });
+  const staffPermissions = React.useMemo(() => {
+    return effectivePermsData?.data?.permissions || [];
+  }, [effectivePermsData?.data?.permissions]);
 
   // Strict role-based authorization:
-  // - Admin is authorized ONLY on admin routes (/dashboard/admin and nested)
-  // - Non-admin is authorized ONLY on non-admin user dashboard routes
-  const isAuthorized = isUserAdmin ? isAdminRoute : !isAdminRoute;
+  // - Admin and Staff are authorized on admin routes (/dashboard/admin and nested)
+  // - Non-admin/staff is authorized ONLY on non-admin user dashboard routes
+  const isAuthorized = hasAdminPortalAccess ? isAdminRoute : !isAdminRoute;
+
+  // Module permission check for Staff members
+  const requiredPermission = React.useMemo(() => {
+    if (!isUserStaff) return null;
+    if (pathname.startsWith("/dashboard/admin/users")) return "users.view";
+    if (pathname.startsWith("/dashboard/admin/tours")) return "tours.view";
+    if (pathname.startsWith("/dashboard/admin/media")) return "media.view";
+    if (pathname.startsWith("/dashboard/admin/bookings")) return "bookings.view";
+    if (pathname.startsWith("/dashboard/admin/settings")) return "reports.view";
+    if (pathname === "/dashboard/admin") return "dashboard.view";
+    return null;
+  }, [isUserStaff, pathname]);
 
   // Effect: Handle unauthenticated redirection to /sign-in with return path
   React.useEffect(() => {
@@ -65,17 +88,17 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
   }, [isInitialized, isAuthenticated, authStatus, pathname, router]);
 
   // Effect: Handle strict role-based separation
-  // 1. Admin accessing customer routes (/dashboard, /dashboard/bookings, etc.) -> redirect to /dashboard/admin
+  // 1. Admin/Staff accessing customer routes (/dashboard, /dashboard/bookings, etc.) -> redirect to /dashboard/admin
   // 2. Non-admin customer accessing admin routes (/dashboard/admin, etc.) -> redirect to /dashboard
   React.useEffect(() => {
     if (isInitialized && isAuthenticated && !isAuthorized) {
-      if (isUserAdmin) {
+      if (hasAdminPortalAccess) {
         router.replace("/dashboard/admin");
       } else {
         router.replace("/dashboard");
       }
     }
-  }, [isInitialized, isAuthenticated, isAuthorized, isUserAdmin, router]);
+  }, [isInitialized, isAuthenticated, isAuthorized, hasAdminPortalAccess, router]);
 
   // 1. Initializing or loading state
   if (!isInitialized || authStatus === "loading") {
@@ -167,7 +190,7 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
 
   // 4. Role mismatch state (while redirecting)
   if (!isAuthorized) {
-    const isRedirectingAdmin = isUserAdmin && !isAdminRoute;
+    const isRedirectingAdmin = hasAdminPortalAccess && !isAdminRoute;
     return (
       <div
         className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFB]"
@@ -193,6 +216,54 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     );
   }
 
-  // 5. Authorized session
+  // 5. Staff fine-grained permission enforcement on admin portal
+  if (isUserStaff && isAdminRoute) {
+    if (isPermissionsLoading) {
+      return (
+        <div
+          className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFB]"
+          role="status"
+          aria-label="Verifying permissions"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-[#3297A3]" aria-hidden="true" />
+            <p className="text-sm font-medium text-[#74818A]">Verifying permissions...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (requiredPermission && !staffPermissions.includes(requiredPermission)) {
+      return (
+        <div
+          data-testid="staff-access-denied"
+          className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFB] p-4"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-sm text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-3">
+              <ShieldAlert className="h-6 w-6" aria-hidden="true" />
+            </div>
+            <h2 className="font-outfit text-lg font-bold text-[#18282A]">
+              Access Restricted
+            </h2>
+            <p className="mt-1 text-xs text-[#74818A] leading-relaxed">
+              Your staff account does not have permission to access this module (
+              <span className="font-mono text-[11px] font-semibold text-amber-700">
+                {requiredPermission}
+              </span>
+              ). Please contact your administrator to request access.
+            </p>
+            <div className="mt-5 flex justify-center">
+              <Button asChild size="sm" className="bg-[#176779] text-white text-xs px-5 h-9">
+                <Link href="/dashboard/admin">Return to Overview</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // 6. Authorized session
   return <>{children}</>;
 }

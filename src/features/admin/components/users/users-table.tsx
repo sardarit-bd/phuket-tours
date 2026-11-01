@@ -23,6 +23,14 @@ export interface UsersTableProps {
   onViewDetails: (user: AdminUserRecord) => void;
   onEditUser: (user: AdminUserRecord) => void;
   onToggleStatus: (user: AdminUserRecord) => void;
+  canEditUser?: boolean;
+  canToggleStatus?: boolean;
+  canManagePermissions?: boolean;
+  canDeleteUser?: boolean;
+  canResendInvitation?: boolean;
+  onManagePermissions?: (user: AdminUserRecord) => void;
+  onDeleteUser?: (user: AdminUserRecord) => void;
+  onResendInvitation?: (user: AdminUserRecord) => void;
 }
 
 function formatDate(dateStr?: string | null): string {
@@ -53,6 +61,14 @@ export function UsersTable({
   onViewDetails,
   onEditUser,
   onToggleStatus,
+  canEditUser = true,
+  canToggleStatus = true,
+  canManagePermissions = true,
+  canDeleteUser = true,
+  canResendInvitation = true,
+  onManagePermissions,
+  onDeleteUser,
+  onResendInvitation,
 }: UsersTableProps) {
   if (isLoading) {
     return (
@@ -182,7 +198,11 @@ export function UsersTable({
 
                 {/* Status Badge */}
                 <td className="py-3 px-4">
-                  <UserStatusBadge status={user.status} />
+                  <UserStatusBadge
+                    status={user.status}
+                    invitationStatus={user.invitationStatus}
+                    deletedAt={user.deletedAt}
+                  />
                 </td>
 
                 {/* Joined Date */}
@@ -198,9 +218,17 @@ export function UsersTable({
                   <UserActionsMenu
                     user={user}
                     currentUserId={currentUserId}
+                    canEditUser={canEditUser}
+                    canToggleStatus={canToggleStatus}
+                    canManagePermissions={canManagePermissions}
+                    canDeleteUser={canDeleteUser}
+                    canResendInvitation={canResendInvitation}
                     onViewDetails={onViewDetails}
                     onEditUser={onEditUser}
                     onToggleStatus={onToggleStatus}
+                    onManagePermissions={onManagePermissions}
+                    onDeleteUser={onDeleteUser}
+                    onResendInvitation={onResendInvitation}
                   />
                 </td>
               </tr>

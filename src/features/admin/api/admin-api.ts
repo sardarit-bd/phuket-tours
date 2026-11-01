@@ -34,6 +34,10 @@ import type {
   CreateAdminStaffInput,
   UpdateAdminUserInput,
   UpdateAdminAgentInput,
+  PermissionCatalogData,
+  StaffPermissionsData,
+  UpdateStaffPermissionsInput,
+  EffectivePermissionsData,
 } from "../types/admin";
 
 export const adminApi = baseApi.injectEndpoints({
@@ -457,6 +461,106 @@ export const adminApi = baseApi.injectEndpoints({
         { type: "User", id: "LIST" },
       ],
     }),
+
+    deleteAdminUser: builder.mutation<
+      AdminApiResponse<AdminUserRecord>,
+      string
+    >({
+      query: (userId) => ({
+        url: `/admin/users/${userId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, userId) => [
+        { type: "User", id: userId },
+        { type: "User", id: "LIST" },
+        { type: "User", id: "STAFF_LIST" },
+      ],
+    }),
+
+    resendStaffInvitation: builder.mutation<
+      AdminApiResponse<void>,
+      string
+    >({
+      query: (staffId) => ({
+        url: `/admin/staff/${staffId}/resend-invitation`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, staffId) => [
+        { type: "User", id: staffId },
+        { type: "User", id: "LIST" },
+        { type: "User", id: "STAFF_LIST" },
+      ],
+    }),
+
+    resendUserInvitation: builder.mutation<
+      AdminApiResponse<void>,
+      string
+    >({
+      query: (userId) => ({
+        url: `/admin/users/${userId}/resend-invitation`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, userId) => [
+        { type: "User", id: userId },
+        { type: "User", id: "LIST" },
+        { type: "User", id: "STAFF_LIST" },
+      ],
+    }),
+
+    // Permissions Management Endpoints
+    getAdminPermissions: builder.query<
+      AdminApiResponse<PermissionCatalogData>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/permissions",
+        method: "GET",
+      }),
+      providesTags: ["AdminPermission"],
+      keepUnusedDataFor: 300,
+    }),
+
+    getStaffPermissions: builder.query<
+      AdminApiResponse<StaffPermissionsData>,
+      string
+    >({
+      query: (staffId) => ({
+        url: `/admin/staff/${staffId}/permissions`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, staffId) => [
+        { type: "AdminPermission", id: staffId },
+      ],
+      keepUnusedDataFor: 60,
+    }),
+
+    updateStaffPermissions: builder.mutation<
+      AdminApiResponse<StaffPermissionsData>,
+      UpdateStaffPermissionsInput
+    >({
+      query: ({ staffId, permissions }) => ({
+        url: `/admin/staff/${staffId}/permissions`,
+        method: "PUT",
+        body: { permissions },
+      }),
+      invalidatesTags: (_result, _error, { staffId }) => [
+        "AdminPermission",
+        { type: "AdminPermission", id: staffId },
+        "User",
+      ],
+    }),
+
+    getEffectivePermissions: builder.query<
+      AdminApiResponse<EffectivePermissionsData>,
+      void
+    >({
+      query: () => ({
+        url: "/auth/me/permissions",
+        method: "GET",
+      }),
+      providesTags: ["AdminPermission", "Auth"],
+      keepUnusedDataFor: 60,
+    }),
   }),
 });
 
@@ -501,6 +605,17 @@ export const {
   useCreateAdminStaffMutation,
   useUpdateAdminUserMutation,
   useUpdateAdminAgentMutation,
+  useDeleteAdminUserMutation,
+  useResendStaffInvitationMutation,
+  useResendUserInvitationMutation,
+  // Staff Permission Hooks
+  useGetAdminPermissionsQuery,
+  useLazyGetAdminPermissionsQuery,
+  useGetStaffPermissionsQuery,
+  useLazyGetStaffPermissionsQuery,
+  useUpdateStaffPermissionsMutation,
+  useGetEffectivePermissionsQuery,
+  useLazyGetEffectivePermissionsQuery,
 } = adminApi;
 
 export * from "../types/admin";

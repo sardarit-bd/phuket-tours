@@ -39,6 +39,27 @@ export const authApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Auth", "User"],
     }),
+    validateInvitation: builder.query<
+      { success: boolean; data: { valid: boolean; user: { name: string; email: string; role: string } } },
+      string
+    >({
+      query: (token) => ({
+        url: "/auth/invitation/verify",
+        method: "GET",
+        params: { token },
+      }),
+    }),
+    setupPassword: builder.mutation<
+      MessageResponse,
+      { token: string; password: string }
+    >({
+      query: (data) => ({
+        url: "/auth/setup-password",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Auth", "User"],
+    }),
   }),
 });
 
@@ -48,6 +69,9 @@ export const {
   useLogoutMutation,
   useGetMeQuery,
   useLazyGetMeQuery,
+  useValidateInvitationQuery,
+  useLazyValidateInvitationQuery,
+  useSetupPasswordMutation,
 } = authApi;
 
 export * from "../types/auth";

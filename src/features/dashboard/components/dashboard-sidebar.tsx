@@ -18,6 +18,7 @@ import {
 import { useLogoutMutation } from "@/features/auth/api/auth-api";
 import { baseApi } from "@/lib/api/base-api";
 import { getInitials } from "@/features/auth/utils/avatar";
+import { usePermissions } from "@/features/admin/hooks/use-permissions";
 
 interface DashboardSidebarProps {
   config: DashboardNavConfig;
@@ -35,9 +36,18 @@ export function DashboardSidebar({
   const pathname = usePathname() ?? "/dashboard";
   const user = useAppSelector(selectCurrentUser);
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
+  const { hasPermission, isAdmin } = usePermissions();
 
   const isViewAdmin = config.role === "admin";
   const homeHref = isViewAdmin ? "/dashboard/admin" : "/dashboard";
+
+  const visibleItems = React.useMemo(() => {
+    return config.items.filter((item) => {
+      if (!item.permission) return true;
+      if (isAdmin) return true;
+      return hasPermission(item.permission);
+    });
+  }, [config.items, isAdmin, hasPermission]);
 
   const displayName =
     user?.name || (isViewAdmin ? "Admin Staff" : "Phuket Traveler");
@@ -106,7 +116,7 @@ export function DashboardSidebar({
           Menu
         </div>
         <ul className="space-y-1">
-          {config.items.map((item) => {
+          {visibleItems.map((item) => {
             const isActive = isNavItemActive(pathname, item);
             const Icon = item.icon;
 

@@ -18,6 +18,8 @@ export interface AdminAgentProfile {
   agencyName: string | null;
 }
 
+export type InvitationStatus = "none" | "pending" | "expired" | "completed";
+
 export interface AdminUserRecord {
   id: string;
   name: string;
@@ -25,6 +27,9 @@ export interface AdminUserRecord {
   phone: string | null;
   role: UserRole;
   status: UserStatus;
+  deletedAt?: string | null;
+  invitationStatus?: InvitationStatus;
+  canResendInvitation?: boolean;
   createdAt: string;
   updatedAt: string;
   agentProfile: AdminAgentProfile | null;

@@ -19,6 +19,7 @@ export const baseApi = createApi({
     "AdminServicePricing",
     "AdminServiceAvailability",
     "AdminMedia",
+    "AdminPermission",
   ],
   endpoints: () => ({}),
 });

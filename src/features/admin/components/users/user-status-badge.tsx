@@ -1,49 +1,85 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import type { UserStatus } from "../../types/admin-users";
+import type { UserStatus, InvitationStatus } from "../../types/admin-users";
 
 export interface UserStatusBadgeProps {
   status: UserStatus;
+  invitationStatus?: InvitationStatus;
+  deletedAt?: string | null;
   className?: string;
 }
 
-const statusConfig: Record<
-  UserStatus,
-  { label: string; badgeClasses: string; dotColor: string }
-> = {
-  active: {
-    label: "Active",
-    badgeClasses: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
-    dotColor: "bg-emerald-500",
-  },
-  deactivated: {
-    label: "Deactivated",
-    badgeClasses: "bg-rose-50 text-rose-700 border-rose-200/80",
-    dotColor: "bg-rose-500",
-  },
-};
+export function UserStatusBadge({
+  status,
+  invitationStatus,
+  deletedAt,
+  className,
+}: UserStatusBadgeProps) {
+  if (deletedAt) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border tracking-wide bg-slate-50 text-slate-700 border-slate-200",
+          className
+        )}
+        data-testid="user-status-badge-deleted"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-400" aria-hidden="true" />
+        <span>Archived</span>
+      </span>
+    );
+  }
 
-export function UserStatusBadge({ status, className }: UserStatusBadgeProps) {
-  const config = statusConfig[status] ?? {
-    label: status,
-    badgeClasses: "bg-gray-50 text-gray-700 border-gray-200",
-    dotColor: "bg-gray-400",
-  };
+  if (invitationStatus === "pending") {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border tracking-wide bg-amber-50 text-amber-700 border-amber-200/80",
+          className
+        )}
+        data-testid="user-status-badge-pending"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" aria-hidden="true" />
+        <span>Invitation Pending</span>
+      </span>
+    );
+  }
 
+  if (invitationStatus === "expired") {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border tracking-wide bg-orange-50 text-orange-700 border-orange-200/80",
+          className
+        )}
+        data-testid="user-status-badge-expired"
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-orange-500" aria-hidden="true" />
+        <span>Invitation Expired</span>
+      </span>
+    );
+  }
+
+  const isDeactivated = status === "deactivated";
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border tracking-wide",
-        config.badgeClasses,
+        isDeactivated
+          ? "bg-rose-50 text-rose-700 border-rose-200/80"
+          : "bg-emerald-50 text-emerald-700 border-emerald-200/80",
         className
       )}
       data-testid={`user-status-badge-${status}`}
     >
       <span
-        className={cn("h-1.5 w-1.5 rounded-full", config.dotColor)}
+        className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          isDeactivated ? "bg-rose-500" : "bg-emerald-500"
+        )}
         aria-hidden="true"
       />
-      <span>{config.label}</span>
+      <span>{isDeactivated ? "Deactivated" : "Active"}</span>
     </span>
   );
 }

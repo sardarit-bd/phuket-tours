@@ -353,5 +353,48 @@ describe("DashboardGuard Component", () => {
 
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
     });
+
+    it("redirects authenticated staff visiting /dashboard to /dashboard/admin", async () => {
+      mockPathname.mockReturnValue("/dashboard");
+      store.dispatch(
+        setCredentials({
+          id: "staff-1",
+          name: "Staff User",
+          email: "staff@phukettours.com",
+          role: "staff",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/admin");
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("status", { name: /redirecting to admin portal/i })
+      ).toBeInTheDocument();
+    });
+
+    it("displays access restricted banner for staff attempting to access unauthorized route", async () => {
+      mockPathname.mockReturnValue("/dashboard/admin/users");
+      store.dispatch(
+        setCredentials({
+          id: "staff-1",
+          name: "Staff User",
+          email: "staff@phukettours.com",
+          role: "staff",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("staff-access-denied")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Access Restricted")).toBeInTheDocument();
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    });
   });
 });

@@ -9,6 +9,7 @@ export interface UsersHeaderProps {
   onRefresh: () => void;
   isRefreshing?: boolean;
   totalUsers?: number;
+  canInvite?: boolean;
 }
 
 export function UsersHeader({
@@ -16,6 +17,7 @@ export function UsersHeader({
   onRefresh,
   isRefreshing = false,
   totalUsers,
+  canInvite = true,
 }: UsersHeaderProps) {
   return (
     <div className="space-y-3">
@@ -58,15 +60,17 @@ export function UsersHeader({
             {isRefreshing ? "Updating..." : "Refresh"}
           </Button>
 
-          <Button
-            onClick={onInviteUser}
-            size="sm"
-            className="bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664] cursor-pointer shadow-xs"
-            data-testid="invite-user-btn"
-          >
-            <UserPlus className="mr-1.5 h-4 w-4" />
-            Invite User
-          </Button>
+          {canInvite && (
+            <Button
+              onClick={onInviteUser}
+              size="sm"
+              className="bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664] cursor-pointer shadow-xs"
+              data-testid="invite-user-btn"
+            >
+              <UserPlus className="mr-1.5 h-4 w-4" />
+              Invite User
+            </Button>
+          )}
         </div>
       </div>
     </div>

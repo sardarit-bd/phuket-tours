@@ -12,5 +12,7 @@ export * from "./user-details-dialog";
 export * from "./edit-user-dialog";
 export * from "./invite-user-dialog";
 export * from "./deactivate-user-dialog";
+export * from "./delete-user-dialog";
+export * from "./manage-permissions-dialog";
 export * from "./users-table";
 export * from "./admin-users-view";

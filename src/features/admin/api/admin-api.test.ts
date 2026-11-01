@@ -1089,10 +1089,138 @@ describe("adminApi RTK Query endpoints", () => {
           "http://localhost:5000/api/v1/admin/agents/agt-1"
         );
         expect(capturedRequest?.method).toBe("PATCH");
+        expect("data" in result).toBe(true);
+      });
+    });
+
+    describe("Staff Permission Endpoints", () => {
+      it("GET /admin/permissions fetches permissions catalog", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Permission catalog retrieved successfully",
+          data: {
+            totalPermissions: 20,
+            modules: [
+              {
+                module: "tours",
+                permissions: [
+                  {
+                    id: "tours.view",
+                    module: "tours",
+                    action: "view",
+                    name: "View Tours",
+                    description: "View tour inventory",
+                  },
+                ],
+              },
+            ],
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.getAdminPermissions.initiate()
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/permissions"
+        );
+        expect(capturedRequest?.method).toBe("GET");
+        expect("data" in result).toBe(true);
+        if ("data" in result && result.data) {
+          expect(result.data.data.totalPermissions).toBe(20);
+          expect(result.data.data.modules[0].module).toBe("tours");
+        }
+      });
+
+      it("GET /admin/staff/:staffId/permissions fetches staff permissions", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Staff permissions retrieved successfully",
+          data: {
+            staffId: "stf-123",
+            role: "staff",
+            permissions: ["tours.view", "bookings.view"],
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.getStaffPermissions.initiate("stf-123")
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/staff/stf-123/permissions"
+        );
+        expect(capturedRequest?.method).toBe("GET");
+        expect("data" in result).toBe(true);
+        if ("data" in result && result.data) {
+          expect(result.data.data.staffId).toBe("stf-123");
+          expect(result.data.data.permissions).toEqual(["tours.view", "bookings.view"]);
+        }
+      });
+
+      it("PUT /admin/staff/:staffId/permissions updates staff permissions", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Staff permissions updated successfully",
+          data: {
+            staffId: "stf-123",
+            role: "staff",
+            permissions: ["tours.view", "bookings.view", "tours.create"],
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.updateStaffPermissions.initiate({
+            staffId: "stf-123",
+            permissions: ["tours.view", "bookings.view", "tours.create"],
+          })
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/admin/staff/stf-123/permissions"
+        );
+        expect(capturedRequest?.method).toBe("PUT");
         expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
-          agencyName: "Updated Island Tours",
+          permissions: ["tours.view", "bookings.view", "tours.create"],
         });
         expect("data" in result).toBe(true);
+      });
+
+      it("GET /auth/me/permissions fetches effective permissions", async () => {
+        const mockResponse = {
+          success: true,
+          message: "Effective permissions retrieved successfully",
+          data: {
+            userId: "usr-staff-1",
+            role: "staff",
+            permissions: ["tours.view", "reports.view"],
+          },
+        };
+
+        setupMockFetch(200, mockResponse);
+        const store = makeStore();
+
+        const result = await store.dispatch(
+          adminApi.endpoints.getEffectivePermissions.initiate()
+        );
+
+        expect(capturedRequest?.url).toBe(
+          "http://localhost:5000/api/v1/auth/me/permissions"
+        );
+        expect(capturedRequest?.method).toBe("GET");
+        expect("data" in result).toBe(true);
+        if ("data" in result && result.data) {
+          expect(result.data.data.permissions).toEqual(["tours.view", "reports.view"]);
+        }
       });
     });
   });

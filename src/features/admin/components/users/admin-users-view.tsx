@@ -4,7 +4,11 @@ import * as React from "react";
 import { AlertCircle, CheckCircle2, X } from "lucide-react";
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
-import { useGetAdminUsersQuery } from "../../api/admin-api";
+import {
+  useGetAdminUsersQuery,
+  useResendStaffInvitationMutation,
+  useResendUserInvitationMutation,
+} from "../../api/admin-api";
 import { UsersHeader } from "./users-header";
 import { UsersSummaryCards } from "./users-summary-cards";
 import { UsersToolbar } from "./users-toolbar";
@@ -14,6 +18,9 @@ import { UserDetailsDialog } from "./user-details-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
 import { InviteUserDialog } from "./invite-user-dialog";
 import { DeactivateUserDialog } from "./deactivate-user-dialog";
+import { DeleteUserDialog } from "./delete-user-dialog";
+import { ManagePermissionsDialog } from "./manage-permissions-dialog";
+import { usePermissions } from "../../hooks/use-permissions";
 import type {
   AdminUserRecord,
   UserRole,
@@ -30,6 +37,15 @@ export function AdminUsersView() {
   // 1. Current authenticated admin user (for self-deactivation protection)
   const currentAuthUser = useAppSelector(selectCurrentUser);
   const currentUserId = currentAuthUser?.id || null;
+
+  // Permissions checks
+  const { isAdmin, hasPermission } = usePermissions();
+  const canInvite = isAdmin || hasPermission("users.invite_staff") || hasPermission("users.invite_agent");
+  const canEditUser = isAdmin || hasPermission("users.edit");
+  const canToggleStatus = isAdmin || hasPermission("users.deactivate");
+  const canManagePermissions = isAdmin; // Only admin can assign/manage staff permissions
+  const canDeleteUser = isAdmin || hasPermission("users.delete");
+  const canResendInvitation = isAdmin || hasPermission("users.invite_staff") || hasPermission("users.invite_agent");
 
   // 2. Pagination & filter states
   const [page, setPage] = React.useState<number>(1);
@@ -56,6 +72,13 @@ export function AdminUsersView() {
     React.useState<AdminUserRecord | null>(null);
   const [userForStatusToggle, setUserForStatusToggle] =
     React.useState<AdminUserRecord | null>(null);
+  const [userForPermissions, setUserForPermissions] =
+    React.useState<AdminUserRecord | null>(null);
+  const [userForDelete, setUserForDelete] =
+    React.useState<AdminUserRecord | null>(null);
+
+  const [resendStaffInvitation] = useResendStaffInvitationMutation();
+  const [resendUserInvitation] = useResendUserInvitationMutation();
 
   // 4. Action feedback banner
   const [feedback, setFeedback] = React.useState<ActionFeedback | null>(null);
@@ -175,6 +198,39 @@ export function AdminUsersView() {
     refetchUsers();
   }, [refetchUsers]);
 
+  const handleDeleteSuccess = React.useCallback(() => {
+    setFeedback({
+      type: "success",
+      message: "User account deleted and archived successfully.",
+    });
+    refetchUsers();
+  }, [refetchUsers]);
+
+  const handleResendInvitation = React.useCallback(
+    async (user: AdminUserRecord) => {
+      try {
+        if (user.role === "staff") {
+          await resendStaffInvitation(user.id).unwrap();
+        } else {
+          await resendUserInvitation(user.id).unwrap();
+        }
+        setFeedback({
+          type: "success",
+          message: `Fresh onboarding invitation sent to ${user.email}.`,
+        });
+        refetchUsers();
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { message?: string } };
+        setFeedback({
+          type: "error",
+          message:
+            apiErr?.data?.message || "Failed to resend invitation email.",
+        });
+      }
+    },
+    [resendStaffInvitation, resendUserInvitation, refetchUsers]
+  );
+
   const errorMessage = React.useMemo(() => {
     if (!usersError) return undefined;
     if (typeof usersError === "object" && "data" in usersError) {
@@ -225,6 +281,7 @@ export function AdminUsersView() {
         onRefresh={handleRefresh}
         isRefreshing={isUsersFetching}
         totalUsers={pagination.total}
+        canInvite={canInvite}
       />
 
       {/* Summary Cards */}
@@ -259,12 +316,20 @@ export function AdminUsersView() {
           isError={isUsersError}
           errorMessage={errorMessage}
           isFiltered={isFiltered}
+          canEditUser={canEditUser}
+          canToggleStatus={canToggleStatus}
+          canManagePermissions={canManagePermissions}
+          canDeleteUser={canDeleteUser}
+          canResendInvitation={canResendInvitation}
           onRetry={() => refetchUsers()}
           onResetFilters={handleResetFilters}
           onInviteUser={() => setIsInviteOpen(true)}
           onViewDetails={(u) => setActiveUserForDetails(u)}
           onEditUser={(u) => setUserForEdit(u)}
           onToggleStatus={(u) => setUserForStatusToggle(u)}
+          onManagePermissions={(u) => setUserForPermissions(u)}
+          onDeleteUser={(u) => setUserForDelete(u)}
+          onResendInvitation={handleResendInvitation}
         />
 
         {/* Server-side Pagination */}
@@ -314,6 +379,31 @@ export function AdminUsersView() {
         user={userForStatusToggle}
         currentUserId={currentUserId}
         onSuccess={handleStatusToggleSuccess}
+      />
+
+      {/* Dialog 5: Manage Staff Permissions */}
+      {userForPermissions && (
+        <ManagePermissionsDialog
+          isOpen={userForPermissions !== null}
+          onClose={() => setUserForPermissions(null)}
+          staff={userForPermissions}
+          onSuccess={(msg) => {
+            setFeedback({
+              type: "success",
+              message: msg || "Staff permissions updated successfully.",
+            });
+            refetchUsers();
+          }}
+        />
+      )}
+
+      {/* Dialog 6: Delete / Archive User Account */}
+      <DeleteUserDialog
+        isOpen={userForDelete !== null}
+        onClose={() => setUserForDelete(null)}
+        user={userForDelete}
+        currentUserId={currentUserId}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   );

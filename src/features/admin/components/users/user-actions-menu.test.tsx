@@ -105,4 +105,145 @@ describe("UserActionsMenu component", () => {
     expect(screen.getByText("Cannot self-deactivate")).toBeInTheDocument();
     expect(screen.queryByTestId("action-deactivate-user-usr-admin-me")).not.toBeInTheDocument();
   });
+
+  it("shows Manage Permissions button for staff users when canManagePermissions is true", () => {
+    const mockManagePermissions = vi.fn();
+    render(
+      <UserActionsMenu
+        user={MOCK_OTHER_USER} // role is 'staff'
+        currentUserId="usr-admin-me"
+        canManagePermissions={true}
+        onViewDetails={mockView}
+        onEditUser={mockEdit}
+        onToggleStatus={mockToggleStatus}
+        onManagePermissions={mockManagePermissions}
+      />
+    );
+
+    const trigger = screen.getByTestId("user-actions-trigger-usr-other-1");
+    fireEvent.click(trigger);
+
+    const manageBtn = screen.getByTestId("action-manage-permissions-usr-other-1");
+    expect(manageBtn).toBeInTheDocument();
+    expect(manageBtn).toHaveTextContent("Manage Permissions");
+
+    fireEvent.click(manageBtn);
+    expect(mockManagePermissions).toHaveBeenCalledWith(MOCK_OTHER_USER);
+  });
+
+  it("does not show Manage Permissions button for non-staff users", () => {
+    const mockManagePermissions = vi.fn();
+    render(
+      <UserActionsMenu
+        user={MOCK_SELF_ADMIN} // role is 'admin'
+        currentUserId="usr-other-1"
+        canManagePermissions={true}
+        onViewDetails={mockView}
+        onEditUser={mockEdit}
+        onToggleStatus={mockToggleStatus}
+        onManagePermissions={mockManagePermissions}
+      />
+    );
+
+    const trigger = screen.getByTestId("user-actions-trigger-usr-admin-me");
+    fireEvent.click(trigger);
+
+    expect(screen.queryByTestId("action-manage-permissions-usr-admin-me")).not.toBeInTheDocument();
+  });
+
+  it("hides Edit Account and Deactivate Account when permissions are denied", () => {
+    render(
+      <UserActionsMenu
+        user={MOCK_OTHER_USER}
+        currentUserId="usr-admin-me"
+        canEditUser={false}
+        canToggleStatus={false}
+        onViewDetails={mockView}
+        onEditUser={mockEdit}
+        onToggleStatus={mockToggleStatus}
+      />
+    );
+
+    const trigger = screen.getByTestId("user-actions-trigger-usr-other-1");
+    fireEvent.click(trigger);
+
+    expect(screen.getByTestId("action-view-user-usr-other-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("action-edit-user-usr-other-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("action-deactivate-user-usr-other-1")).not.toBeInTheDocument();
+  });
+
+  it("shows Delete User and calls onDeleteUser", () => {
+    const mockDelete = vi.fn();
+    render(
+      <UserActionsMenu
+        user={MOCK_OTHER_USER}
+        currentUserId="usr-admin-me"
+        onViewDetails={mockView}
+        onEditUser={mockEdit}
+        onToggleStatus={mockToggleStatus}
+        onDeleteUser={mockDelete}
+      />
+    );
+
+    const trigger = screen.getByTestId("user-actions-trigger-usr-other-1");
+    fireEvent.click(trigger);
+
+    const deleteBtn = screen.getByTestId("action-delete-user-usr-other-1");
+    expect(deleteBtn).toBeInTheDocument();
+    expect(deleteBtn).toHaveTextContent("Delete User");
+
+    fireEvent.click(deleteBtn);
+    expect(mockDelete).toHaveBeenCalledWith(MOCK_OTHER_USER);
+  });
+
+  it("blocks self-deletion when target is current user", () => {
+    const mockDelete = vi.fn();
+    render(
+      <UserActionsMenu
+        user={MOCK_SELF_ADMIN}
+        currentUserId="usr-admin-me"
+        onViewDetails={mockView}
+        onEditUser={mockEdit}
+        onToggleStatus={mockToggleStatus}
+        onDeleteUser={mockDelete}
+      />
+    );
+
+    const trigger = screen.getByTestId("user-actions-trigger-usr-admin-me");
+    fireEvent.click(trigger);
+
+    expect(screen.getByTestId("action-self-delete-blocked-usr-admin-me")).toBeInTheDocument();
+    expect(screen.getByText("Cannot delete self")).toBeInTheDocument();
+    expect(screen.queryByTestId("action-delete-user-usr-admin-me")).not.toBeInTheDocument();
+  });
+
+  it("shows Resend Invitation when user invitation is pending", () => {
+    const mockResend = vi.fn();
+    const pendingUser: AdminUserRecord = {
+      ...MOCK_OTHER_USER,
+      invitationStatus: "pending",
+      canResendInvitation: true,
+    };
+
+    render(
+      <UserActionsMenu
+        user={pendingUser}
+        currentUserId="usr-admin-me"
+        onViewDetails={mockView}
+        onEditUser={mockEdit}
+        onToggleStatus={mockToggleStatus}
+        onResendInvitation={mockResend}
+      />
+    );
+
+    const trigger = screen.getByTestId("user-actions-trigger-usr-other-1");
+    fireEvent.click(trigger);
+
+    const resendBtn = screen.getByTestId("action-resend-invitation-usr-other-1");
+    expect(resendBtn).toBeInTheDocument();
+    expect(resendBtn).toHaveTextContent("Resend Invitation");
+
+    fireEvent.click(resendBtn);
+    expect(mockResend).toHaveBeenCalledWith(pendingUser);
+  });
 });

@@ -8,7 +8,10 @@ import {
   Edit2,
   UserX,
   UserCheck,
+  Shield,
   ShieldAlert,
+  Send,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminUserRecord } from "../../types/admin-users";
@@ -16,9 +19,17 @@ import type { AdminUserRecord } from "../../types/admin-users";
 export interface UserActionsMenuProps {
   user: AdminUserRecord;
   currentUserId?: string | null;
+  canEditUser?: boolean;
+  canToggleStatus?: boolean;
+  canManagePermissions?: boolean;
+  canDeleteUser?: boolean;
+  canResendInvitation?: boolean;
   onViewDetails: (user: AdminUserRecord) => void;
   onEditUser: (user: AdminUserRecord) => void;
   onToggleStatus: (user: AdminUserRecord) => void;
+  onManagePermissions?: (user: AdminUserRecord) => void;
+  onDeleteUser?: (user: AdminUserRecord) => void;
+  onResendInvitation?: (user: AdminUserRecord) => void;
 }
 
 const emptySubscribe = () => () => {};
@@ -26,9 +37,17 @@ const emptySubscribe = () => () => {};
 export function UserActionsMenu({
   user,
   currentUserId,
+  canEditUser = true,
+  canToggleStatus = true,
+  canManagePermissions = true,
+  canDeleteUser = true,
+  canResendInvitation = true,
   onViewDetails,
   onEditUser,
   onToggleStatus,
+  onManagePermissions,
+  onDeleteUser,
+  onResendInvitation,
 }: UserActionsMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const isClient = React.useSyncExternalStore(emptySubscribe, () => true, () => false);
@@ -42,11 +61,18 @@ export function UserActionsMenu({
 
   const isSelf = Boolean(currentUserId && user.id === currentUserId);
   const isDeactivated = user.status === "deactivated";
+  const showResend =
+    canResendInvitation &&
+    Boolean(onResendInvitation) &&
+    (user.role === "staff" || user.role === "agent") &&
+    (user.canResendInvitation ||
+      user.invitationStatus === "pending" ||
+      user.invitationStatus === "expired");
 
   const updatePosition = React.useCallback(() => {
     if (!buttonRef.current || typeof window === "undefined") return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const menuHeight = 150;
+    const menuHeight = 220;
     const menuWidth = 192; // 12rem = 192px
 
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -127,7 +153,6 @@ export function UserActionsMenu({
 
   const handleStatusToggle = () => {
     if (isSelf && !isDeactivated) {
-      // Disallow self-deactivation strictly in the action handler
       return;
     }
     handleAction(() => onToggleStatus(user));
@@ -162,53 +187,113 @@ export function UserActionsMenu({
         <span>View Details</span>
       </button>
 
-      {/* 2. Edit User */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => handleAction(() => onEditUser(user))}
-        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
-        data-testid={`action-edit-user-${user.id}`}
-      >
-        <Edit2 className="h-4 w-4 text-[#74818A]" />
-        <span>Edit Account</span>
-      </button>
+      {/* 2. Manage Permissions (Staff accounts only) */}
+      {user.role === "staff" && canManagePermissions && onManagePermissions && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onManagePermissions(user))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#176779] hover:bg-[#EBF3F5] transition-colors cursor-pointer"
+          data-testid={`action-manage-permissions-${user.id}`}
+        >
+          <Shield className="h-4 w-4 text-[#176779]" />
+          <span>Manage Permissions</span>
+        </button>
+      )}
+
+      {/* 3. Resend Invitation (Pending/Expired Staff or Agent) */}
+      {showResend && onResendInvitation && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onResendInvitation(user))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#2B9BA8] hover:bg-[#EBF3F5] transition-colors cursor-pointer"
+          data-testid={`action-resend-invitation-${user.id}`}
+        >
+          <Send className="h-4 w-4 text-[#2B9BA8]" />
+          <span>Resend Invitation</span>
+        </button>
+      )}
+
+      {/* 4. Edit User */}
+      {canEditUser && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onEditUser(user))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+          data-testid={`action-edit-user-${user.id}`}
+        >
+          <Edit2 className="h-4 w-4 text-[#74818A]" />
+          <span>Edit Account</span>
+        </button>
+      )}
 
       {/* Divider */}
-      <div className="my-1 border-t border-[#E5EAED]" />
+      {canToggleStatus && <div className="my-1 border-t border-[#E5EAED]" />}
 
-      {/* 3. Activate / Deactivate Account */}
-      {isSelf && !isDeactivated ? (
-        <div
-          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] font-medium text-amber-700 bg-amber-50 cursor-not-allowed select-none"
-          title="You cannot deactivate your own administrative account"
-          data-testid={`action-self-deactivate-blocked-${user.id}`}
-        >
-          <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
-          <span>Cannot self-deactivate</span>
-        </div>
-      ) : isDeactivated ? (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={handleStatusToggle}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-          data-testid={`action-activate-user-${user.id}`}
-        >
-          <UserCheck className="h-4 w-4 text-emerald-600" />
-          <span>Activate Account</span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={handleStatusToggle}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
-          data-testid={`action-deactivate-user-${user.id}`}
-        >
-          <UserX className="h-4 w-4 text-rose-600" />
-          <span>Deactivate Account</span>
-        </button>
+      {/* 5. Activate / Deactivate Account */}
+      {canToggleStatus && (
+        isSelf && !isDeactivated ? (
+          <div
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] font-medium text-amber-700 bg-amber-50 cursor-not-allowed select-none"
+            title="You cannot deactivate your own administrative account"
+            data-testid={`action-self-deactivate-blocked-${user.id}`}
+          >
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>Cannot self-deactivate</span>
+          </div>
+        ) : isDeactivated ? (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleStatusToggle}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+            data-testid={`action-activate-user-${user.id}`}
+          >
+            <UserCheck className="h-4 w-4 text-emerald-600" />
+            <span>Activate Account</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleStatusToggle}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+            data-testid={`action-deactivate-user-${user.id}`}
+          >
+            <UserX className="h-4 w-4 text-rose-600" />
+            <span>Deactivate Account</span>
+          </button>
+        )
+      )}
+
+      {/* Divider */}
+      {canDeleteUser && <div className="my-1 border-t border-[#E5EAED]" />}
+
+      {/* 6. Delete Account */}
+      {canDeleteUser && onDeleteUser && (
+        isSelf ? (
+          <div
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[11px] font-medium text-amber-700 bg-amber-50 cursor-not-allowed select-none"
+            title="You cannot delete your own administrative account"
+            data-testid={`action-self-delete-blocked-${user.id}`}
+          >
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>Cannot delete self</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleAction(() => onDeleteUser(user))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+            data-testid={`action-delete-user-${user.id}`}
+          >
+            <Trash2 className="h-4 w-4 text-rose-600" />
+            <span>Delete User</span>
+          </button>
+        )
       )}
     </div>
   ) : null;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { UsersTable } from "./users-table";
 import type { AdminUserRecord } from "../../types/admin-users";
 
@@ -112,5 +112,40 @@ describe("UsersTable component", () => {
 
     expect(screen.getByTestId("users-empty-state")).toBeInTheDocument();
     expect(screen.getByText("No matching accounts found")).toBeInTheDocument();
+  });
+
+  it("propagates onManagePermissions for staff rows", () => {
+    const mockManage = vi.fn();
+    const staffUser: AdminUserRecord = {
+      id: "usr-staff-99",
+      name: "Staff Member",
+      email: "staff@phukettours.com",
+      phone: "+66 83 999 0000",
+      role: "staff",
+      status: "active",
+      createdAt: "2026-10-25T00:00:00.000Z",
+      updatedAt: "2026-10-25T00:00:00.000Z",
+      agentProfile: null,
+    };
+
+    render(
+      <UsersTable
+        users={[staffUser]}
+        currentUserId="usr-admin-1"
+        canManagePermissions={true}
+        onManagePermissions={mockManage}
+        {...mockHandlers}
+      />
+    );
+
+    // Open action menu
+    const trigger = screen.getByTestId("user-actions-trigger-usr-staff-99");
+    fireEvent.click(trigger);
+
+    const manageBtn = screen.getByTestId("action-manage-permissions-usr-staff-99");
+    expect(manageBtn).toBeInTheDocument();
+    fireEvent.click(manageBtn);
+
+    expect(mockManage).toHaveBeenCalledWith(staffUser);
   });
 });

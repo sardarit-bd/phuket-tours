@@ -54,6 +54,19 @@ vi.mock("@/store/hooks", () => ({
   }),
 }));
 
+// Mock permissions hook
+vi.mock("../../hooks/use-permissions", () => ({
+  usePermissions: vi.fn(() => ({
+    permissions: [],
+    isAdmin: true,
+    isStaff: false,
+    isLoading: false,
+    hasPermission: vi.fn(() => true),
+    hasAnyPermission: vi.fn(() => true),
+    hasAllPermissions: vi.fn(() => true),
+  })),
+}));
+
 // Mock RTK Query hooks
 vi.mock("../../api/admin-api", () => ({
   useGetAdminUsersQuery: vi.fn((params) => {
@@ -114,6 +127,37 @@ vi.mock("../../api/admin-api", () => ({
     { isLoading: false },
   ]),
   useCreateAdminAgentMutation: vi.fn(() => [
+    vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true }) }),
+    { isLoading: false },
+  ]),
+  useGetEffectivePermissionsQuery: vi.fn(() => ({
+    data: { data: { permissions: [] } },
+    isLoading: false,
+    isError: false,
+  })),
+  useGetAdminPermissionsQuery: vi.fn(() => ({
+    data: { data: { total: 0, modules: [] } },
+    isLoading: false,
+    isError: false,
+  })),
+  useGetStaffPermissionsQuery: vi.fn(() => ({
+    data: { data: { permissions: [] } },
+    isLoading: false,
+    isError: false,
+  })),
+  useUpdateStaffPermissionsMutation: vi.fn(() => [
+    vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true }) }),
+    { isLoading: false },
+  ]),
+  useDeleteAdminUserMutation: vi.fn(() => [
+    vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true }) }),
+    { isLoading: false },
+  ]),
+  useResendStaffInvitationMutation: vi.fn(() => [
+    vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true }) }),
+    { isLoading: false },
+  ]),
+  useResendUserInvitationMutation: vi.fn(() => [
     vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true }) }),
     { isLoading: false },
   ]),
