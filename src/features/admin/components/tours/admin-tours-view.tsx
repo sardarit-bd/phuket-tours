@@ -50,6 +50,7 @@ export function AdminToursView() {
     isOpen: boolean;
     mode: "create" | "edit";
     tourName?: string;
+    tour?: AdminServiceRecord | null;
   }>({
     isOpen: false,
     mode: "create",
@@ -350,10 +351,10 @@ export function AdminToursView() {
       />
 
       {/* Table Container Card */}
-      <div className="relative overflow-hidden rounded-2xl border border-[#E5EAED] bg-white shadow-2xs">
+      <div className="relative rounded-2xl border border-[#E5EAED] bg-white shadow-2xs">
         {/* Loading overlay indicator for background refetching */}
         {isListFetching && !isListLoading && (
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#176779] animate-pulse z-10" />
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#176779] animate-pulse z-10 rounded-t-2xl" />
         )}
 
         {/* State Rendering */}
@@ -388,6 +389,7 @@ export function AdminToursView() {
                   isOpen: true,
                   mode: "edit",
                   tourName: tour.name,
+                  tour,
                 })
               }
               onStatusChange={handleSingleStatusChange}
@@ -442,15 +444,28 @@ export function AdminToursView() {
             isOpen: true,
             mode: "edit",
             tourName: tour.name,
+            tour,
           })
         }
       />
 
       <AddTourDialog
         isOpen={addTourModal.isOpen}
-        onClose={() => setAddTourModal((prev) => ({ ...prev, isOpen: false }))}
+        onClose={() =>
+          setAddTourModal((prev) => ({ ...prev, isOpen: false, tour: null }))
+        }
         mode={addTourModal.mode}
         tourName={addTourModal.tourName}
+        tour={addTourModal.tour}
+        onSuccess={(savedTour) => {
+          refetchList();
+          setFeedback({
+            type: "success",
+            message: `Tour "${savedTour.name}" was successfully ${
+              addTourModal.mode === "create" ? "created" : "updated"
+            }.`,
+          });
+        }}
       />
     </div>
   );

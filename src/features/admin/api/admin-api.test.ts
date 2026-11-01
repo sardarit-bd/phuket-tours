@@ -473,5 +473,152 @@ describe("adminApi RTK Query endpoints", () => {
       }
     });
   });
+
+  describe("POST /admin/services (createAdminService)", () => {
+    it("sends service creation payload with type TOUR and metadata", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Service created successfully",
+        data: {
+          id: "tour-created-1",
+          name: "Phi Phi Speedboat",
+          type: "TOUR",
+          status: "DRAFT",
+          metadata: { destination: "Phi Phi Islands", duration: "Full Day" },
+        },
+      };
+
+      setupMockFetch(201, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.createAdminService.initiate({
+          name: "Phi Phi Speedboat",
+          type: "TOUR",
+          description: "Full day island tour",
+          metadata: { destination: "Phi Phi Islands", duration: "Full Day" },
+        })
+      );
+
+      expect(capturedRequest).toBeDefined();
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/services");
+      expect(capturedRequest?.method).toBe("POST");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        name: "Phi Phi Speedboat",
+        type: "TOUR",
+        description: "Full day island tour",
+        metadata: { destination: "Phi Phi Islands", duration: "Full Day" },
+      });
+
+      expect("data" in result).toBe(true);
+    });
+  });
+
+  describe("GET /admin/services/:serviceId (getAdminServiceById)", () => {
+    it("fetches service details including pricing and availability", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Admin service details retrieved successfully",
+        data: {
+          id: "tour-101",
+          name: "James Bond Island",
+          type: "TOUR",
+          status: "PUBLISHED",
+          pricing: [{ id: "p-1", basePrice: 120, currency: "USD" }],
+          availability: [{ id: "av-1", date: "2026-12-25", isAvailable: true }],
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminServiceById.initiate("tour-101")
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/services/tour-101");
+      expect(capturedRequest?.method).toBe("GET");
+      expect("data" in result).toBe(true);
+    });
+  });
+
+  describe("PATCH /admin/services/:serviceId (updateAdminService)", () => {
+    it("sends partial update for tour name and metadata", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Service updated successfully",
+        data: { id: "tour-101", name: "Updated Name" },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.updateAdminService.initiate({
+          serviceId: "tour-101",
+          name: "Updated Name",
+          metadata: { highlights: ["Snorkeling", "Canoeing"] },
+        })
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/services/tour-101");
+      expect(capturedRequest?.method).toBe("PATCH");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        name: "Updated Name",
+        metadata: { highlights: ["Snorkeling", "Canoeing"] },
+      });
+      expect("data" in result).toBe(true);
+    });
+  });
+
+  describe("PUT /admin/services/:serviceId/pricing & availability", () => {
+    it("updates pricing configuration", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Pricing updated successfully",
+        data: { id: "p-1", basePrice: 150, currency: "USD" },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.updateAdminServicePricing.initiate({
+          serviceId: "tour-101",
+          currency: "USD",
+          basePrice: 150,
+          discountedPrice: 120,
+        })
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/services/tour-101/pricing");
+      expect(capturedRequest?.method).toBe("PUT");
+      expect("data" in result).toBe(true);
+    });
+
+    it("updates availability schedule for a date", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Availability updated successfully",
+        data: { id: "av-1", date: "2026-12-25", isAvailable: true, capacity: 25 },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.updateAdminServiceAvailability.initiate({
+          serviceId: "tour-101",
+          date: "2026-12-25",
+          isAvailable: true,
+          capacity: 25,
+        })
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/services/tour-101/availability");
+      expect(capturedRequest?.method).toBe("PUT");
+      expect("data" in result).toBe(true);
+    });
+  });
 });
 

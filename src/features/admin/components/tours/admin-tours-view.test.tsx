@@ -9,6 +9,37 @@ vi.mock("@/features/admin/api/admin-api", () => {
     useGetAdminServicesQuery: vi.fn(),
     useUpdateAdminServiceStatusMutation: vi.fn(),
     useBulkUpdateAdminServiceStatusMutation: vi.fn(),
+    useGetAdminServiceByIdQuery: vi.fn(() => ({
+      data: { success: true, data: MOCK_TOUR },
+      isLoading: false,
+    })),
+    useCreateAdminServiceMutation: vi.fn(() => [
+      vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true, data: MOCK_TOUR }) }),
+      { isLoading: false },
+    ]),
+    useUpdateAdminServiceMutation: vi.fn(() => [
+      vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true, data: MOCK_TOUR }) }),
+      { isLoading: false },
+    ]),
+    useUpdateAdminServicePricingMutation: vi.fn(() => [
+      vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true, data: {} }) }),
+      { isLoading: false },
+    ]),
+    useUpdateAdminServiceAvailabilityMutation: vi.fn(() => [
+      vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true, data: {} }) }),
+      { isLoading: false },
+    ]),
+    useGetAdminServicePricingQuery: vi.fn(() => ({ data: { data: [] }, isLoading: false })),
+    useGetAdminServiceAvailabilityQuery: vi.fn(() => ({ data: { data: [] }, isLoading: false })),
+  };
+});
+
+vi.mock("@/features/admin/api/admin-media-api", () => {
+  return {
+    useGetAdminMediaQuery: vi.fn(() => ({
+      data: { data: { items: [], pagination: {} } },
+      isLoading: false,
+    })),
   };
 });
 
@@ -232,8 +263,8 @@ describe("AdminToursView component", () => {
 
     // Modal dialog title and details should be present
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("Pricing Configuration")).toBeInTheDocument();
-    expect(screen.getByText("Availability Schedule")).toBeInTheDocument();
+    expect(screen.getByText("Pricing & Package Variations")).toBeInTheDocument();
+    expect(screen.getByText("Availability & Departure Schedule")).toBeInTheDocument();
   });
 
   it("handles bulk selection and triggers confirmation modal", async () => {
@@ -273,6 +304,8 @@ describe("AdminToursView component", () => {
     fireEvent.click(addBtn);
 
     expect(screen.getByText("Create New Tour Package")).toBeInTheDocument();
-    expect(screen.getByText(/Dedicated Tour Builder — Scheduled for Phase Admin-2D/i)).toBeInTheDocument();
+    expect(screen.getByTestId("tour-editor-tab-basic")).toBeInTheDocument();
+    expect(screen.getByTestId("save-tour-draft-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("publish-tour-btn")).toBeInTheDocument();
   });
 });

@@ -154,6 +154,7 @@ export function Pagination({
               onChange={handlePageSizeSelect}
               size="sm"
               disabled={isFetching}
+              usePortal={true}
               aria-label={pageSizeLabel.replace(":", "") || "Items per page"}
               data-testid={`${dataTestId}-size-select`}
               className="w-auto"

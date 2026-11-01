@@ -84,3 +84,133 @@ export interface UpdateServiceStatusInput {
   serviceId: string;
   status: AdminServiceStatus;
 }
+
+export interface AdminServicePricingRecord {
+  id: string;
+  serviceId: string;
+  currency: string;
+  basePrice: number;
+  discountedPrice: number | null;
+  taxRate: number;
+  validFrom: string | null;
+  validTo: string | null;
+}
+
+export interface AdminServiceAvailabilityRecord {
+  id: string;
+  serviceId: string;
+  date: string;
+  isAvailable: boolean;
+  capacity: number | null;
+  bookedCount: number;
+  externalReferenceId: string | null;
+  lastVerifiedAt: string | null;
+}
+
+export interface AdminServiceMediaRecord {
+  id: string;
+  assetId: string;
+  publicId: string;
+  secureUrl: string;
+  originalFilename?: string | null;
+  format: string;
+  width?: number | null;
+  height?: number | null;
+  bytes: number;
+  folder: string;
+  createdAt: string;
+}
+
+export interface AdminServiceDetail extends AdminServiceRecord {
+  availability?: AdminServiceAvailabilityRecord[];
+  pricing?: AdminServicePricingRecord[];
+  media?: AdminServiceMediaRecord[];
+}
+
+export interface CreateAdminServiceInput {
+  name: string;
+  description?: string;
+  type: AdminServiceType;
+  providerName?: string;
+  providerId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateAdminServiceInput {
+  serviceId: string;
+  name?: string;
+  description?: string;
+  type?: AdminServiceType;
+  providerName?: string;
+  providerId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateAdminPricingInput {
+  serviceId: string;
+  currency?: string;
+  basePrice?: number;
+  discountedPrice?: number | null;
+  taxRate?: number;
+  validFrom?: string | null;
+  validTo?: string | null;
+}
+
+export interface UpdateAdminAvailabilityInput {
+  serviceId: string;
+  date: string; // YYYY-MM-DD
+  isAvailable: boolean;
+  capacity?: number;
+  externalReferenceId?: string;
+}
+
+export interface TourPricingTier {
+  tierName: string; // "Adult", "Child (4-11)", "Infant (0-3)", "Private Boat"
+  price: number;
+  description?: string;
+}
+
+export interface TourItineraryItem {
+  day?: number;
+  time?: string;
+  title: string;
+  description: string;
+}
+
+export interface TourScheduleDetails {
+  isDaily?: boolean;
+  daysOfWeek?: number[]; // 0 = Sunday, 1 = Monday...
+  timeSlots?: string[];
+  operatingHours?: string;
+}
+
+export interface TourMetadata {
+  slug?: string;
+  subtitle?: string;
+  categoryId?: string;
+  categoryName?: string;
+  destination?: string;
+  destinationCategory?: string;
+  location?: {
+    city?: string;
+    country?: string;
+    departurePoint?: string;
+  };
+  duration?: string;
+  durationCategory?: "half-day" | "full-day" | "multi-day" | "custom" | string;
+  tourType?: string;
+  groupSize?: string;
+  languages?: string[];
+  badge?: "Popular" | "Bestseller" | "New";
+  isFeatured?: boolean;
+  featuredImage?: string;
+  images?: string[];
+  highlights?: string[];
+  itinerary?: TourItineraryItem[];
+  included?: string[];
+  excluded?: string[];
+  pricingTiers?: TourPricingTier[];
+  scheduleDetails?: TourScheduleDetails;
+  importantInfo?: string;
+  [key: string]: unknown;
+}

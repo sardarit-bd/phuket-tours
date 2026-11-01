@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export interface CustomSelectProps<T extends string | number = string | number> 
   menuClassName?: string;
   align?: "left" | "right";
   disabled?: boolean;
+  usePortal?: boolean;
   "aria-label"?: string;
   "aria-labelledby"?: string;
   "data-testid"?: string;
@@ -61,6 +63,8 @@ const sizeStyles: Record<
   },
 };
 
+const emptySubscribe = () => () => {};
+
 export function CustomSelect<T extends string | number = string | number>({
   id = "custom-select",
   name,
@@ -75,6 +79,7 @@ export function CustomSelect<T extends string | number = string | number>({
   menuClassName = "",
   align = "left",
   disabled = false,
+  usePortal = false,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   "data-testid": dataTestId,
@@ -87,8 +92,14 @@ export function CustomSelect<T extends string | number = string | number>({
   const currentValue = isControlled ? controlledValue : internalValue;
 
   const [isOpen, setIsOpen] = React.useState(false);
+  const isClient = React.useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
   const [openUpwards, setOpenUpwards] = React.useState(false);
+  const [portalCoords, setPortalCoords] = React.useState<{
+    top: number;
+    left: number;
+    minWidth: number;
+  }>({ top: 0, left: 0, minWidth: 0 });
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -96,15 +107,34 @@ export function CustomSelect<T extends string | number = string | number>({
 
   const selectedOption = options.find((opt) => opt.value === currentValue);
 
-  // Auto-detect opening direction (upwards if space below is limited, e.g. in pagination footer)
+  // Auto-detect opening direction and compute portal coordinates
   const updateDirection = React.useCallback(() => {
     if (triggerRef.current && typeof window !== "undefined") {
       const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const estimatedMenuHeight = Math.min(options.length * 38 + 16, 240);
-      setOpenUpwards(spaceBelow < estimatedMenuHeight && rect.top > spaceBelow);
+      const estimatedMenuHeight = Math.min(options.length * 36 + 16, 240);
+      const upwards = spaceBelow < estimatedMenuHeight + 8 && rect.top > spaceBelow;
+      setOpenUpwards(upwards);
+
+      if (usePortal) {
+        const top = upwards
+          ? Math.max(8, rect.top - estimatedMenuHeight - 4)
+          : Math.min(window.innerHeight - estimatedMenuHeight - 8, rect.bottom + 4);
+
+        const menuWidth = Math.max(rect.width, 80);
+        const left =
+          align === "right"
+            ? Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8))
+            : Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8));
+
+        setPortalCoords({
+          top,
+          left,
+          minWidth: rect.width,
+        });
+      }
     }
-  }, [options.length]);
+  }, [options.length, usePortal, align]);
 
   const toggleOpen = () => {
     if (disabled) return;
@@ -123,9 +153,11 @@ export function CustomSelect<T extends string | number = string | number>({
     if (!isOpen) return;
 
     const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(target) &&
+        (!menuRef.current || !menuRef.current.contains(target))
       ) {
         setIsOpen(false);
       }
@@ -145,7 +177,11 @@ export function CustomSelect<T extends string | number = string | number>({
     if (!isOpen) return;
 
     const handleWindowEvents = () => {
-      updateDirection();
+      if (usePortal) {
+        setIsOpen(false);
+      } else {
+        updateDirection();
+      }
     };
 
     window.addEventListener("resize", handleWindowEvents);
@@ -155,7 +191,7 @@ export function CustomSelect<T extends string | number = string | number>({
       window.removeEventListener("resize", handleWindowEvents);
       window.removeEventListener("scroll", handleWindowEvents, true);
     };
-  }, [isOpen, updateDirection]);
+  }, [isOpen, updateDirection, usePortal]);
 
   // Scroll highlighted item into view during keyboard navigation
   React.useEffect(() => {
@@ -311,67 +347,136 @@ export function CustomSelect<T extends string | number = string | number>({
       </button>
 
       {/* Dropdown Menu Listbox */}
-      {isOpen && (
-        <ul
-          ref={menuRef}
-          id={`${id}-menu`}
-          role="listbox"
-          tabIndex={-1}
-          aria-labelledby={ariaLabelledBy || id}
-          className={cn(
-            "absolute z-50 min-w-full w-max max-w-[280px] max-h-60 overflow-y-auto rounded-xl border border-[#E5EAED] bg-white p-1 shadow-lg shadow-slate-900/10 focus:outline-none",
-            openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5",
-            align === "right" ? "right-0" : "left-0",
-            menuClassName
-          )}
-        >
-          {options.map((opt, index) => {
-            const isSelected = opt.value === currentValue;
-            const isHighlighted = index === highlightedIndex;
+      {isOpen &&
+        (usePortal && isClient && typeof document !== "undefined" ? (
+          createPortal(
+            <ul
+              ref={menuRef}
+              id={`${id}-menu`}
+              role="listbox"
+              tabIndex={-1}
+              aria-labelledby={ariaLabelledBy || id}
+              style={{
+                position: "fixed",
+                top: portalCoords.top,
+                left: portalCoords.left,
+                minWidth: portalCoords.minWidth,
+                zIndex: 9999,
+              }}
+              className={cn(
+                "z-50 min-w-full w-max max-w-[280px] max-h-60 overflow-y-auto rounded-xl border border-[#E5EAED] bg-white p-1 shadow-xl shadow-slate-900/10 focus:outline-none",
+                menuClassName
+              )}
+            >
+              {options.map((opt, index) => {
+                const isSelected = opt.value === currentValue;
+                const isHighlighted = index === highlightedIndex;
 
-            return (
-              <li
-                key={String(opt.value)}
-                id={`${id}-option-${index}`}
-                role="option"
-                aria-selected={isSelected}
-                aria-disabled={opt.disabled}
-                onClick={() => {
-                  if (!opt.disabled) {
-                    handleSelectOption(opt.value);
-                  }
-                }}
-                onMouseEnter={() => {
-                  if (!opt.disabled) {
-                    setHighlightedIndex(index);
-                  }
-                }}
-                className={cn(
-                  "group flex items-center justify-between gap-2.5 font-medium transition-colors cursor-pointer select-none outline-none",
-                  currentSize.option,
-                  opt.disabled && "opacity-40 cursor-not-allowed",
-                  isSelected
-                    ? "bg-[#E8F8F5] text-[#176779] font-semibold"
-                    : isHighlighted
-                    ? "bg-[#F8FAFB] text-[#18282A]"
-                    : "text-[#5C6C6E] hover:bg-[#F8FAFB] hover:text-[#18282A]"
-                )}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  {opt.icon && <span className="shrink-0">{opt.icon}</span>}
-                  <span className="truncate">{opt.label}</span>
-                </div>
-                {isSelected && (
-                  <Check
-                    className="h-3.5 w-3.5 text-[#176779] shrink-0 ml-1.5"
-                    aria-hidden="true"
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                return (
+                  <li
+                    key={String(opt.value)}
+                    id={`${id}-option-${index}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={opt.disabled}
+                    onClick={() => {
+                      if (!opt.disabled) {
+                        handleSelectOption(opt.value);
+                      }
+                    }}
+                    onMouseEnter={() => {
+                      if (!opt.disabled) {
+                        setHighlightedIndex(index);
+                      }
+                    }}
+                    className={cn(
+                      "group flex items-center justify-between gap-2.5 font-medium transition-colors cursor-pointer select-none outline-none",
+                      currentSize.option,
+                      opt.disabled && "opacity-40 cursor-not-allowed",
+                      isSelected
+                        ? "bg-[#E8F8F5] text-[#176779] font-semibold"
+                        : isHighlighted
+                        ? "bg-[#F8FAFB] text-[#18282A]"
+                        : "text-[#5C6C6E] hover:bg-[#F8FAFB] hover:text-[#18282A]"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {opt.icon && <span className="shrink-0">{opt.icon}</span>}
+                      <span className="truncate">{opt.label}</span>
+                    </div>
+                    {isSelected && (
+                      <Check
+                        className="h-3.5 w-3.5 text-[#176779] shrink-0 ml-1.5"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>,
+            document.body
+          )
+        ) : (
+          <ul
+            ref={menuRef}
+            id={`${id}-menu`}
+            role="listbox"
+            tabIndex={-1}
+            aria-labelledby={ariaLabelledBy || id}
+            className={cn(
+              "absolute z-50 min-w-full w-max max-w-[280px] max-h-60 overflow-y-auto rounded-xl border border-[#E5EAED] bg-white p-1 shadow-lg shadow-slate-900/10 focus:outline-none",
+              openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5",
+              align === "right" ? "right-0" : "left-0",
+              menuClassName
+            )}
+          >
+            {options.map((opt, index) => {
+              const isSelected = opt.value === currentValue;
+              const isHighlighted = index === highlightedIndex;
+
+              return (
+                <li
+                  key={String(opt.value)}
+                  id={`${id}-option-${index}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  aria-disabled={opt.disabled}
+                  onClick={() => {
+                    if (!opt.disabled) {
+                      handleSelectOption(opt.value);
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (!opt.disabled) {
+                      setHighlightedIndex(index);
+                    }
+                  }}
+                  className={cn(
+                    "group flex items-center justify-between gap-2.5 font-medium transition-colors cursor-pointer select-none outline-none",
+                    currentSize.option,
+                    opt.disabled && "opacity-40 cursor-not-allowed",
+                    isSelected
+                      ? "bg-[#E8F8F5] text-[#176779] font-semibold"
+                      : isHighlighted
+                      ? "bg-[#F8FAFB] text-[#18282A]"
+                      : "text-[#5C6C6E] hover:bg-[#F8FAFB] hover:text-[#18282A]"
+                  )}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {opt.icon && <span className="shrink-0">{opt.icon}</span>}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+                  {isSelected && (
+                    <Check
+                      className="h-3.5 w-3.5 text-[#176779] shrink-0 ml-1.5"
+                      aria-hidden="true"
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ))}
     </div>
   );
 }

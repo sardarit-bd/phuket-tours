@@ -11,8 +11,10 @@ export interface DialogProps {
   description?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  bodyClassName?: string;
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
   showCloseButton?: boolean;
+  noBodyWrapper?: boolean;
 }
 
 const SIZE_CLASSES = {
@@ -20,6 +22,7 @@ const SIZE_CLASSES = {
   md: "max-w-lg",
   lg: "max-w-2xl",
   xl: "max-w-4xl",
+  "2xl": "max-w-5xl",
 };
 
 export function Dialog({
@@ -29,8 +32,10 @@ export function Dialog({
   description,
   children,
   className,
+  bodyClassName,
   size = "md",
   showCloseButton = true,
+  noBodyWrapper = false,
 }: DialogProps) {
   const titleId = React.useId();
   const descId = React.useId();
@@ -59,7 +64,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
@@ -75,7 +80,7 @@ export function Dialog({
       {/* Dialog Surface */}
       <div
         className={cn(
-          "relative z-10 w-full rounded-2xl bg-white shadow-2xl transition-all duration-200 border border-[#E5EAED] flex flex-col max-h-[90vh]",
+          "relative z-10 w-full rounded-2xl bg-white shadow-2xl transition-all duration-200 border border-[#E5EAED] flex flex-col max-h-[calc(100dvh-32px)]",
           SIZE_CLASSES[size],
           className
         )}
@@ -111,8 +116,14 @@ export function Dialog({
           </div>
         )}
 
-        {/* Content body with custom scrolling */}
-        <div className="overflow-y-auto px-6 py-5 flex-1">{children}</div>
+        {/* Content body */}
+        {noBodyWrapper ? (
+          children
+        ) : (
+          <div className={cn("overflow-y-auto px-6 py-5 flex-1", bodyClassName)}>
+            {children}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,10 +9,17 @@ import type {
   AdminServicesReportQuery,
   AdminServicesListResponse,
   AdminServiceRecord,
+  AdminServiceDetail,
+  AdminServicePricingRecord,
+  AdminServiceAvailabilityRecord,
   GetAdminServicesParams,
   BulkUpdateServiceStatusInput,
   BulkUpdateServiceStatusResult,
   UpdateServiceStatusInput,
+  CreateAdminServiceInput,
+  UpdateAdminServiceInput,
+  UpdateAdminPricingInput,
+  UpdateAdminAvailabilityInput,
 } from "../types/admin";
 
 export const adminApi = baseApi.injectEndpoints({
@@ -104,6 +111,46 @@ export const adminApi = baseApi.injectEndpoints({
           : [{ type: "AdminService", id: "LIST" }],
     }),
 
+    getAdminServiceById: builder.query<
+      AdminApiResponse<AdminServiceDetail>,
+      string
+    >({
+      query: (serviceId) => ({
+        url: `/admin/services/${serviceId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, serviceId) => [
+        { type: "AdminService", id: serviceId },
+      ],
+    }),
+
+    createAdminService: builder.mutation<
+      AdminApiResponse<AdminServiceRecord>,
+      CreateAdminServiceInput
+    >({
+      query: (body) => ({
+        url: "/admin/services",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "AdminService", id: "LIST" }],
+    }),
+
+    updateAdminService: builder.mutation<
+      AdminApiResponse<AdminServiceRecord>,
+      UpdateAdminServiceInput
+    >({
+      query: ({ serviceId, ...body }) => ({
+        url: `/admin/services/${serviceId}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { serviceId }) => [
+        { type: "AdminService", id: serviceId },
+        { type: "AdminService", id: "LIST" },
+      ],
+    }),
+
     updateAdminServiceStatus: builder.mutation<
       AdminApiResponse<AdminServiceRecord>,
       UpdateServiceStatusInput
@@ -130,6 +177,64 @@ export const adminApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: [{ type: "AdminService", id: "LIST" }],
     }),
+
+    getAdminServicePricing: builder.query<
+      AdminApiResponse<AdminServicePricingRecord[]>,
+      string
+    >({
+      query: (serviceId) => ({
+        url: `/admin/services/${serviceId}/pricing`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, serviceId) => [
+        { type: "AdminServicePricing" as const, id: serviceId },
+      ],
+    }),
+
+    updateAdminServicePricing: builder.mutation<
+      AdminApiResponse<AdminServicePricingRecord>,
+      UpdateAdminPricingInput
+    >({
+      query: ({ serviceId, ...body }) => ({
+        url: `/admin/services/${serviceId}/pricing`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { serviceId }) => [
+        { type: "AdminServicePricing" as const, id: serviceId },
+        { type: "AdminService", id: serviceId },
+        { type: "AdminService", id: "LIST" },
+      ],
+    }),
+
+    getAdminServiceAvailability: builder.query<
+      AdminApiResponse<AdminServiceAvailabilityRecord[]>,
+      string
+    >({
+      query: (serviceId) => ({
+        url: `/admin/services/${serviceId}/availability`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, serviceId) => [
+        { type: "AdminServiceAvailability" as const, id: serviceId },
+      ],
+    }),
+
+    updateAdminServiceAvailability: builder.mutation<
+      AdminApiResponse<AdminServiceAvailabilityRecord>,
+      UpdateAdminAvailabilityInput
+    >({
+      query: ({ serviceId, ...body }) => ({
+        url: `/admin/services/${serviceId}/availability`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { serviceId }) => [
+        { type: "AdminServiceAvailability" as const, id: serviceId },
+        { type: "AdminService", id: serviceId },
+        { type: "AdminService", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -144,8 +249,18 @@ export const {
   useLazyGetAdminServicesReportQuery,
   useGetAdminServicesQuery,
   useLazyGetAdminServicesQuery,
+  useGetAdminServiceByIdQuery,
+  useLazyGetAdminServiceByIdQuery,
+  useCreateAdminServiceMutation,
+  useUpdateAdminServiceMutation,
   useUpdateAdminServiceStatusMutation,
   useBulkUpdateAdminServiceStatusMutation,
+  useGetAdminServicePricingQuery,
+  useLazyGetAdminServicePricingQuery,
+  useUpdateAdminServicePricingMutation,
+  useGetAdminServiceAvailabilityQuery,
+  useLazyGetAdminServiceAvailabilityQuery,
+  useUpdateAdminServiceAvailabilityMutation,
 } = adminApi;
 
 export * from "../types/admin";

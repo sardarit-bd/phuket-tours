@@ -32,7 +32,7 @@ export function ToursTable({
     tours.some((t) => selectedIds.includes(t.id)) && !allSelected;
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-t-2xl">
       <table
         data-testid="admin-tours-table"
         className="w-full text-left border-collapse text-xs"
