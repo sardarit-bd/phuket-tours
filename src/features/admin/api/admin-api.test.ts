@@ -620,5 +620,185 @@ describe("adminApi RTK Query endpoints", () => {
       expect("data" in result).toBe(true);
     });
   });
+
+  describe("Operational Bookings & Staff Management Endpoints", () => {
+    it("fetches operational bookings with pagination and filters", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Operational bookings retrieved successfully",
+        data: {
+          items: [],
+          page: 2,
+          limit: 25,
+          total: 50,
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminOperationsBookings.initiate({
+          page: 2,
+          limit: 25,
+          fulfillmentStatus: "IN_PROGRESS",
+          assignedStaffId: "00000000-0000-0000-0000-000000000001",
+        })
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/operations/bookings?page=2&limit=25&fulfillmentStatus=IN_PROGRESS&assignedStaffId=00000000-0000-0000-0000-000000000001"
+      );
+      expect(capturedRequest?.method).toBe("GET");
+      expect("data" in result).toBe(true);
+    });
+
+    it("fetches staff accounts for operational assignments", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Staff retrieved successfully",
+        data: {
+          items: [
+            {
+              id: "staff-1",
+              name: "Staff Member",
+              email: "staff@example.com",
+              role: "staff",
+              status: "active",
+            },
+          ],
+          pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminStaff.initiate()
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/staff");
+      expect(capturedRequest?.method).toBe("GET");
+      expect("data" in result).toBe(true);
+    });
+
+    it("assigns staff member to operational booking", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Booking assignment updated successfully",
+        data: { id: "bkg-101", assignedStaffId: "staff-1" },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.assignBookingStaff.initiate({
+          bookingId: "bkg-101",
+          staffId: "staff-1",
+          notes: "Handover at pier",
+        })
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/operations/bookings/bkg-101/assignment"
+      );
+      expect(capturedRequest?.method).toBe("PATCH");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        staffId: "staff-1",
+        notes: "Handover at pier",
+      });
+      expect("data" in result).toBe(true);
+    });
+
+    it("unassigns staff when staffId is null", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Booking assignment updated successfully",
+        data: { id: "bkg-101", assignedStaffId: null },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.assignBookingStaff.initiate({
+          bookingId: "bkg-101",
+          staffId: null,
+        })
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/operations/bookings/bkg-101/assignment"
+      );
+      expect(capturedRequest?.method).toBe("PATCH");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        staffId: null,
+      });
+      expect("data" in result).toBe(true);
+    });
+
+    it("updates booking fulfillment status with required notes", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Fulfillment status updated successfully",
+        data: { id: "bkg-101", fulfillmentStatus: "IN_PROGRESS" },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.updateBookingFulfillmentStatus.initiate({
+          bookingId: "bkg-101",
+          fulfillmentStatus: "IN_PROGRESS",
+          notes: "Guests boarded speedboat",
+        })
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/operations/bookings/bkg-101/status"
+      );
+      expect(capturedRequest?.method).toBe("PATCH");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        fulfillmentStatus: "IN_PROGRESS",
+        notes: "Guests boarded speedboat",
+      });
+      expect("data" in result).toBe(true);
+    });
+
+    it("reviews booking price approval proposal", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Price proposal reviewed successfully",
+        data: { id: "bkg-101", status: "CONFIRMED", finalPrice: 2500 },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.reviewBookingPriceApproval.initiate({
+          bookingId: "bkg-101",
+          status: "APPROVED",
+          approvedPrice: 2500,
+          notes: "Approved special group discount",
+        })
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/bookings/bkg-101/price-approvals"
+      );
+      expect(capturedRequest?.method).toBe("POST");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        status: "APPROVED",
+        approvedPrice: 2500,
+        notes: "Approved special group discount",
+      });
+      expect("data" in result).toBe(true);
+    });
+  });
 });
+
 

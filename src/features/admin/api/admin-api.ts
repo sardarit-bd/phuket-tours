@@ -20,6 +20,13 @@ import type {
   UpdateAdminServiceInput,
   UpdateAdminPricingInput,
   UpdateAdminAvailabilityInput,
+  AdminBookingsListResponse,
+  GetAdminBookingsParams,
+  OperationalBookingRecord,
+  AssignBookingStaffInput,
+  UpdateBookingFulfillmentInput,
+  ReviewBookingPriceApprovalInput,
+  AdminStaffListResponse,
 } from "../types/admin";
 
 export const adminApi = baseApi.injectEndpoints({
@@ -235,6 +242,99 @@ export const adminApi = baseApi.injectEndpoints({
         { type: "AdminService", id: "LIST" },
       ],
     }),
+
+    getAdminOperationsBookings: builder.query<
+      AdminApiResponse<AdminBookingsListResponse>,
+      GetAdminBookingsParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.fulfillmentStatus) queryParams.fulfillmentStatus = params.fulfillmentStatus;
+        if (params?.assignedStaffId) queryParams.assignedStaffId = params.assignedStaffId;
+
+        return {
+          url: "/admin/operations/bookings",
+          method: "GET",
+          params: queryParams,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((b) => ({
+                type: "Booking" as const,
+                id: b.id,
+              })),
+              { type: "Booking", id: "LIST" },
+            ]
+          : [{ type: "Booking", id: "LIST" }],
+    }),
+
+    getAdminStaff: builder.query<
+      AdminApiResponse<AdminStaffListResponse>,
+      { page?: number; limit?: number; status?: string } | void
+    >({
+      query: (params) => ({
+        url: "/admin/staff",
+        method: "GET",
+        params: params || undefined,
+      }),
+      providesTags: [{ type: "User", id: "STAFF_LIST" }],
+    }),
+
+    assignBookingStaff: builder.mutation<
+      AdminApiResponse<OperationalBookingRecord>,
+      AssignBookingStaffInput
+    >({
+      query: ({ bookingId, staffId, notes }) => ({
+        url: `/admin/operations/bookings/${bookingId}/assignment`,
+        method: "PATCH",
+        body: { staffId, notes },
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    updateBookingFulfillmentStatus: builder.mutation<
+      AdminApiResponse<OperationalBookingRecord>,
+      UpdateBookingFulfillmentInput
+    >({
+      query: ({ bookingId, fulfillmentStatus, notes }) => ({
+        url: `/admin/operations/bookings/${bookingId}/status`,
+        method: "PATCH",
+        body: { fulfillmentStatus, notes },
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    reviewBookingPriceApproval: builder.mutation<
+      AdminApiResponse<OperationalBookingRecord>,
+      ReviewBookingPriceApprovalInput
+    >({
+      query: ({ bookingId, status, approvedPrice, notes }) => ({
+        url: `/admin/bookings/${bookingId}/price-approvals`,
+        method: "POST",
+        body: {
+          status,
+          ...(approvedPrice !== undefined ? { approvedPrice } : {}),
+          ...(notes ? { notes } : {}),
+        },
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+        "AdminReport",
+      ],
+    }),
   }),
 });
 
@@ -261,6 +361,13 @@ export const {
   useGetAdminServiceAvailabilityQuery,
   useLazyGetAdminServiceAvailabilityQuery,
   useUpdateAdminServiceAvailabilityMutation,
+  useGetAdminOperationsBookingsQuery,
+  useLazyGetAdminOperationsBookingsQuery,
+  useGetAdminStaffQuery,
+  useLazyGetAdminStaffQuery,
+  useAssignBookingStaffMutation,
+  useUpdateBookingFulfillmentStatusMutation,
+  useReviewBookingPriceApprovalMutation,
 } = adminApi;
 
 export * from "../types/admin";
