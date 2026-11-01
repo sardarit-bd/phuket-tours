@@ -287,4 +287,55 @@ describe("AdminMediaView component", () => {
       expect(mockRefetch).toHaveBeenCalled();
     });
   });
+
+  it("integrates with centralized pagination and updates query params on page and page size changes", async () => {
+    vi.mocked(mediaApiModule.useGetAdminMediaQuery).mockReturnValue({
+      data: {
+        success: true,
+        message: "ok",
+        data: {
+          items: MOCK_MEDIA_ITEMS,
+          pagination: { page: 1, limit: 12, total: 36, totalPages: 3 },
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: mockRefetch,
+    } as unknown as MediaQueryReturn);
+
+    render(<AdminMediaView />);
+
+    // Initial query should be called with page: 1, limit: 12
+    expect(mediaApiModule.useGetAdminMediaQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, limit: 12 })
+    );
+
+    // Verify pagination is rendered
+    expect(screen.getByTestId("media-pagination")).toBeInTheDocument();
+    expect(screen.getByText("1–12")).toBeInTheDocument();
+    expect(screen.getByText("36")).toBeInTheDocument();
+
+    // Click Next page button
+    const nextBtn = screen.getByTestId("media-pagination-next");
+    fireEvent.click(nextBtn);
+
+    // Next render should query page 2
+    expect(mediaApiModule.useGetAdminMediaQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2, limit: 12 })
+    );
+
+    // Open CustomSelect and pick 24 per page
+    const sizeCombobox = screen.getByTestId("media-pagination-size-select").querySelector("button");
+    if (sizeCombobox) {
+      fireEvent.click(sizeCombobox);
+      const option24 = screen.getByRole("option", { name: "24" });
+      fireEvent.click(option24);
+
+      // Should query with limit: 24 and reset to page: 1
+      expect(mediaApiModule.useGetAdminMediaQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, limit: 24 })
+      );
+    }
+  });
 });

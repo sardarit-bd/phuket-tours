@@ -40,23 +40,23 @@ export function MediaGrid({
     return (
       <div
         data-testid="media-loading-skeleton"
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4"
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-3.5 sm:[grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]"
       >
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 12 }).map((_, i) => (
           <div
             key={`media-skeleton-${i}`}
-            className="flex flex-col overflow-hidden rounded-2xl border border-[#E5EAED] bg-white shadow-xs animate-pulse"
+            className="flex flex-col overflow-hidden rounded-xl border border-[#E5EAED] bg-white shadow-xs animate-pulse"
           >
-            <div className="aspect-4/3 w-full bg-[#E5EAED]" />
-            <div className="p-3 space-y-2">
-              <div className="h-3.5 w-3/4 rounded-md bg-[#E5EAED]" />
+            <div className="aspect-square w-full bg-[#E5EAED]" />
+            <div className="p-2.5 space-y-2">
+              <div className="h-3 w-3/4 rounded-md bg-[#E5EAED]" />
               <div className="flex justify-between">
                 <div className="h-2.5 w-1/3 rounded-md bg-[#E5EAED]" />
                 <div className="h-2.5 w-1/4 rounded-md bg-[#E5EAED]" />
               </div>
-              <div className="flex justify-between pt-2 border-t border-[#E5EAED]">
-                <div className="h-3 w-16 rounded-md bg-[#E5EAED]" />
-                <div className="h-3 w-16 rounded-md bg-[#E5EAED]" />
+              <div className="flex justify-between pt-1.5 border-t border-[#E5EAED]/60">
+                <div className="h-3 w-14 rounded-md bg-[#E5EAED]" />
+                <div className="h-3 w-14 rounded-md bg-[#E5EAED]" />
               </div>
             </div>
           </div>
@@ -165,7 +165,7 @@ export function MediaGrid({
   return (
     <div
       data-testid="media-grid"
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4"
+      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-3.5 sm:[grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]"
     >
       {items.map((item) => (
         <MediaCard

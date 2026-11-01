@@ -83,4 +83,32 @@ describe("ToursPagination component", () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("uses CustomSelect for row limit change and does not use native select", () => {
+    const handleLimitChange = vi.fn();
+    render(
+      <ToursPagination
+        page={1}
+        totalPages={10}
+        total={100}
+        limit={10}
+        onPageChange={vi.fn()}
+        onLimitChange={handleLimitChange}
+      />
+    );
+
+    // No native select
+    expect(screen.queryByRole("combobox", { name: "select" })).not.toBeInTheDocument();
+
+    const sizeCombobox = screen.getByTestId("tours-pagination-size-select").querySelector("button");
+    expect(sizeCombobox).toBeInTheDocument();
+    expect(sizeCombobox).toHaveTextContent("10");
+
+    if (sizeCombobox) {
+      fireEvent.click(sizeCombobox);
+      const option25 = screen.getByRole("option", { name: "25" });
+      fireEvent.click(option25);
+      expect(handleLimitChange).toHaveBeenCalledWith(25);
+    }
+  });
 });

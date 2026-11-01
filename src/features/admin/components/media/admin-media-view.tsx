@@ -12,8 +12,7 @@ import {
   useGetAdminMediaQuery,
 } from "../../api/admin-media-api";
 import type { MediaItem, GalleryImage } from "../../types/admin-media";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/shared/pagination";
 
 export function AdminMediaView() {
   const [page, setPage] = React.useState(1);
@@ -165,103 +164,23 @@ export function AdminMediaView() {
 
       {/* 4. Pagination */}
       {!isLoading && !isError && pagination.total > 0 && (
-        <div
-          data-testid="media-pagination"
-          className="flex flex-col items-center justify-between gap-4 border-t border-[#E5EAED] bg-white px-6 py-4 sm:flex-row rounded-2xl border shadow-xs"
-        >
-          <div className="flex items-center gap-3 text-xs text-[#74818A]">
-            <span>
-              Showing{" "}
-              <strong className="font-semibold text-[#18282A]">
-                {(page - 1) * limit + 1}–{Math.min(page * limit, pagination.total)}
-              </strong>{" "}
-              of{" "}
-              <strong className="font-semibold text-[#18282A]">
-                {pagination.total.toLocaleString()}
-              </strong>{" "}
-              assets
-            </span>
-
-            <div className="hidden items-center gap-1.5 sm:flex">
-              <span className="text-[#B0BCC2]">•</span>
-              <span>Per page:</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                aria-label="Items per page"
-                disabled={isFetching}
-                className="rounded-lg border border-[#E5EAED] bg-white px-2 py-1 text-xs font-medium text-[#18282A] focus:border-[#176779] focus:outline-none"
-              >
-                <option value={12}>12</option>
-                <option value={24}>24</option>
-                <option value={48}>48</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(1)}
-              disabled={page <= 1 || isFetching}
-              aria-label="First page"
-              data-testid="media-pagination-first"
-              className="h-8 w-8 p-0 rounded-lg text-[#74818A] hover:text-[#18282A] disabled:opacity-40"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || isFetching}
-              aria-label="Previous page"
-              data-testid="media-pagination-prev"
-              className="h-8 px-2.5 rounded-lg text-xs font-medium text-[#74818A] hover:text-[#18282A] disabled:opacity-40"
-            >
-              <ChevronLeft className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Prev</span>
-            </Button>
-
-            <span className="px-3 text-xs font-semibold text-[#18282A]">
-              Page {page} of {pagination.totalPages || 1}
-            </span>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-              disabled={page >= pagination.totalPages || isFetching}
-              aria-label="Next page"
-              data-testid="media-pagination-next"
-              className="h-8 px-2.5 rounded-lg text-xs font-medium text-[#74818A] hover:text-[#18282A] disabled:opacity-40"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="h-4 w-4 sm:ml-1" />
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPage(pagination.totalPages)}
-              disabled={page >= pagination.totalPages || isFetching}
-              aria-label="Last page"
-              data-testid="media-pagination-last"
-              className="h-8 w-8 p-0 rounded-lg text-[#74818A] hover:text-[#18282A] disabled:opacity-40"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={page}
+          pageSize={limit}
+          totalItems={pagination.total}
+          totalPages={pagination.totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
+          pageSizeOptions={[12, 24, 48]}
+          pageSizeLabel="Per page:"
+          itemLabel="assets"
+          isFetching={isFetching}
+          dataTestId="media-pagination"
+          buttonTestIdPrefix="media-pagination"
+        />
       )}
 
       {/* 5. Upload Modal */}
