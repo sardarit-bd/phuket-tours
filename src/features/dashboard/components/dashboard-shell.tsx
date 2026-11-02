@@ -9,6 +9,7 @@ import {
   DashboardNavConfig,
   userNavConfig,
   adminNavConfig,
+  agentNavConfig,
 } from "../types/dashboard-nav";
 import { DashboardGuard } from "@/features/auth/components/dashboard-guard";
 
@@ -29,10 +30,13 @@ export function DashboardShell({
   const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false);
   const user = useAppSelector(selectCurrentUser);
 
-  // Automatically select role config: admin accounts must use ONLY adminNavConfig
+  // Automatically select role config
   const activeConfig = React.useMemo(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" || user?.role === "staff") {
       return adminNavConfig;
+    }
+    if (user?.role === "agent" || pathname.startsWith("/dashboard/agent")) {
+      return agentNavConfig;
     }
     if (navConfig) return navConfig;
     if (pathname.startsWith("/dashboard/admin")) {

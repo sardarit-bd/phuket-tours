@@ -45,8 +45,15 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
 
   const isAdminRoute =
     pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/");
-  const isUserAdmin = user?.role === "admin";
-  const isUserStaff = user?.role === "staff";
+  const isAgentRoute =
+    pathname === "/dashboard/agent" || pathname.startsWith("/dashboard/agent/");
+  const isCustomerRoute =
+    pathname.startsWith("/dashboard") && !isAdminRoute && !isAgentRoute;
+
+  const userRole = user?.role;
+  const isUserAdmin = userRole === "admin";
+  const isUserStaff = userRole === "staff";
+  const isUserAgent = userRole === "agent";
   const hasAdminPortalAccess = isUserAdmin || isUserStaff;
 
   const { data: effectivePermsData, isLoading: isPermissionsLoading } =
@@ -58,9 +65,14 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
   }, [effectivePermsData?.data?.permissions]);
 
   // Strict role-based authorization:
-  // - Admin and Staff are authorized on admin routes (/dashboard/admin and nested)
-  // - Non-admin/staff is authorized ONLY on non-admin user dashboard routes
-  const isAuthorized = hasAdminPortalAccess ? isAdminRoute : !isAdminRoute;
+  // - Admin & Staff: authorized ONLY on admin routes (/dashboard/admin*)
+  // - Agent: authorized ONLY on agent routes (/dashboard/agent*)
+  // - Customer: authorized ONLY on customer routes (/dashboard, /dashboard/bookings, etc.)
+  const isAuthorized = React.useMemo(() => {
+    if (hasAdminPortalAccess) return isAdminRoute;
+    if (isUserAgent) return isAgentRoute;
+    return isCustomerRoute;
+  }, [hasAdminPortalAccess, isAdminRoute, isUserAgent, isAgentRoute, isCustomerRoute]);
 
   // Module permission check for Staff members
   const requiredPermission = React.useMemo(() => {
@@ -88,17 +100,20 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
   }, [isInitialized, isAuthenticated, authStatus, pathname, router]);
 
   // Effect: Handle strict role-based separation
-  // 1. Admin/Staff accessing customer routes (/dashboard, /dashboard/bookings, etc.) -> redirect to /dashboard/admin
-  // 2. Non-admin customer accessing admin routes (/dashboard/admin, etc.) -> redirect to /dashboard
+  // 1. Admin/Staff accessing non-admin routes -> redirect to /dashboard/admin
+  // 2. Agent accessing non-agent routes -> redirect to /dashboard/agent
+  // 3. Customer accessing admin/agent routes -> redirect to /dashboard
   React.useEffect(() => {
     if (isInitialized && isAuthenticated && !isAuthorized) {
       if (hasAdminPortalAccess) {
         router.replace("/dashboard/admin");
+      } else if (isUserAgent) {
+        router.replace("/dashboard/agent");
       } else {
         router.replace("/dashboard");
       }
     }
-  }, [isInitialized, isAuthenticated, isAuthorized, hasAdminPortalAccess, router]);
+  }, [isInitialized, isAuthenticated, isAuthorized, hasAdminPortalAccess, isUserAgent, router]);
 
   // 1. Initializing or loading state
   if (!isInitialized || authStatus === "loading") {
@@ -190,16 +205,17 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
 
   // 4. Role mismatch state (while redirecting)
   if (!isAuthorized) {
-    const isRedirectingAdmin = hasAdminPortalAccess && !isAdminRoute;
+    const redirectLabel = hasAdminPortalAccess
+      ? "Redirecting to admin portal..."
+      : isUserAgent
+      ? "Redirecting to agent portal..."
+      : "Access restricted. Redirecting to dashboard...";
+
     return (
       <div
         className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFB]"
         role="status"
-        aria-label={
-          isRedirectingAdmin
-            ? "Redirecting to admin portal"
-            : "Restricted access, redirecting to user dashboard"
-        }
+        aria-label={redirectLabel}
       >
         <div className="flex flex-col items-center gap-3">
           <Loader2
@@ -207,9 +223,7 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
             aria-hidden="true"
           />
           <p className="text-sm font-medium text-[#74818A]">
-            {isRedirectingAdmin
-              ? "Redirecting to admin portal..."
-              : "Access restricted. Redirecting to dashboard..."}
+            {redirectLabel}
           </p>
         </div>
       </div>

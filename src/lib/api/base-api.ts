@@ -20,6 +20,11 @@ export const baseApi = createApi({
     "AdminServiceAvailability",
     "AdminMedia",
     "AdminPermission",
+    "AgentOverview",
+    "AgentBookings",
+    "AgentCommissions",
+    "AgentProfile",
+    "AdminCommissions",
   ],
   endpoints: () => ({}),
 });

@@ -54,14 +54,24 @@ describe("Dashboard Navigation Active Logic", () => {
 describe("DashboardShell Component", () => {
   const renderWithStore = (
     ui: React.ReactElement,
-    role: "customer" | "admin" = "customer"
+    role: "customer" | "admin" | "agent" = "customer"
   ) => {
     const store: AppStore = makeStore();
     store.dispatch(
       setCredentials({
-        id: role === "admin" ? "admin-1" : "user-1",
-        name: role === "admin" ? "Admin Staff" : "Phuket Traveler",
-        email: role === "admin" ? "admin@phukettours.com" : "guest@phukettours.com",
+        id: role === "admin" ? "admin-1" : role === "agent" ? "agent-1" : "user-1",
+        name:
+          role === "admin"
+            ? "Admin Staff"
+            : role === "agent"
+            ? "Partner Agent"
+            : "Phuket Traveler",
+        email:
+          role === "admin"
+            ? "admin@phukettours.com"
+            : role === "agent"
+            ? "agent@phukettours.com"
+            : "guest@phukettours.com",
         role,
       })
     );
@@ -262,6 +272,28 @@ describe("DashboardShell Component", () => {
 
     // Customer items absent
     expect(screen.queryByText("My Bookings")).not.toBeInTheDocument();
+    expect(screen.queryByText("My Favorites")).not.toBeInTheDocument();
+  });
+
+  it("automatically switches to Agent navigation and renders AGENT PORTAL badge for agent accounts", () => {
+    mockPathname.mockReturnValue("/dashboard/agent");
+
+    renderWithStore(
+      <DashboardShell>
+        <div data-testid="agent-content">Agent Overview</div>
+      </DashboardShell>,
+      "agent"
+    );
+
+    // Agent items present
+    expect(screen.getByTestId("agent-content")).toBeInTheDocument();
+    expect(screen.getByText("My Commissions")).toBeInTheDocument();
+    expect(screen.getByText("Agency Profile")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-role-indicator")).toHaveTextContent("Agent Portal");
+    expect(screen.getAllByText("Agent Portal").length).toBeGreaterThanOrEqual(2);
+
+    // Admin & Customer items absent
+    expect(screen.queryByText("Tours Management")).not.toBeInTheDocument();
     expect(screen.queryByText("My Favorites")).not.toBeInTheDocument();
   });
 });

@@ -39,7 +39,12 @@ export function DashboardSidebar({
   const { hasPermission, isAdmin } = usePermissions();
 
   const isViewAdmin = config.role === "admin";
-  const homeHref = isViewAdmin ? "/dashboard/admin" : "/dashboard";
+  const isViewAgent = config.role === "agent";
+  const homeHref = isViewAdmin
+    ? "/dashboard/admin"
+    : isViewAgent
+    ? "/dashboard/agent"
+    : "/dashboard";
 
   const visibleItems = React.useMemo(() => {
     return config.items.filter((item) => {
@@ -50,9 +55,9 @@ export function DashboardSidebar({
   }, [config.items, isAdmin, hasPermission]);
 
   const displayName =
-    user?.name || (isViewAdmin ? "Admin Staff" : "Phuket Traveler");
+    user?.name || (isViewAdmin ? "Admin Staff" : isViewAgent ? "Partner Agent" : "Phuket Traveler");
   const displayEmail =
-    user?.email || (isViewAdmin ? "admin@phukettours.com" : "guest@phukettours.com");
+    user?.email || (isViewAdmin ? "admin@phukettours.com" : isViewAgent ? "agent@phukettours.com" : "guest@phukettours.com");
   const avatarInitials = getInitials(user?.name);
 
   const handleLogout = async () => {
@@ -97,13 +102,16 @@ export function DashboardSidebar({
         </Link>
         <span
           className={cn(
-            "rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider",
+            "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
             isViewAdmin
               ? "bg-[#18282A] text-white"
+              : isViewAgent
+              ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
               : "bg-[#3297A3]/10 text-[#3297A3]"
           )}
+          data-testid="sidebar-role-indicator"
         >
-          {isViewAdmin ? "Admin" : "User"}
+          {isViewAdmin ? "Admin" : isViewAgent ? "Agent Portal" : "User"}
         </span>
       </div>
 

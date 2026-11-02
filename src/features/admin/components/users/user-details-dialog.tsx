@@ -16,6 +16,9 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  TrendingUp,
+  Coins,
+  Briefcase,
 } from "lucide-react";
 
 export interface UserDetailsDialogProps {
@@ -82,7 +85,7 @@ function UserDetailsContent({
 
   const currentUser: AdminUserRecord = userResponse?.data || user;
 
-  // If role is agent, also fetch agent profile from GET /admin/agents/:agentId
+  // If role is agent, also fetch agent profile and business overview from GET /admin/agents/:agentId
   const isAgent = currentUser.role === "agent";
   const {
     data: agentResponse,
@@ -91,7 +94,9 @@ function UserDetailsContent({
     skip: !isAgent,
   });
 
-  const agentProfile = agentResponse?.data?.agentProfile || currentUser.agentProfile;
+  const agentUser = agentResponse?.data;
+  const agentProfile = agentUser?.agentProfile || currentUser.agentProfile;
+  const businessOverview = agentUser?.businessOverview;
 
   return (
     <div className="space-y-5 pt-1" data-testid="user-details-dialog-content">
@@ -174,6 +179,62 @@ function UserDetailsContent({
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Agent Business Overview (Real Backend Data) */}
+        {isAgent && (
+          <div
+            className="col-span-1 sm:col-span-2 space-y-2.5 pt-1"
+            data-testid="admin-agent-business-overview"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#18282A] uppercase tracking-wider flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-[#176779]" />
+                Agent Business Overview
+              </span>
+              <span className="text-[11px] text-[#74818A]">Real-time operational summary</span>
+            </div>
+
+            {isAgentLoading ? (
+              <div className="flex items-center justify-center p-4 rounded-xl border border-dashed border-[#E5EAED] bg-[#F8FAFB] text-xs text-[#74818A]">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin text-[#176779]" />
+                Loading agent business metrics...
+              </div>
+            ) : businessOverview ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-2.5">
+                  <span className="text-[10px] font-semibold text-[#74818A] uppercase">Total Bookings</span>
+                  <p className="mt-0.5 text-base font-bold text-[#18282A]">{businessOverview.totalBookings}</p>
+                  <p className="text-[10px] text-emerald-700 font-medium">{businessOverview.confirmedBookings} confirmed</p>
+                </div>
+                <div className="rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-2.5">
+                  <span className="text-[10px] font-semibold text-[#74818A] uppercase">Pending Bookings</span>
+                  <p className="mt-0.5 text-base font-bold text-amber-600">{businessOverview.pendingBookings}</p>
+                  <p className="text-[10px] text-slate-500 font-medium">{businessOverview.completedBookings} completed</p>
+                </div>
+                <div className="rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-2.5">
+                  <span className="text-[10px] font-semibold text-[#74818A] uppercase">Total Commission</span>
+                  <p className="mt-0.5 text-base font-bold text-[#176779]">
+                    ฿{businessOverview.totalCommission.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[10px] text-emerald-700 font-medium">
+                    ฿{businessOverview.paidCommission.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} paid
+                  </p>
+                </div>
+                <div className="rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-2.5">
+                  <span className="text-[10px] font-semibold text-[#74818A] uppercase">Pending Commission</span>
+                  <p className="mt-0.5 text-base font-bold text-amber-600">
+                    ฿{businessOverview.pendingCommission.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-medium">{businessOverview.activeCommissionsCount} active records</p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-[#E5EAED] bg-[#F8FAFB] p-3 text-center text-xs text-[#74818A]">
+                No business metrics recorded yet for this agent.
+              </div>
+            )}
           </div>
         )}
 

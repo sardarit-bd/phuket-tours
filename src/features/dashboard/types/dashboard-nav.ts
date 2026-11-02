@@ -10,6 +10,8 @@ import {
   Tag,
   Sliders,
   Image as ImageIcon,
+  Percent,
+  Building2,
 } from "lucide-react";
 
 import type { PermissionId } from "@/features/admin/types/admin-permissions";
@@ -24,7 +26,7 @@ export interface DashboardNavItem {
 }
 
 export interface DashboardNavConfig {
-  role: "user" | "admin";
+  role: "user" | "admin" | "agent";
   roleLabel: string;
   portalTitle: string;
   items: DashboardNavItem[];
@@ -106,6 +108,35 @@ export const adminNavConfig: DashboardNavConfig = {
       href: "/dashboard/admin/settings",
       icon: Sliders,
       permission: "reports.view",
+    },
+  ],
+};
+
+export const agentNavConfig: DashboardNavConfig = {
+  role: "agent",
+  roleLabel: "Agent Portal",
+  portalTitle: "PhuketTours Agent Portal",
+  items: [
+    {
+      title: "Overview",
+      href: "/dashboard/agent",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      title: "My Bookings",
+      href: "/dashboard/agent/bookings",
+      icon: CalendarCheck,
+    },
+    {
+      title: "My Commissions",
+      href: "/dashboard/agent/commissions",
+      icon: Percent,
+    },
+    {
+      title: "Agency Profile",
+      href: "/dashboard/agent/profile",
+      icon: Building2,
     },
   ],
 };

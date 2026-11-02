@@ -8,6 +8,8 @@
  * - src/modules/admin/adminValidators.ts
  */
 
+import type { AgentOverviewMetrics } from "@/features/agent/types/agent";
+
 export const USER_ROLES = ["customer", "agent", "staff", "admin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
@@ -33,6 +35,7 @@ export interface AdminUserRecord {
   createdAt: string;
   updatedAt: string;
   agentProfile: AdminAgentProfile | null;
+  businessOverview?: AgentOverviewMetrics | null;
 }
 
 export interface AdminPaginationMeta {

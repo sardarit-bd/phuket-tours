@@ -75,8 +75,14 @@ export function SignInForm() {
       setSuccessMessage("Sign in successful! Redirecting...");
 
       const role = response.data.role;
-      const isOpsRole = role === "admin" || role === "staff";
-      let targetRoute = isOpsRole ? "/dashboard/admin" : "/dashboard";
+      let targetRoute = "/dashboard";
+      if (role === "admin" || role === "staff") {
+        targetRoute = "/dashboard/admin";
+      } else if (role === "agent") {
+        targetRoute = "/dashboard/agent";
+      } else {
+        targetRoute = "/dashboard";
+      }
 
       const redirectParam = searchParams.get("redirect");
       if (
@@ -84,17 +90,27 @@ export function SignInForm() {
         redirectParam.startsWith("/") &&
         !redirectParam.startsWith("//")
       ) {
-        if (redirectParam.startsWith("/dashboard/admin") && !isOpsRole) {
-          targetRoute = "/dashboard";
-        } else if (
-          isOpsRole &&
-          (redirectParam === "/dashboard" ||
-            (redirectParam.startsWith("/dashboard/") &&
-              !redirectParam.startsWith("/dashboard/admin")))
-        ) {
-          targetRoute = "/dashboard/admin";
+        if (role === "admin" || role === "staff") {
+          if (redirectParam.startsWith("/dashboard/admin")) {
+            targetRoute = redirectParam;
+          } else {
+            targetRoute = "/dashboard/admin";
+          }
+        } else if (role === "agent") {
+          if (redirectParam.startsWith("/dashboard/agent")) {
+            targetRoute = redirectParam;
+          } else {
+            targetRoute = "/dashboard/agent";
+          }
         } else {
-          targetRoute = redirectParam;
+          if (
+            redirectParam.startsWith("/dashboard/admin") ||
+            redirectParam.startsWith("/dashboard/agent")
+          ) {
+            targetRoute = "/dashboard";
+          } else {
+            targetRoute = redirectParam;
+          }
         }
       }
 
