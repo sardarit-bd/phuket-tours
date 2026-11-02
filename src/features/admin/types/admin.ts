@@ -151,4 +151,5 @@ export * from "./admin-services";
 export * from "./admin-bookings";
 export * from "./admin-users";
 export * from "./admin-permissions";
+export * from "./admin-payments";
 

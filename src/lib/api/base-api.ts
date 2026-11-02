@@ -25,6 +25,7 @@ export const baseApi = createApi({
     "AgentCommissions",
     "AgentProfile",
     "AdminCommissions",
+    "AdminPayment",
   ],
   endpoints: () => ({}),
 });

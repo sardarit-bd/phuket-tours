@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   Percent,
   Building2,
+  CreditCard,
 } from "lucide-react";
 
 import type { PermissionId } from "@/features/admin/types/admin-permissions";
@@ -90,6 +91,12 @@ export const adminNavConfig: DashboardNavConfig = {
       href: "/dashboard/admin/bookings",
       icon: ClipboardList,
       permission: "bookings.view",
+    },
+    {
+      title: "Payments Management",
+      href: "/dashboard/admin/payments",
+      icon: CreditCard,
+      permission: "payments.view",
     },
     {
       title: "Users Management",

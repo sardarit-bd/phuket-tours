@@ -38,6 +38,11 @@ import type {
   StaffPermissionsData,
   UpdateStaffPermissionsInput,
   EffectivePermissionsData,
+  AdminPaymentRecord,
+  AdminPaymentListResponse,
+  GetAdminPaymentsParams,
+  VerifyPaymentInput,
+  RecordPaymentInput,
 } from "../types/admin";
 
 export const adminApi = baseApi.injectEndpoints({
@@ -561,6 +566,88 @@ export const adminApi = baseApi.injectEndpoints({
       providesTags: ["AdminPermission", "Auth"],
       keepUnusedDataFor: 60,
     }),
+
+    // Payment Management Endpoints
+    getAdminPayments: builder.query<
+      AdminApiResponse<AdminPaymentListResponse>,
+      GetAdminPaymentsParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.status) queryParams.status = params.status;
+        if (params?.method) queryParams.method = params.method;
+        if (params?.bookingId) queryParams.bookingId = params.bookingId;
+        if (params?.customerId) queryParams.customerId = params.customerId;
+        return {
+          url: "/admin/payments",
+          method: "GET",
+          params: queryParams,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((p) => ({
+                type: "AdminPayment" as const,
+                id: p.id,
+              })),
+              { type: "AdminPayment", id: "LIST" },
+            ]
+          : [{ type: "AdminPayment", id: "LIST" }],
+    }),
+
+    getAdminPaymentById: builder.query<
+      AdminApiResponse<AdminPaymentRecord>,
+      string
+    >({
+      query: (paymentId) => ({
+        url: `/admin/payments/${paymentId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, paymentId) => [
+        { type: "AdminPayment", id: paymentId },
+      ],
+    }),
+
+    verifyAdminPayment: builder.mutation<
+      AdminApiResponse<AdminPaymentRecord>,
+      { paymentId: string; input: VerifyPaymentInput }
+    >({
+      query: ({ paymentId, input }) => ({
+        url: `/admin/payments/${paymentId}/verify`,
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: (_result, _error, { paymentId }) => [
+        { type: "AdminPayment", id: paymentId },
+        { type: "AdminPayment", id: "LIST" },
+        "AdminReport",
+        "Booking",
+        "AgentCommissions",
+        "AdminCommissions",
+      ],
+    }),
+
+    recordAdminPayment: builder.mutation<
+      AdminApiResponse<AdminPaymentRecord>,
+      { paymentId: string; input: RecordPaymentInput }
+    >({
+      query: ({ paymentId, input }) => ({
+        url: `/admin/payments/${paymentId}/record`,
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: (_result, _error, { paymentId }) => [
+        { type: "AdminPayment", id: paymentId },
+        { type: "AdminPayment", id: "LIST" },
+        "AdminReport",
+        "Booking",
+        "AgentCommissions",
+        "AdminCommissions",
+      ],
+    }),
   }),
 });
 
@@ -616,6 +703,13 @@ export const {
   useUpdateStaffPermissionsMutation,
   useGetEffectivePermissionsQuery,
   useLazyGetEffectivePermissionsQuery,
+  // Payment Management Hooks
+  useGetAdminPaymentsQuery,
+  useLazyGetAdminPaymentsQuery,
+  useGetAdminPaymentByIdQuery,
+  useLazyGetAdminPaymentByIdQuery,
+  useVerifyAdminPaymentMutation,
+  useRecordAdminPaymentMutation,
 } = adminApi;
 
 export * from "../types/admin";

@@ -81,6 +81,7 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     if (pathname.startsWith("/dashboard/admin/tours")) return "tours.view";
     if (pathname.startsWith("/dashboard/admin/media")) return "media.view";
     if (pathname.startsWith("/dashboard/admin/bookings")) return "bookings.view";
+    if (pathname.startsWith("/dashboard/admin/payments")) return "payments.view";
     if (pathname.startsWith("/dashboard/admin/settings")) return "reports.view";
     if (pathname === "/dashboard/admin") return "dashboard.view";
     return null;
