@@ -5,6 +5,7 @@ import { Clock, Users, Plus, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { SelectedDateList } from "./selected-date-list";
 import type { TourScheduleDetails } from "../../../types/admin";
 
@@ -406,15 +407,18 @@ export function AvailabilityTab({ data, onChange }: AvailabilityTabProps) {
               <label className="block text-[11px] font-semibold text-[#74818A] mb-1">
                 Status
               </label>
-              <select
+              <CustomSelect<string>
+                options={[
+                  { value: "available", label: "Available" },
+                  { value: "blocked", label: "Unavailable" },
+                ]}
                 value={newDateStatus ? "available" : "blocked"}
-                onChange={(e) => setNewDateStatus(e.target.value === "available")}
-                className="h-11 w-full rounded-xl border border-[#E5EAED] bg-white px-3 text-xs text-[#18282A] focus:border-[#176779] focus:outline-none"
+                onChange={(val) => setNewDateStatus(val === "available")}
                 data-testid="new-date-status-select"
-              >
-                <option value="available">Available</option>
-                <option value="blocked">Unavailable</option>
-              </select>
+                size="lg"
+                usePortal={true}
+                className="w-full"
+              />
             </div>
 
             <div>

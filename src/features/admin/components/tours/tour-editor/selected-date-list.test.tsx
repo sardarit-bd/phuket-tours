@@ -75,11 +75,15 @@ describe("SelectedDateList component", () => {
     fireEvent.click(editBtn);
 
     // Inline controls should be visible
-    const statusSelect = screen.getByTestId("inline-edit-status-2026-11-20");
+    const statusTrigger = screen.getByTestId("inline-edit-status-2026-11-20").querySelector("button");
     const capacityInput = screen.getByTestId("inline-edit-capacity-2026-11-20");
     const saveBtn = screen.getByTestId("inline-save-2026-11-20");
 
-    fireEvent.change(statusSelect, { target: { value: "blocked" } });
+    if (statusTrigger) {
+      fireEvent.click(statusTrigger);
+      const blockedOpt = screen.getByRole("option", { name: "Unavailable" });
+      fireEvent.click(blockedOpt);
+    }
     fireEvent.change(capacityInput, { target: { value: "0" } });
     fireEvent.click(saveBtn);
 

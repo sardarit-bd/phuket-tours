@@ -5,6 +5,7 @@ import { AlertCircle, Loader2, Calendar, Hash } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { useRecordAdminPaymentMutation } from "../../api/admin-api";
 import type { AdminPaymentRecord } from "../../types/admin-payments";
 
@@ -152,22 +153,22 @@ export function RecordPaymentDialog({
               Select Initiated Payment <span className="text-destructive">*</span>
             </label>
             {initiatedPayments.length > 0 ? (
-              <select
+              <CustomSelect<string>
                 id="select-initiated-payment"
+                options={initiatedPayments.map((p) => ({
+                  value: p.id,
+                  label: `#${p.id.slice(0, 8)} — ฿${Number(p.amount).toLocaleString()} (${p.method}) [Booking #${p.bookingId.slice(0, 8)}]`,
+                }))}
                 value={selectedPaymentId}
-                onChange={(e) => {
-                  setSelectedPaymentId(e.target.value);
+                onChange={(val) => {
+                  setSelectedPaymentId(val);
                   if (validationError) setValidationError(null);
                 }}
-                className="w-full rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-2.5 text-xs text-[#18282A] focus:border-[#176779] focus:bg-white focus:outline-none transition-colors"
+                className="w-full"
+                usePortal={true}
                 data-testid="select-initiated-payment"
-              >
-                {initiatedPayments.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    #{p.id.slice(0, 8)} — ฿{Number(p.amount).toLocaleString()} ({p.method}) [Booking #{p.bookingId.slice(0, 8)}]
-                  </option>
-                ))}
-              </select>
+                aria-label="Select Initiated Payment"
+              />
             ) : (
               <div className="space-y-1.5">
                 <Input

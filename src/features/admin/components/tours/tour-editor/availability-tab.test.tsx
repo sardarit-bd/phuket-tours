@@ -44,8 +44,12 @@ describe("AvailabilityTab component", () => {
     fireEvent.click(dayBtn);
 
     // Select status = available
-    const statusSelect = screen.getByTestId("new-date-status-select");
-    fireEvent.change(statusSelect, { target: { value: "available" } });
+    const statusTrigger = screen.getByTestId("new-date-status-select").querySelector("button");
+    if (statusTrigger) {
+      fireEvent.click(statusTrigger);
+      const availOpt = screen.getByRole("option", { name: "Available" });
+      fireEvent.click(availOpt);
+    }
 
     // Set capacity override
     const capacityInput = screen.getByTestId("new-date-capacity-input");
@@ -83,8 +87,12 @@ describe("AvailabilityTab component", () => {
     expect(addBtn).toHaveTextContent("Update Date");
 
     // Change status to available
-    const statusSelect = screen.getByTestId("new-date-status-select");
-    fireEvent.change(statusSelect, { target: { value: "available" } });
+    const updateStatusTrigger = screen.getByTestId("new-date-status-select").querySelector("button");
+    if (updateStatusTrigger) {
+      fireEvent.click(updateStatusTrigger);
+      const availOpt = screen.getByRole("option", { name: "Available" });
+      fireEvent.click(availOpt);
+    }
 
     // Change capacity
     const capacityInput = screen.getByTestId("new-date-capacity-input");

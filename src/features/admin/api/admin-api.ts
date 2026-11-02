@@ -43,7 +43,29 @@ import type {
   GetAdminPaymentsParams,
   VerifyPaymentInput,
   RecordPaymentInput,
+  AdminCommissionDetail,
+  GetAdminCommissionsParams,
+  AdminCommissionsListResponse,
+  AdjustCommissionInput,
+  AdminCommissionRule,
+  GetAdminCommissionRulesParams,
+  AdminCommissionRulesResponse,
+  ConfigureCommissionRuleInput,
+  AdminCommissionsReportData,
 } from "../types/admin";
+import type {
+  SystemSettingsOverview,
+  SettingAuditLogsResponse,
+  UpdateGeneralSettingsInput,
+  UpdatePaymentSettingsInput,
+  UpdateWebhookSettingsInput,
+  UpdateCloudinarySettingsInput,
+  UpdateSmtpSettingsInput,
+  TestConnectionResult,
+  SendTestEmailInput,
+  SendTestEmailResult,
+  GetSettingAuditLogsParams,
+} from "../types/admin-settings";
 
 export const adminApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -648,6 +670,233 @@ export const adminApi = baseApi.injectEndpoints({
         "AdminCommissions",
       ],
     }),
+
+    // Commission Management Endpoints
+    getAdminCommissions: builder.query<
+      AdminApiResponse<AdminCommissionsListResponse>,
+      GetAdminCommissionsParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page) queryParams.page = params.page;
+        if (params?.limit) queryParams.limit = params.limit;
+        if (params?.status && (params.status as string) !== "ALL") queryParams.status = params.status;
+        if (params?.agentId) queryParams.agentId = params.agentId;
+        if (params?.bookingId) queryParams.bookingId = params.bookingId;
+
+        return {
+          url: "/admin/commissions",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map(({ id }) => ({
+                type: "AdminCommissions" as const,
+                id,
+              })),
+              { type: "AdminCommissions", id: "LIST" },
+            ]
+          : [{ type: "AdminCommissions", id: "LIST" }],
+    }),
+
+    getAdminCommissionById: builder.query<
+      AdminApiResponse<AdminCommissionDetail>,
+      string
+    >({
+      query: (commissionId) => ({
+        url: `/admin/commissions/${commissionId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, commissionId) => [
+        { type: "AdminCommissions", id: commissionId },
+      ],
+    }),
+
+    adjustAdminCommission: builder.mutation<
+      AdminApiResponse<AdminCommissionDetail>,
+      { commissionId: string; input: AdjustCommissionInput }
+    >({
+      query: ({ commissionId, input }) => ({
+        url: `/admin/commissions/${commissionId}`,
+        method: "PATCH",
+        body: input,
+      }),
+      invalidatesTags: (_result, _error, { commissionId }) => [
+        { type: "AdminCommissions", id: commissionId },
+        { type: "AdminCommissions", id: "LIST" },
+        "AdminReport",
+        "AgentCommissions",
+        "Booking",
+      ],
+    }),
+
+    getAdminCommissionRules: builder.query<
+      AdminApiResponse<AdminCommissionRulesResponse>,
+      GetAdminCommissionRulesParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, number> = {};
+        if (params?.page) queryParams.page = params.page;
+        if (params?.limit) queryParams.limit = params.limit;
+
+        return {
+          url: "/admin/commission-rules",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    configureAdminCommissionRule: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      ConfigureCommissionRuleInput
+    >({
+      query: (input) => ({
+        url: "/admin/commission-rules",
+        method: "PUT",
+        body: input,
+      }),
+      invalidatesTags: [
+        "AdminCommissionRule",
+        "AdminCommissions",
+        "AdminReport",
+      ],
+    }),
+
+    getAdminCommissionsReport: builder.query<
+      AdminApiResponse<AdminCommissionsReportData>,
+      AdminReportFiltersQuery | void
+    >({
+      query: (filters) => ({
+        url: "/admin/reports/commissions",
+        method: "GET",
+        params: filters || undefined,
+      }),
+      providesTags: ["AdminReport", "AdminCommissions"],
+      keepUnusedDataFor: 300,
+    }),
+
+    // System Settings Endpoints
+    getAdminSettings: builder.query<
+      AdminApiResponse<SystemSettingsOverview>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/settings",
+        method: "GET",
+      }),
+      providesTags: ["AdminSetting"],
+    }),
+
+    updateAdminGeneralSettings: builder.mutation<
+      AdminApiResponse<SystemSettingsOverview>,
+      UpdateGeneralSettingsInput
+    >({
+      query: (body) => ({
+        url: "/admin/settings/general",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    updateAdminPaymentSettings: builder.mutation<
+      AdminApiResponse<SystemSettingsOverview>,
+      UpdatePaymentSettingsInput
+    >({
+      query: (body) => ({
+        url: "/admin/settings/payment",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    updateAdminWebhookSettings: builder.mutation<
+      AdminApiResponse<SystemSettingsOverview>,
+      UpdateWebhookSettingsInput
+    >({
+      query: (body) => ({
+        url: "/admin/settings/webhook",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    updateAdminCloudinarySettings: builder.mutation<
+      AdminApiResponse<SystemSettingsOverview>,
+      UpdateCloudinarySettingsInput
+    >({
+      query: (body) => ({
+        url: "/admin/settings/cloudinary",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    testAdminCloudinaryConnection: builder.mutation<
+      AdminApiResponse<TestConnectionResult>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/settings/cloudinary/test",
+        method: "POST",
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    updateAdminSmtpSettings: builder.mutation<
+      AdminApiResponse<SystemSettingsOverview>,
+      UpdateSmtpSettingsInput
+    >({
+      query: (body) => ({
+        url: "/admin/settings/smtp",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    testAdminSmtpConnection: builder.mutation<
+      AdminApiResponse<TestConnectionResult>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/settings/smtp/test",
+        method: "POST",
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    sendAdminTestEmail: builder.mutation<
+      AdminApiResponse<SendTestEmailResult>,
+      SendTestEmailInput
+    >({
+      query: (body) => ({
+        url: "/admin/settings/smtp/send-test",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AdminSetting"],
+    }),
+
+    getAdminSettingAuditLogs: builder.query<
+      AdminApiResponse<SettingAuditLogsResponse>,
+      GetSettingAuditLogsParams | void
+    >({
+      query: (params) => ({
+        url: "/admin/settings/audit",
+        method: "GET",
+        params: params || undefined,
+      }),
+      providesTags: ["AdminSetting"],
+    }),
   }),
 });
 
@@ -710,7 +959,33 @@ export const {
   useLazyGetAdminPaymentByIdQuery,
   useVerifyAdminPaymentMutation,
   useRecordAdminPaymentMutation,
+  // Commission Management Hooks
+  useGetAdminCommissionsQuery,
+  useLazyGetAdminCommissionsQuery,
+  useGetAdminCommissionByIdQuery,
+  useLazyGetAdminCommissionByIdQuery,
+  useAdjustAdminCommissionMutation,
+  useGetAdminCommissionRulesQuery,
+  useLazyGetAdminCommissionRulesQuery,
+  useConfigureAdminCommissionRuleMutation,
+  useGetAdminCommissionsReportQuery,
+  useLazyGetAdminCommissionsReportQuery,
+  // System Settings Hooks
+  useGetAdminSettingsQuery,
+  useLazyGetAdminSettingsQuery,
+  useUpdateAdminGeneralSettingsMutation,
+  useUpdateAdminPaymentSettingsMutation,
+  useUpdateAdminWebhookSettingsMutation,
+  useUpdateAdminCloudinarySettingsMutation,
+  useTestAdminCloudinaryConnectionMutation,
+  useUpdateAdminSmtpSettingsMutation,
+  useTestAdminSmtpConnectionMutation,
+  useSendAdminTestEmailMutation,
+  useGetAdminSettingAuditLogsQuery,
+  useLazyGetAdminSettingAuditLogsQuery,
 } = adminApi;
 
 export * from "../types/admin";
+export * from "../types/admin-settings";
+
 

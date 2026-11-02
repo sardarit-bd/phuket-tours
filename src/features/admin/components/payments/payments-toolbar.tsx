@@ -4,6 +4,7 @@ import * as React from "react";
 import { Search, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/custom-select";
 import { cn } from "@/lib/utils";
 
 export interface PaymentsToolbarProps {
@@ -86,20 +87,16 @@ export function PaymentsToolbar({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Method Select */}
-          <div className="relative min-w-[180px]">
-            <select
+          <div className="w-[180px]">
+            <CustomSelect<string>
+              options={METHOD_OPTIONS}
               value={methodFilter}
-              onChange={(e) => onMethodFilterChange(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-[#E5EAED] bg-[#F8FAFB] px-3.5 py-2 text-xs font-medium text-[#18282A] focus:border-[#176779] focus:bg-white focus:outline-none transition-colors cursor-pointer"
+              onChange={(val) => onMethodFilterChange(val)}
               aria-label="Filter by payment method"
               data-testid="filter-method-select"
-            >
-              {METHOD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              size="sm"
+              usePortal={true}
+            />
           </div>
 
           {/* Reset Filters Button */}

@@ -36,6 +36,14 @@ export const SUPPORTED_PERMISSION_IDS = [
   "media.delete",
   // Reports
   "reports.view",
+  // Settings
+  "settings.view",
+  "settings.general.manage",
+  "settings.payment.manage",
+  "settings.webhook.manage",
+  "settings.cloudinary.manage",
+  "settings.smtp.manage",
+  "settings.audit.view",
 ] as const;
 
 export type PermissionId = (typeof SUPPORTED_PERMISSION_IDS)[number];

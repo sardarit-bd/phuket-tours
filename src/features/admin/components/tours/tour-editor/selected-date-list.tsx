@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CheckCircle2, Ban, Edit2, Trash2, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { CustomSelect } from "@/components/ui/custom-select";
 import type { SpecificDateAvailability } from "./availability-tab";
 
 export interface SelectedDateListProps {
@@ -75,15 +76,19 @@ export function SelectedDateList({
                   <span className="font-bold text-[#18282A] min-w-[85px]">
                     {item.date}
                   </span>
-                  <select
-                    value={editStatus ? "available" : "blocked"}
-                    onChange={(e) => setEditStatus(e.target.value === "available")}
-                    className="h-8 rounded-lg border border-[#E5EAED] bg-white px-2 text-xs text-[#18282A] focus:border-[#176779] focus:outline-none"
-                    data-testid={`inline-edit-status-${item.date}`}
-                  >
-                    <option value="available">Available</option>
-                    <option value="blocked">Unavailable</option>
-                  </select>
+                  <div className="w-[125px]">
+                    <CustomSelect<string>
+                      options={[
+                        { value: "available", label: "Available" },
+                        { value: "blocked", label: "Unavailable" },
+                      ]}
+                      value={editStatus ? "available" : "blocked"}
+                      onChange={(val) => setEditStatus(val === "available")}
+                      data-testid={`inline-edit-status-${item.date}`}
+                      size="sm"
+                      usePortal={true}
+                    />
+                  </div>
                   <Input
                     type="number"
                     min="0"

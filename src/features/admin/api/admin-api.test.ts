@@ -12,6 +12,12 @@ import {
   useCreateAdminStaffMutation,
   useUpdateAdminUserMutation,
   useUpdateAdminAgentMutation,
+  useGetAdminCommissionsQuery,
+  useGetAdminCommissionByIdQuery,
+  useAdjustAdminCommissionMutation,
+  useGetAdminCommissionRulesQuery,
+  useConfigureAdminCommissionRuleMutation,
+  useGetAdminCommissionsReportQuery,
   type AdminApiResponse,
   type AdminRevenueReportData,
   type AdminBookingsReportData,
@@ -84,6 +90,12 @@ describe("adminApi RTK Query endpoints", () => {
     expect(typeof useCreateAdminStaffMutation).toBe("function");
     expect(typeof useUpdateAdminUserMutation).toBe("function");
     expect(typeof useUpdateAdminAgentMutation).toBe("function");
+    expect(typeof useGetAdminCommissionsQuery).toBe("function");
+    expect(typeof useGetAdminCommissionByIdQuery).toBe("function");
+    expect(typeof useAdjustAdminCommissionMutation).toBe("function");
+    expect(typeof useGetAdminCommissionRulesQuery).toBe("function");
+    expect(typeof useConfigureAdminCommissionRuleMutation).toBe("function");
+    expect(typeof useGetAdminCommissionsReportQuery).toBe("function");
   });
 
   describe("GET /admin/reports/revenue", () => {
@@ -1224,6 +1236,349 @@ describe("adminApi RTK Query endpoints", () => {
       });
     });
   });
+
+  describe("Commission Management Endpoints", () => {
+    it("GET /admin/commissions fetches commissions list with filters", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Commissions retrieved successfully",
+        data: {
+          items: [
+            {
+              id: "comm-1234",
+              bookingId: "book-1234",
+              agentId: "agent-1234",
+              ruleId: "rule-1234",
+              rateType: "PERCENTAGE",
+              rateValue: 10,
+              baseAmount: 10000,
+              amount: 1000,
+              status: "ACTIVE",
+              createdAt: "2026-10-25T10:00:00.000Z",
+              updatedAt: "2026-10-25T10:00:00.000Z",
+            },
+          ],
+          page: 1,
+          limit: 10,
+          total: 1,
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminCommissions.initiate({
+          page: 1,
+          limit: 10,
+          status: "ACTIVE",
+          agentId: "agent-1234",
+        })
+      );
+
+      expect(capturedRequest?.url).toContain("/admin/commissions");
+      expect(capturedRequest?.url).toContain("page=1");
+      expect(capturedRequest?.url).toContain("limit=10");
+      expect(capturedRequest?.url).toContain("status=ACTIVE");
+      expect(capturedRequest?.url).toContain("agentId=agent-1234");
+      expect(capturedRequest?.method).toBe("GET");
+      expect("data" in result).toBe(true);
+    });
+
+    it("GET /admin/commissions/:commissionId fetches single commission details", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Commission retrieved successfully",
+        data: {
+          id: "comm-1234",
+          bookingId: "book-1234",
+          agentId: "agent-1234",
+          ruleId: "rule-1234",
+          rateType: "PERCENTAGE",
+          rateValue: 10,
+          baseAmount: 10000,
+          amount: 1000,
+          status: "ACTIVE",
+          adjustments: [],
+          createdAt: "2026-10-25T10:00:00.000Z",
+          updatedAt: "2026-10-25T10:00:00.000Z",
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminCommissionById.initiate("comm-1234")
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/commissions/comm-1234"
+      );
+      expect(capturedRequest?.method).toBe("GET");
+      expect("data" in result).toBe(true);
+    });
+
+    it("PATCH /admin/commissions/:commissionId submits adjustment with amount and reason", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Commission adjusted successfully",
+        data: {
+          id: "comm-1234",
+          amount: 850,
+          status: "ACTIVE",
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.adjustAdminCommission.initiate({
+          commissionId: "comm-1234",
+          input: {
+            amount: 850,
+            reason: "Agreed discount reduction with partner agent",
+          },
+        })
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/commissions/comm-1234"
+      );
+      expect(capturedRequest?.method).toBe("PATCH");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        amount: 850,
+        reason: "Agreed discount reduction with partner agent",
+      });
+      expect("data" in result).toBe(true);
+    });
+
+    it("GET /admin/commission-rules fetches active rule and historical policies", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Commission rules retrieved successfully",
+        data: {
+          activeRule: {
+            id: "rule-1",
+            rateType: "PERCENTAGE",
+            rateValue: 10,
+            isActive: true,
+            createdById: "admin-1",
+            createdAt: "2026-10-01T00:00:00.000Z",
+          },
+          items: [],
+          page: 1,
+          limit: 10,
+          total: 1,
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminCommissionRules.initiate({ page: 1, limit: 10 })
+      );
+
+      expect(capturedRequest?.url).toContain("/admin/commission-rules");
+      expect(capturedRequest?.method).toBe("GET");
+      expect("data" in result).toBe(true);
+    });
+
+    it("PUT /admin/commission-rules configures new commission policy", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Commission rule updated successfully",
+        data: {
+          id: "rule-2",
+          rateType: "FIXED",
+          rateValue: 500,
+          isActive: true,
+          createdById: "admin-1",
+          createdAt: "2026-11-01T00:00:00.000Z",
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.configureAdminCommissionRule.initiate({
+          rateType: "FIXED",
+          rateValue: 500,
+        })
+      );
+
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/commission-rules"
+      );
+      expect(capturedRequest?.method).toBe("PUT");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        rateType: "FIXED",
+        rateValue: 500,
+      });
+      expect("data" in result).toBe(true);
+    });
+
+    it("GET /admin/reports/commissions fetches platform commission aggregate summary", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Commissions report retrieved successfully",
+        data: {
+          filters: { from: null, to: null, serviceType: null, agentId: null },
+          count: 20,
+          totalActiveAmount: 75000,
+          byStatus: [
+            { status: "ACTIVE", count: 18, totalAmount: 75000 },
+            { status: "CANCELLED", count: 2, totalAmount: 4000 },
+          ],
+          items: [],
+          page: 1,
+          limit: 10,
+          total: 2,
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.getAdminCommissionsReport.initiate()
+      );
+
+      expect(capturedRequest?.url).toContain("/admin/reports/commissions");
+      expect(capturedRequest?.method).toBe("GET");
+      expect("data" in result).toBe(true);
+    });
+  });
+
+  describe("System Settings Endpoints", () => {
+    it("GET /admin/settings retrieves configuration overview with masked secrets", async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          general: { platformName: "PhuketTours" },
+          payment: { providerName: "Stripe", hasSecretKey: true, maskedSecretKey: "••••••••••••3210" },
+          webhook: { endpointUrl: "https://api.phukettours.com/api/v1/webhooks/payment" },
+          cloudinary: { cloudName: "dg83pvgls", hasApiSecret: true, maskedApiSecret: "••••••••••••abcd" },
+          smtp: { host: "smtp.gmail.com", hasPass: true, maskedPass: "••••••••••••pass" },
+          serverTime: "2026-11-02T12:00:00.000Z",
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(adminApi.endpoints.getAdminSettings.initiate());
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/settings");
+      expect(capturedRequest?.method).toBe("GET");
+      expect(capturedRequest?.credentials).toBe("include");
+      expect("data" in result).toBe(true);
+    });
+
+    it("PUT /admin/settings/general updates platform name and maintenance mode", async () => {
+      setupMockFetch(200, { success: true, data: {} });
+      const store = makeStore();
+
+      await store.dispatch(
+        adminApi.endpoints.updateAdminGeneralSettings.initiate({
+          platformName: "Phuket Luxury Tours",
+          maintenanceMode: false,
+        })
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/settings/general");
+      expect(capturedRequest?.method).toBe("PUT");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        platformName: "Phuket Luxury Tours",
+        maintenanceMode: false,
+      });
+    });
+
+    it("PUT /admin/settings/payment updates payment credentials safely", async () => {
+      setupMockFetch(200, { success: true, data: {} });
+      const store = makeStore();
+
+      await store.dispatch(
+        adminApi.endpoints.updateAdminPaymentSettings.initiate({
+          providerName: "Stripe",
+          environment: "sandbox",
+          publishableKey: "pk_test_123",
+          secretKey: "sk_test_secret",
+        })
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/settings/payment");
+      expect(capturedRequest?.method).toBe("PUT");
+      expect(JSON.parse(capturedRequest?.body || "{}").secretKey).toBe("sk_test_secret");
+    });
+
+    it("PUT /admin/settings/webhook updates webhook signing secret and enabled flag", async () => {
+      setupMockFetch(200, { success: true, data: {} });
+      const store = makeStore();
+
+      await store.dispatch(
+        adminApi.endpoints.updateAdminWebhookSettings.initiate({
+          signingSecret: "whsec_live_12345",
+          enabled: true,
+        })
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/settings/webhook");
+      expect(capturedRequest?.method).toBe("PUT");
+    });
+
+    it("POST /admin/settings/cloudinary/test tests real Cloudinary API connectivity", async () => {
+      setupMockFetch(200, {
+        success: true,
+        data: { success: true, message: "Cloudinary API handshake successful", verifiedAt: "2026-11-02T12:00:00Z" },
+      });
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.testAdminCloudinaryConnection.initiate()
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/settings/cloudinary/test");
+      expect(capturedRequest?.method).toBe("POST");
+      expect("data" in result).toBe(true);
+    });
+
+    it("POST /admin/settings/smtp/send-test dispatches test email to administrator", async () => {
+      setupMockFetch(200, {
+        success: true,
+        data: { success: true, message: "Test email dispatched", recipient: "test@domain.com" },
+      });
+      const store = makeStore();
+
+      await store.dispatch(
+        adminApi.endpoints.sendAdminTestEmail.initiate({ recipientEmail: "test@domain.com" })
+      );
+
+      expect(capturedRequest?.url).toBe("http://localhost:5000/api/v1/admin/settings/smtp/send-test");
+      expect(capturedRequest?.method).toBe("POST");
+      expect(JSON.parse(capturedRequest?.body || "{}").recipientEmail).toBe("test@domain.com");
+    });
+
+    it("GET /admin/settings/audit fetches paginated configuration audit records", async () => {
+      setupMockFetch(200, {
+        success: true,
+        data: { logs: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 1 } },
+      });
+      const store = makeStore();
+
+      await store.dispatch(
+        adminApi.endpoints.getAdminSettingAuditLogs.initiate({ category: "PAYMENT", page: 1 })
+      );
+
+      expect(capturedRequest?.url).toContain("/admin/settings/audit");
+      expect(capturedRequest?.url).toContain("category=PAYMENT");
+      expect(capturedRequest?.method).toBe("GET");
+    });
+  });
 });
+
 
 

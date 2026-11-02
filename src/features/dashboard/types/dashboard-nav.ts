@@ -24,6 +24,7 @@ export interface DashboardNavItem {
   badge?: string;
   exact?: boolean;
   permission?: PermissionId;
+  adminOnly?: boolean;
 }
 
 export interface DashboardNavConfig {
@@ -99,6 +100,12 @@ export const adminNavConfig: DashboardNavConfig = {
       permission: "payments.view",
     },
     {
+      title: "Commissions Management",
+      href: "/dashboard/admin/commissions",
+      icon: Percent,
+      adminOnly: true,
+    },
+    {
       title: "Users Management",
       href: "/dashboard/admin/users",
       icon: Users,
@@ -111,10 +118,10 @@ export const adminNavConfig: DashboardNavConfig = {
       permission: "tours.view",
     },
     {
-      title: "Settings / Reports",
+      title: "Settings",
       href: "/dashboard/admin/settings",
       icon: Sliders,
-      permission: "reports.view",
+      permission: "settings.view",
     },
   ],
 };

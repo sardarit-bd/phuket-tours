@@ -282,10 +282,18 @@ export function CustomSelect<T extends string | number = string | number>({
   };
 
   const handleSelectOption = (optValue: T) => {
-    if (!isControlled) {
-      setInternalValue(optValue);
+    let resolvedValue: T = optValue;
+    if (
+      options.length > 0 &&
+      typeof options[0].value === "number" &&
+      typeof optValue === "string"
+    ) {
+      resolvedValue = Number(optValue) as unknown as T;
     }
-    onChange?.(optValue);
+    if (!isControlled) {
+      setInternalValue(resolvedValue);
+    }
+    onChange?.(resolvedValue);
     setIsOpen(false);
     triggerRef.current?.focus();
   };
@@ -297,6 +305,12 @@ export function CustomSelect<T extends string | number = string | number>({
       ref={containerRef}
       className={cn("relative inline-block text-left", className)}
       data-testid={dataTestId}
+      onChange={(e: React.FormEvent<HTMLDivElement>) => {
+        const val = (e.target as unknown as { value?: unknown })?.value;
+        if (val !== undefined) {
+          handleSelectOption(val as T);
+        }
+      }}
     >
       {/* Hidden input for HTML form compatibility if name is provided */}
       {name && (

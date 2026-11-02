@@ -48,6 +48,7 @@ export function DashboardSidebar({
 
   const visibleItems = React.useMemo(() => {
     return config.items.filter((item) => {
+      if (item.adminOnly && !isAdmin) return false;
       if (!item.permission) return true;
       if (isAdmin) return true;
       return hasPermission(item.permission);

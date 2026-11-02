@@ -82,7 +82,7 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     if (pathname.startsWith("/dashboard/admin/media")) return "media.view";
     if (pathname.startsWith("/dashboard/admin/bookings")) return "bookings.view";
     if (pathname.startsWith("/dashboard/admin/payments")) return "payments.view";
-    if (pathname.startsWith("/dashboard/admin/settings")) return "reports.view";
+    if (pathname.startsWith("/dashboard/admin/settings")) return "settings.view";
     if (pathname === "/dashboard/admin") return "dashboard.view";
     return null;
   }, [isUserStaff, pathname]);
@@ -243,6 +243,32 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-[#3297A3]" aria-hidden="true" />
             <p className="text-sm font-medium text-[#74818A]">Verifying permissions...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (pathname.startsWith("/dashboard/admin/commissions")) {
+      return (
+        <div
+          data-testid="staff-access-denied"
+          className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFB] p-4"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-sm text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-3">
+              <ShieldAlert className="h-6 w-6" aria-hidden="true" />
+            </div>
+            <h2 className="font-outfit text-lg font-bold text-[#18282A]">
+              Access Restricted
+            </h2>
+            <p className="mt-1 text-xs text-[#74818A] leading-relaxed">
+              Commissions Management is restricted to Administrators only. Staff accounts do not have access to view or adjust financial commission ledgers.
+            </p>
+            <div className="mt-5 flex justify-center">
+              <Button asChild size="sm" className="bg-[#176779] text-white text-xs px-5 h-9">
+                <Link href="/dashboard/admin">Return to Overview</Link>
+              </Button>
+            </div>
           </div>
         </div>
       );
