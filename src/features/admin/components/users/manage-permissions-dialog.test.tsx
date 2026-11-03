@@ -290,6 +290,50 @@ describe("ManagePermissionsDialog", () => {
     });
   });
 
+  it("warns when permissions are granted without dashboard.view", () => {
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    expect(screen.getByTestId("dashboard-view-warning")).toBeInTheDocument();
+    expect(
+      screen.getByText(/is required for Staff Portal access/)
+    ).toBeInTheDocument();
+  });
+
+  it("does not warn when dashboard.view is granted", () => {
+    mockStaffQuery = vi.fn(() => ({
+      data: {
+        success: true,
+        data: {
+          staffId: "staff-uuid-1",
+          staffName: "Sarah Staff",
+          staffEmail: "sarah@phukettours.com",
+          permissions: ["dashboard.view", "tours.view"],
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    }));
+
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    expect(screen.queryByTestId("dashboard-view-warning")).not.toBeInTheDocument();
+  });
+
   it("renders catalog error state with retry button", () => {
     mockCatalogQuery = vi.fn(() => ({
       data: undefined,

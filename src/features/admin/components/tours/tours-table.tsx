@@ -15,6 +15,7 @@ export interface ToursTableProps {
   onEditTour: (tour: AdminServiceRecord) => void;
   onStatusChange: (id: string, status: AdminServiceStatus) => void;
   isStatusUpdating?: boolean;
+  canEdit?: boolean;
 }
 
 export function ToursTable({
@@ -26,6 +27,7 @@ export function ToursTable({
   onEditTour,
   onStatusChange,
   isStatusUpdating = false,
+  canEdit = true,
 }: ToursTableProps) {
   const allSelected = tours.length > 0 && tours.every((t) => selectedIds.includes(t.id));
   const someSelected =

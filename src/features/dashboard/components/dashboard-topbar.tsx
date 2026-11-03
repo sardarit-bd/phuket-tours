@@ -33,7 +33,12 @@ export function DashboardTopbar({
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
 
   const displayName =
-    user?.name || (config.role === "admin" ? "Admin Staff" : "Guest Account");
+    user?.name ||
+    (config.role === "admin"
+      ? "Admin Staff"
+      : config.role === "staff"
+      ? "PhuketTours Staff"
+      : "Guest Account");
   const avatarInitials = getInitials(user?.name);
 
   const handleLogout = async () => {

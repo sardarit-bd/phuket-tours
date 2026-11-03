@@ -15,9 +15,17 @@ import { OverviewSkeleton } from "@/features/admin/components/overview/overview-
 import { ReportFiltersBar } from "@/features/admin/components/overview/report-filters-bar";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, ShieldAlert } from "lucide-react";
+import { useModulePermissions } from "@/features/admin/context/module-permissions";
+import { STAFF_OVERVIEW_PERMISSIONS } from "@/features/dashboard/types/dashboard-nav";
 
 export default function AdminOverviewPage() {
   const [filters, setFilters] = React.useState<AdminReportFiltersQuery>({});
+  const { isStaff, hasAll } = useModulePermissions();
+
+  // Overview analytics require both dashboard.view and reports.view for Staff.
+  // Admins continue to bypass all permission checks.
+  const canViewOverview =
+    !isStaff || hasAll(STAFF_OVERVIEW_PERMISSIONS);
 
   const {
     data: revenueResponse,
@@ -25,7 +33,7 @@ export default function AdminOverviewPage() {
     isFetching: isRevenueFetching,
     error: revenueError,
     refetch: refetchRevenue,
-  } = useGetAdminRevenueReportQuery(filters);
+  } = useGetAdminRevenueReportQuery(filters, { skip: !canViewOverview });
 
   const {
     data: bookingsResponse,
@@ -33,7 +41,7 @@ export default function AdminOverviewPage() {
     isFetching: isBookingsFetching,
     error: bookingsError,
     refetch: refetchBookings,
-  } = useGetAdminBookingsReportQuery(filters);
+  } = useGetAdminBookingsReportQuery(filters, { skip: !canViewOverview });
 
   const {
     data: paymentsResponse,
@@ -41,7 +49,7 @@ export default function AdminOverviewPage() {
     isFetching: isPaymentsFetching,
     error: paymentsError,
     refetch: refetchPayments,
-  } = useGetAdminPaymentsReportQuery(filters);
+  } = useGetAdminPaymentsReportQuery(filters, { skip: !canViewOverview });
 
   const {
     data: servicesResponse,
@@ -49,7 +57,10 @@ export default function AdminOverviewPage() {
     isFetching: isServicesFetching,
     error: servicesError,
     refetch: refetchServices,
-  } = useGetAdminServicesReportQuery({ ...filters, page: 1, limit: 10 });
+  } = useGetAdminServicesReportQuery(
+    { ...filters, page: 1, limit: 10 },
+    { skip: !canViewOverview }
+  );
 
   const isInitialLoading =
     isRevenueLoading || isBookingsLoading || isPaymentsLoading || isServicesLoading;
@@ -74,6 +85,26 @@ export default function AdminOverviewPage() {
 
   const hasAnyError = Boolean(revenueError || bookingsError || paymentsError || servicesError);
 
+  if (!canViewOverview) {
+    return (
+      <div
+        data-testid="overview-access-denied"
+        className="rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-sm"
+      >
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+          <ShieldAlert className="h-6 w-6" aria-hidden="true" />
+        </div>
+        <h1 className="mt-4 font-outfit text-xl font-bold text-[#18282A]">
+          Overview Analytics Restricted
+        </h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-[#74818A]">
+          Overview analytics require both dashboard.view and reports.view.
+          Please contact your administrator to request report access.
+        </p>
+      </div>
+    );
+  }
+
   if (isInitialLoading) {
     return <OverviewSkeleton />;
   }
@@ -85,7 +116,7 @@ export default function AdminOverviewPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
-              Admin Overview Analytics
+              {isStaff ? "Staff Overview Analytics" : "Admin Overview Analytics"}
             </h1>
             <span className="rounded-full border border-[#E5EAED] bg-[#F5F8F9] px-2.5 py-0.5 text-xs font-medium text-[#74818A]">
               Report Overview

@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, LogOut } from "lucide-react";
 import {
   DashboardNavConfig,
+  hasAllPermissions,
   isNavItemActive,
 } from "../types/dashboard-nav";
 import { cn } from "@/lib/utils";
@@ -36,29 +37,48 @@ export function DashboardSidebar({
   const pathname = usePathname() ?? "/dashboard";
   const user = useAppSelector(selectCurrentUser);
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, permissions } = usePermissions();
 
   const isViewAdmin = config.role === "admin";
+  const isViewStaff = config.role === "staff";
   const isViewAgent = config.role === "agent";
-  const homeHref = isViewAdmin
-    ? "/dashboard/admin"
-    : isViewAgent
-    ? "/dashboard/agent"
-    : "/dashboard";
+  const homeHref =
+    isViewAdmin || isViewStaff
+      ? "/dashboard/admin"
+      : isViewAgent
+      ? "/dashboard/agent"
+      : "/dashboard";
 
   const visibleItems = React.useMemo(() => {
     return config.items.filter((item) => {
       if (item.adminOnly && !isAdmin) return false;
-      if (!item.permission) return true;
       if (isAdmin) return true;
+      if (item.permissions && !hasAllPermissions(permissions, item.permissions)) {
+        return false;
+      }
+      if (!item.permission) return true;
       return hasPermission(item.permission);
     });
-  }, [config.items, isAdmin, hasPermission]);
+  }, [config.items, isAdmin, permissions, hasPermission]);
 
   const displayName =
-    user?.name || (isViewAdmin ? "Admin Staff" : isViewAgent ? "Partner Agent" : "Phuket Traveler");
+    user?.name ||
+    (isViewAdmin
+      ? "Admin Staff"
+      : isViewStaff
+      ? "PhuketTours Staff"
+      : isViewAgent
+      ? "Partner Agent"
+      : "Phuket Traveler");
   const displayEmail =
-    user?.email || (isViewAdmin ? "admin@phukettours.com" : isViewAgent ? "agent@phukettours.com" : "guest@phukettours.com");
+    user?.email ||
+    (isViewAdmin
+      ? "admin@phukettours.com"
+      : isViewStaff
+      ? "staff@phukettours.com"
+      : isViewAgent
+      ? "agent@phukettours.com"
+      : "guest@phukettours.com");
   const avatarInitials = getInitials(user?.name);
 
   const handleLogout = async () => {
@@ -106,13 +126,21 @@ export function DashboardSidebar({
             "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
             isViewAdmin
               ? "bg-[#18282A] text-white"
+              : isViewStaff
+              ? "bg-[#176779] text-white"
               : isViewAgent
               ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
               : "bg-[#3297A3]/10 text-[#3297A3]"
           )}
           data-testid="sidebar-role-indicator"
         >
-          {isViewAdmin ? "Admin" : isViewAgent ? "Agent Portal" : "User"}
+          {isViewAdmin
+            ? "Admin"
+            : isViewStaff
+            ? "Staff"
+            : isViewAgent
+            ? "Agent Portal"
+            : "User"}
         </span>
       </div>
 

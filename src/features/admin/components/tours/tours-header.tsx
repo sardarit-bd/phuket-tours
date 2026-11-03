@@ -7,12 +7,14 @@ export interface ToursHeaderProps {
   totalCount?: number;
   isLoading?: boolean;
   onAddNewTour?: () => void;
+  canCreate?: boolean;
 }
 
 export function ToursHeader({
   totalCount,
   isLoading = false,
   onAddNewTour,
+  canCreate = true,
 }: ToursHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -40,17 +42,19 @@ export function ToursHeader({
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          onClick={onAddNewTour}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#176779] px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-[#125261] transition-colors cursor-pointer"
-          data-testid="add-new-tour-button"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>Add New Tour</span>
-        </Button>
-      </div>
+      {canCreate && onAddNewTour && (
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            onClick={onAddNewTour}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#176779] px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-[#125261] transition-colors cursor-pointer"
+            data-testid="add-new-tour-button"
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <span>Add New Tour</span>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -23,16 +23,33 @@ export interface DashboardNavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   exact?: boolean;
-  permission?: PermissionId;
+  /** Any one of these permissions grants visibility (admin always bypasses). */
+  permission?: PermissionId | PermissionId[];
+  /** Every one of these permissions is required for visibility (admin always bypasses). */
+  permissions?: PermissionId[];
   adminOnly?: boolean;
 }
 
 export interface DashboardNavConfig {
-  role: "user" | "admin" | "agent";
+  role: "user" | "admin" | "staff" | "agent";
   roleLabel: string;
   portalTitle: string;
   items: DashboardNavItem[];
 }
+
+/** Mandatory permission for any Staff Portal entry. */
+export const STAFF_PORTAL_ENTRY_PERMISSION: PermissionId = "dashboard.view";
+
+/** Overview analytics require both dashboard access and report access. */
+export const STAFF_OVERVIEW_PERMISSIONS: PermissionId[] = [
+  "dashboard.view",
+  "reports.view",
+];
+
+const ADMIN_OVERVIEW_PERMISSIONS: PermissionId[] = [
+  "dashboard.view",
+  "reports.view",
+];
 
 export const userNavConfig: DashboardNavConfig = {
   role: "user",
@@ -73,7 +90,70 @@ export const adminNavConfig: DashboardNavConfig = {
       href: "/dashboard/admin",
       icon: LayoutDashboard,
       exact: true,
-      permission: "dashboard.view",
+      permissions: ADMIN_OVERVIEW_PERMISSIONS,
+    },
+    {
+      title: "Tours Management",
+      href: "/dashboard/admin/tours",
+      icon: Compass,
+      permission: "tours.view",
+    },
+    {
+      title: "Media Library",
+      href: "/dashboard/admin/media",
+      icon: ImageIcon,
+      permission: "media.view",
+    },
+    {
+      title: "Bookings Management",
+      href: "/dashboard/admin/bookings",
+      icon: ClipboardList,
+      permission: "bookings.view",
+    },
+    {
+      title: "Payments Management",
+      href: "/dashboard/admin/payments",
+      icon: CreditCard,
+      permission: "payments.view",
+    },
+    {
+      title: "Commissions Management",
+      href: "/dashboard/admin/commissions",
+      icon: Percent,
+      adminOnly: true,
+    },
+    {
+      title: "Users Management",
+      href: "/dashboard/admin/users",
+      icon: Users,
+      permission: "users.view",
+    },
+    {
+      title: "Categories",
+      href: "/dashboard/admin/categories",
+      icon: Tag,
+      permission: "tours.view",
+    },
+    {
+      title: "Settings",
+      href: "/dashboard/admin/settings",
+      icon: Sliders,
+      permission: "settings.view",
+    },
+  ],
+};
+
+export const staffNavConfig: DashboardNavConfig = {
+  role: "staff",
+  roleLabel: "Staff Portal",
+  portalTitle: "PhuketTours Staff",
+  items: [
+    {
+      title: "Overview",
+      href: "/dashboard/admin",
+      icon: LayoutDashboard,
+      exact: true,
+      permissions: STAFF_OVERVIEW_PERMISSIONS,
     },
     {
       title: "Tours Management",
@@ -179,4 +259,100 @@ export function getBreadcrumbInfo(
     portal: config.roleLabel,
     current: activeItem?.title ?? "Dashboard",
   };
+}
+
+export interface StaffAdminRouteRule {
+  href: string;
+  permissions: PermissionId[];
+  adminOnly?: boolean;
+  exact?: boolean;
+}
+
+/**
+ * Authoritative Staff routing table for the admin portal.
+ *
+ * Unknown admin routes are intentionally absent so that they default-deny.
+ * Action-only permissions (for example tours.create) never grant module entry.
+ */
+export const staffAdminRouteRules: StaffAdminRouteRule[] = [
+  {
+    href: "/dashboard/admin",
+    permissions: STAFF_OVERVIEW_PERMISSIONS,
+    exact: true,
+  },
+  { href: "/dashboard/admin/tours", permissions: ["tours.view"] },
+  { href: "/dashboard/admin/media", permissions: ["media.view"] },
+  { href: "/dashboard/admin/bookings", permissions: ["bookings.view"] },
+  { href: "/dashboard/admin/payments", permissions: ["payments.view"] },
+  {
+    href: "/dashboard/admin/commissions",
+    permissions: [],
+    adminOnly: true,
+  },
+  { href: "/dashboard/admin/users", permissions: ["users.view"] },
+  { href: "/dashboard/admin/categories", permissions: ["tours.view"] },
+  { href: "/dashboard/admin/settings", permissions: ["settings.view"] },
+];
+
+export function isAdminPortalPath(pathname: string): boolean {
+  return pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/");
+}
+
+export function getStaffAdminRouteRule(
+  pathname: string
+): StaffAdminRouteRule | undefined {
+  return staffAdminRouteRules.find((rule) =>
+    rule.exact
+      ? pathname === rule.href
+      : pathname === rule.href || pathname.startsWith(`${rule.href}/`)
+  );
+}
+
+export function hasAllPermissions(
+  granted: readonly string[],
+  required: readonly PermissionId[]
+): boolean {
+  return required.every((permission) => granted.includes(permission));
+}
+
+/**
+ * Staff may enter a known admin route only when every permission listed for it
+ * is granted. Commissions is admin-only and all unknown routes default-deny.
+ */
+export function canAccessStaffAdminRoute(
+  pathname: string,
+  granted: readonly string[]
+): boolean {
+  const rule = getStaffAdminRouteRule(pathname);
+  if (!rule || rule.adminOnly) return false;
+  return hasAllPermissions(granted, rule.permissions);
+}
+
+/**
+ * Returns the first module a Staff member can enter, in navigation order.
+ * Overview is excluded because it is an analytics landing page, not a module.
+ */
+export function getFirstPermittedModule(
+  granted: readonly string[]
+): string | null {
+  for (const item of staffNavConfig.items) {
+    if (item.href === "/dashboard/admin" || item.adminOnly) continue;
+    if (item.permissions && !hasAllPermissions(granted, item.permissions)) {
+      continue;
+    }
+    if (item.permission) {
+      const required = Array.isArray(item.permission)
+        ? item.permission
+        : [item.permission];
+      if (!required.some((permission) => granted.includes(permission))) {
+        continue;
+      }
+    }
+    return item.href;
+  }
+  return null;
+}
+
+export function canViewStaffOverview(granted: readonly string[]): boolean {
+  return hasAllPermissions(granted, STAFF_OVERVIEW_PERMISSIONS);
 }

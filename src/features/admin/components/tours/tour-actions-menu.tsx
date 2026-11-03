@@ -20,6 +20,7 @@ export interface TourActionsMenuProps {
   onEditTour: (tour: AdminServiceRecord) => void;
   onStatusChange: (tour: AdminServiceRecord, nextStatus: AdminServiceStatus) => void;
   isUpdatingStatus?: boolean;
+  canEdit?: boolean;
 }
 
 const emptySubscribe = () => () => {};
@@ -30,6 +31,7 @@ export function TourActionsMenu({
   onEditTour,
   onStatusChange,
   isUpdatingStatus = false,
+  canEdit = true,
 }: TourActionsMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const isClient = React.useSyncExternalStore(emptySubscribe, () => true, () => false);
@@ -182,54 +184,58 @@ export function TourActionsMenu({
               <span>View Details</span>
             </button>
 
-            {/* Edit Tour */}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => handleAction(() => onEditTour(tour))}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer text-left"
-            >
-              <Edit className="h-4 w-4 text-[#74818A]" />
-              <span>Edit Tour</span>
-            </button>
+            {canEdit && (
+              <>
+                {/* Edit Tour */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => handleAction(() => onEditTour(tour))}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer text-left"
+                >
+                  <Edit className="h-4 w-4 text-[#74818A]" />
+                  <span>Edit Tour</span>
+                </button>
 
-            <div className="my-1 border-t border-[#E5EAED]" />
+                <div className="my-1 border-t border-[#E5EAED]" />
 
-            {/* Contextual Status Transitions */}
-            {tour.status !== "PUBLISHED" && (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => handleAction(() => onStatusChange(tour, "PUBLISHED"))}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer text-left"
-              >
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                <span>Publish Tour</span>
-              </button>
-            )}
+                {/* Contextual Status Transitions */}
+                {tour.status !== "PUBLISHED" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => handleAction(() => onStatusChange(tour, "PUBLISHED"))}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer text-left"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span>Publish Tour</span>
+                  </button>
+                )}
 
-            {tour.status !== "DRAFT" && (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => handleAction(() => onStatusChange(tour, "DRAFT"))}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer text-left"
-              >
-                <FileEdit className="h-4 w-4 text-amber-600" />
-                <span>Move to Draft</span>
-              </button>
-            )}
+                {tour.status !== "DRAFT" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => handleAction(() => onStatusChange(tour, "DRAFT"))}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer text-left"
+                  >
+                    <FileEdit className="h-4 w-4 text-amber-600" />
+                    <span>Move to Draft</span>
+                  </button>
+                )}
 
-            {tour.status !== "UNPUBLISHED" && (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => handleAction(() => onStatusChange(tour, "UNPUBLISHED"))}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left"
-              >
-                <EyeOff className="h-4 w-4 text-slate-500" />
-                <span>Unpublish Tour</span>
-              </button>
+                {tour.status !== "UNPUBLISHED" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => handleAction(() => onStatusChange(tour, "UNPUBLISHED"))}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left"
+                  >
+                    <EyeOff className="h-4 w-4 text-slate-500" />
+                    <span>Unpublish Tour</span>
+                  </button>
+                )}
+              </>
             )}
           </div>,
           document.body

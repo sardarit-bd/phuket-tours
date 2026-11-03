@@ -100,6 +100,9 @@ export function ManagePermissionsDialog({
 
   const selectedPermissions = overridePermissions ?? savedPermissions;
 
+  const isMissingDashboardView =
+    selectedPermissions.size > 0 && !selectedPermissions.has("dashboard.view");
+
   const hasUnsavedChanges = React.useMemo(() => {
     if (overridePermissions === null) return false;
     return !setsEqual(overridePermissions, savedPermissions);
@@ -291,6 +294,27 @@ export function ManagePermissionsDialog({
         <div data-testid="permissions-error-banner" className="mx-6 mt-4 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800">
           <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
           <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {/* 2b. Portal-entry warning: dashboard.view is mandatory */}
+      {isMissingDashboardView && (
+        <div
+          data-testid="dashboard-view-warning"
+          role="alert"
+          className="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <div className="space-y-0.5">
+            <p className="font-semibold">
+              <code className="font-mono">dashboard.view</code> is required for
+              Staff Portal access
+            </p>
+            <p className="text-amber-800">
+              Without it, this staff member will be denied entry to the Staff
+              Portal even if other module permissions are granted.
+            </p>
+          </div>
         </div>
       )}
 

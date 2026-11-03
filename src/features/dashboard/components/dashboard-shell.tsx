@@ -9,6 +9,7 @@ import {
   DashboardNavConfig,
   userNavConfig,
   adminNavConfig,
+  staffNavConfig,
   agentNavConfig,
 } from "../types/dashboard-nav";
 import { DashboardGuard } from "@/features/auth/components/dashboard-guard";
@@ -32,7 +33,10 @@ export function DashboardShell({
 
   // Automatically select role config
   const activeConfig = React.useMemo(() => {
-    if (user?.role === "admin" || user?.role === "staff") {
+    if (user?.role === "staff") {
+      return staffNavConfig;
+    }
+    if (user?.role === "admin") {
       return adminNavConfig;
     }
     if (user?.role === "agent" || pathname.startsWith("/dashboard/agent")) {
