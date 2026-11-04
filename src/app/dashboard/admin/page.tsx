@@ -97,9 +97,9 @@ export default function AdminOverviewPage() {
         <h1 className="mt-4 font-outfit text-xl font-bold text-[#18282A]">
           Overview Analytics Restricted
         </h1>
-        <p className="mx-auto mt-2 max-w-md text-sm text-[#74818A]">
-          Overview analytics require both dashboard.view and reports.view.
-          Please contact your administrator to request report access.
+        <p className="mx-auto mt-2 max-w-md text-sm text-[#74818A] leading-relaxed">
+          Your account doesn&rsquo;t have access to Overview analytics yet.
+          Please contact your administrator to request access.
         </p>
       </div>
     );
@@ -114,17 +114,9 @@ export default function AdminOverviewPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
-              {isStaff ? "Staff Overview Analytics" : "Admin Overview Analytics"}
-            </h1>
-            <span className="rounded-full border border-[#E5EAED] bg-[#F5F8F9] px-2.5 py-0.5 text-xs font-medium text-[#74818A]">
-              Report Overview
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-[#74818A]">
-            Aggregated platform financial performance, booking volume distribution, and service metrics.
-          </p>
+          <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
+            {isStaff ? "Staff Overview Analytics" : "Admin Overview Analytics"}
+          </h1>
         </div>
 
         <div className="flex items-center gap-2">

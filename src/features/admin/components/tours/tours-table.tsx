@@ -225,6 +225,7 @@ export function ToursTable({
                     onEditTour={onEditTour}
                     onStatusChange={(t, status) => onStatusChange(t.id, status)}
                     isUpdatingStatus={isStatusUpdating}
+                    canEdit={canEdit}
                   />
                 </td>
               </tr>

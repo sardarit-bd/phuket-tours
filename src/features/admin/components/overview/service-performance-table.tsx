@@ -12,7 +12,6 @@ import {
   BarChart3,
   CheckCircle2,
   Compass,
-  Info,
   Layers,
   RefreshCw,
   Table as TableIcon,
@@ -125,19 +124,14 @@ export function ServicePerformanceTable({
     >
       {/* Header with Title and View / Filter Controls */}
       <div className="flex flex-col gap-4 border-b border-[#E5EAED] pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-[#2B9BA8]" />
-            <h3
-              id="service-performance-heading"
-              className="font-outfit text-lg font-bold text-[#18282A]"
-            >
-              Service-Level Booking Performance
-            </h3>
-          </div>
-          <p className="mt-0.5 text-xs text-[#74818A]">
-            Tour and service performance aggregated from verified booking totals.
-          </p>
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-[#2B9BA8]" />
+          <h3
+            id="service-performance-heading"
+            className="font-outfit text-lg font-bold text-[#18282A]"
+          >
+            Service-Level Booking Performance
+          </h3>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -264,9 +258,6 @@ export function ServicePerformanceTable({
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-[#74818A]">
                   Booking Volume Comparison by Service
                 </h4>
-                <span className="text-[11px] text-[#74818A]">
-                  Comparing Completed vs Total Pipeline
-                </span>
               </div>
 
               {/* Scrollable list to handle large datasets gracefully */}
@@ -436,18 +427,6 @@ export function ServicePerformanceTable({
           )}
         </div>
       )}
-
-      {/* Contract boundary notice regarding Recent Orders */}
-      <div className="mt-6 flex items-start gap-2.5 rounded-lg border border-[#E5EAED] bg-[#F8FAFB] p-3 text-xs text-[#74818A]">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#2B9BA8]" />
-        <div>
-          <span className="font-medium text-[#18282A]">Backend Contract Boundary: </span>
-          The Admin Overview Analytics Center displays aggregated reports provided by{" "}
-          <code className="text-[#176779]">/api/v1/admin/reports/*</code>. Individual booking order
-          item records are not part of the reporting contract and will be managed in the dedicated
-          Bookings Management module.
-        </div>
-      </div>
     </section>
   );
 }

@@ -301,9 +301,7 @@ describe("ManagePermissionsDialog", () => {
     );
 
     expect(screen.getByTestId("dashboard-view-warning")).toBeInTheDocument();
-    expect(
-      screen.getByText(/is required for Staff Portal access/)
-    ).toBeInTheDocument();
+    expect(screen.getByText("Staff Portal Access Required")).toBeInTheDocument();
   });
 
   it("does not warn when dashboard.view is granted", () => {
@@ -354,5 +352,119 @@ describe("ManagePermissionsDialog", () => {
     expect(screen.getByTestId("permissions-error-state")).toBeInTheDocument();
     expect(screen.getByText("Unable to load permissions")).toBeInTheDocument();
     expect(screen.getByTestId("retry-permissions-btn")).toBeInTheDocument();
+  });
+
+  it("does not show the confirmation dialog when closing with no unsaved changes", () => {
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    // No unsaved changes initially, so clicking Cancel should close without confirmation.
+    fireEvent.click(screen.getByTestId("cancel-permissions-btn"));
+
+    expect(screen.queryByTestId("discard-changes-confirm")).not.toBeInTheDocument();
+    expect(mockClose).toHaveBeenCalled();
+  });
+
+  it("shows the in-app confirmation dialog when closing with unsaved changes", () => {
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    // Toggle a permission to create unsaved changes.
+    fireEvent.click(screen.getByTestId("perm-checkbox-tours.create"));
+
+    // Click Cancel (which now funnels through handleRequestClose).
+    fireEvent.click(screen.getByTestId("cancel-permissions-btn"));
+
+    // The custom confirmation dialog should be visible.
+    expect(screen.getByTestId("discard-changes-confirm")).toBeInTheDocument();
+    expect(screen.getByText("Discard Unsaved Changes?")).toBeInTheDocument();
+
+    // The outer dialog should not have closed yet.
+    expect(mockClose).not.toHaveBeenCalled();
+  });
+
+  it("Keep Editing closes the confirmation but keeps the dialog open with changes preserved", () => {
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    // Create unsaved changes.
+    fireEvent.click(screen.getByTestId("perm-checkbox-tours.create"));
+    expect(screen.getByTestId("perm-checkbox-tours.create")).toBeChecked();
+
+    // Trigger the confirmation via Cancel.
+    fireEvent.click(screen.getByTestId("cancel-permissions-btn"));
+    expect(screen.getByTestId("discard-changes-confirm")).toBeInTheDocument();
+
+    // Click "Keep Editing" — confirmation closes, outer dialog stays open, change preserved.
+    fireEvent.click(screen.getByTestId("keep-editing-btn"));
+    expect(screen.queryByTestId("discard-changes-confirm")).not.toBeInTheDocument();
+    expect(mockClose).not.toHaveBeenCalled();
+    expect(screen.getByTestId("perm-checkbox-tours.create")).toBeChecked();
+  });
+
+  it("Discard Changes closes the dialog and resets local selection", () => {
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    // Create unsaved changes (tours.create added).
+    fireEvent.click(screen.getByTestId("perm-checkbox-tours.create"));
+    expect(screen.getByTestId("unsaved-changes-badge")).toBeInTheDocument();
+
+    // Trigger the confirmation.
+    fireEvent.click(screen.getByTestId("cancel-permissions-btn"));
+    expect(screen.getByTestId("discard-changes-confirm")).toBeInTheDocument();
+
+    // Click "Discard Changes".
+    fireEvent.click(screen.getByTestId("discard-changes-btn"));
+
+    // The outer dialog closes; the parent's onClose is called.
+    expect(mockClose).toHaveBeenCalled();
+    expect(screen.queryByTestId("discard-changes-confirm")).not.toBeInTheDocument();
+  });
+
+  it("Escape key while confirmation is open dismisses the confirmation (Keep Editing behavior)", () => {
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    // Create unsaved changes and open the confirmation via Cancel.
+    fireEvent.click(screen.getByTestId("perm-checkbox-tours.create"));
+    fireEvent.click(screen.getByTestId("cancel-permissions-btn"));
+    expect(screen.getByTestId("discard-changes-confirm")).toBeInTheDocument();
+
+    // The X button on the confirmation (aria-label "Keep editing") closes only the confirmation.
+    const keepEditingX = screen.getByRole("button", { name: "Keep editing" });
+    fireEvent.click(keepEditingX);
+    expect(screen.queryByTestId("discard-changes-confirm")).not.toBeInTheDocument();
+    expect(mockClose).not.toHaveBeenCalled();
   });
 });

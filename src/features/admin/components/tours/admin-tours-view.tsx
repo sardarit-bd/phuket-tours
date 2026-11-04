@@ -19,6 +19,7 @@ import { BulkActionBar } from "./bulk-action-bar";
 import { BulkConfirmDialog } from "./bulk-confirm-dialog";
 import { TourDetailsDialog } from "./tour-details-dialog";
 import { AddTourDialog } from "./add-tour-dialog";
+import { usePermissions } from "../../hooks/use-permissions";
 import type {
   AdminServiceRecord,
   AdminServiceStatus,
@@ -32,6 +33,11 @@ interface ActionFeedback {
 }
 
 export function AdminToursView() {
+  // Permission-gated actions (admin always bypasses; staff need explicit grants)
+  const { isAdmin, hasPermission } = usePermissions();
+  const canCreateTour = isAdmin || hasPermission("tours.create");
+  const canEditTour = isAdmin || hasPermission("tours.edit");
+
   // 1. Filter and sorting state
   const [search, setSearch] = React.useState<string>("");
   const [status, setStatus] = React.useState<AdminServiceStatus | "ALL">("ALL");
@@ -291,6 +297,7 @@ export function AdminToursView() {
         onAddNewTour={() =>
           setAddTourModal({ isOpen: true, mode: "create" })
         }
+        canCreate={canCreateTour}
       />
 
       {/* Summary Cards */}
@@ -372,8 +379,10 @@ export function AdminToursView() {
           <ToursEmptyState
             isFiltered={isFiltered}
             onResetFilters={handleResetFilters}
-            onAddNewTour={() =>
-              setAddTourModal({ isOpen: true, mode: "create" })
+            onAddNewTour={
+              canCreateTour
+                ? () => setAddTourModal({ isOpen: true, mode: "create" })
+                : undefined
             }
           />
         ) : (
@@ -394,6 +403,7 @@ export function AdminToursView() {
               }
               onStatusChange={handleSingleStatusChange}
               isStatusUpdating={isStatusUpdating}
+              canEdit={canEditTour}
             />
 
             {/* Server-side Pagination */}
@@ -439,13 +449,16 @@ export function AdminToursView() {
         isOpen={Boolean(activeTourForDetails)}
         onClose={() => setActiveTourForDetails(null)}
         tour={activeTourForDetails}
-        onEdit={(tour) =>
-          setAddTourModal({
-            isOpen: true,
-            mode: "edit",
-            tourName: tour.name,
-            tour,
-          })
+        onEdit={
+          canEditTour
+            ? (tour) =>
+                setAddTourModal({
+                  isOpen: true,
+                  mode: "edit",
+                  tourName: tour.name,
+                  tour,
+                })
+            : undefined
         }
       />
 

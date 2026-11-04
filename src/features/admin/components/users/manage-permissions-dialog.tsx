@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
   BarChart3,
   Check,
+  X,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,9 @@ export function ManagePermissionsDialog({
   // 3. Update mutation
   const [updatePermissions, { isLoading: isSaving }] =
     useUpdateStaffPermissionsMutation();
+
+  // 4. Confirmation flow for unsaved changes (in-app, replacing window.confirm)
+  const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
 
   // Derive server-persisted permissions directly without cascading effects
   const savedPermissions = React.useMemo(() => {
@@ -170,7 +174,22 @@ export function ManagePermissionsDialog({
     setOverridePermissions(null);
     setSearchQuery("");
     setErrorMessage(null);
+    setShowDiscardConfirm(false);
     onClose();
+  };
+
+  // When closing with unsaved changes, surface an in-app confirmation first.
+  // The close-button (X) and Escape key both funnel through here.
+  const handleRequestClose = () => {
+    if (hasUnsavedChanges && !showDiscardConfirm) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    handleClose();
+  };
+
+  const handleDiscard = () => {
+    handleClose();
   };
 
   const handleSave = async () => {
@@ -207,15 +226,7 @@ export function ManagePermissionsDialog({
   return (
     <Dialog
       isOpen={isOpen}
-      onClose={() => {
-        if (hasUnsavedChanges) {
-          const confirmLeave = window.confirm(
-            "You have unsaved permission changes. Are you sure you want to discard them?"
-          );
-          if (!confirmLeave) return;
-        }
-        handleClose();
-      }}
+      onClose={handleRequestClose}
       size="xl"
       noBodyWrapper
       className="max-h-[90vh] flex flex-col p-0 overflow-hidden"
@@ -306,13 +317,13 @@ export function ManagePermissionsDialog({
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <div className="space-y-0.5">
-            <p className="font-semibold">
-              <code className="font-mono">dashboard.view</code> is required for
-              Staff Portal access
+            <p className="font-semibold text-amber-900">
+              Staff Portal Access Required
             </p>
-            <p className="text-amber-800">
-              Without it, this staff member will be denied entry to the Staff
-              Portal even if other module permissions are granted.
+            <p className="text-amber-800 leading-relaxed">
+              To let this staff member access the portal, enable Dashboard
+              Overview access. Without it, they won&rsquo;t be able to enter
+              the Staff Portal, even if other permissions are enabled.
             </p>
           </div>
         </div>
@@ -483,8 +494,9 @@ export function ManagePermissionsDialog({
         <div className="flex items-center gap-2.5">
           <Button
             type="button"
+            data-testid="cancel-permissions-btn"
             variant="outline"
-            onClick={handleClose}
+            onClick={handleRequestClose}
             disabled={isSaving}
             className="text-xs h-9 px-4 rounded-xl"
           >
@@ -509,6 +521,67 @@ export function ManagePermissionsDialog({
         </div>
       </div>
       </div>
+
+      {/* In-app unsaved-changes confirmation (replaces window.confirm) */}
+      {showDiscardConfirm && (
+        <div
+          data-testid="discard-changes-confirm"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-200"
+            onClick={() => setShowDiscardConfirm(false)}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-[#E5EAED]">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-outfit text-base font-bold text-[#18282A]">
+                  Discard Unsaved Changes?
+                </h3>
+                <p className="mt-1 text-xs text-[#74818A] leading-relaxed">
+                  You have made changes to staff permissions that haven&rsquo;t
+                  been saved. Are you sure you want to discard them?
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Keep editing"
+                onClick={() => setShowDiscardConfirm(false)}
+                className="ml-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#74818A] hover:bg-[#F5F8F9] hover:text-[#18282A] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176779]"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                data-testid="keep-editing-btn"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDiscardConfirm(false)}
+                className="rounded-xl text-xs font-semibold"
+              >
+                Keep Editing
+              </Button>
+              <Button
+                type="button"
+                data-testid="discard-changes-btn"
+                size="sm"
+                onClick={handleDiscard}
+                className="rounded-xl bg-[#176779] hover:bg-[#125362] text-white text-xs font-semibold"
+              >
+                Discard Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 }

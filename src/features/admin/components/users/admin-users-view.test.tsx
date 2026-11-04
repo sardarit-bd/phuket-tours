@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AdminUsersView } from "./admin-users-view";
 import type { AdminUserRecord } from "../../types/admin-users";
+import * as apiModule from "../../api/admin-api";
+import * as permissionsHook from "../../hooks/use-permissions";
 
 const MOCK_USERS_LIST: AdminUserRecord[] = [
   {
@@ -14,6 +16,8 @@ const MOCK_USERS_LIST: AdminUserRecord[] = [
     createdAt: "2026-10-01T00:00:00.000Z",
     updatedAt: "2026-10-01T00:00:00.000Z",
     agentProfile: null,
+    invitationStatus: "pending",
+    canResendInvitation: true,
   },
   {
     id: "usr-agent-2",
@@ -25,6 +29,8 @@ const MOCK_USERS_LIST: AdminUserRecord[] = [
     createdAt: "2026-10-05T00:00:00.000Z",
     updatedAt: "2026-10-05T00:00:00.000Z",
     agentProfile: { agencyName: "Bob's Tours" },
+    invitationStatus: "pending",
+    canResendInvitation: true,
   },
   {
     id: "usr-staff-3",
@@ -36,6 +42,8 @@ const MOCK_USERS_LIST: AdminUserRecord[] = [
     createdAt: "2026-10-10T00:00:00.000Z",
     updatedAt: "2026-10-10T00:00:00.000Z",
     agentProfile: null,
+    invitationStatus: "pending",
+    canResendInvitation: true,
   },
 ];
 
@@ -164,6 +172,36 @@ vi.mock("../../api/admin-api", () => ({
 }));
 
 describe("AdminUsersView orchestrator", () => {
+  let resendStaffMock: ReturnType<typeof vi.fn>;
+  let resendUserMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Capture the resend handlers so we can assert per-role dispatch
+    resendStaffMock = vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true }) });
+    resendUserMock = vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true }) });
+
+    vi.mocked(permissionsHook.usePermissions).mockReturnValue({
+      permissions: [],
+      isAdmin: true,
+      isStaff: false,
+      isLoading: false,
+      hasPermission: vi.fn(() => true),
+      hasAnyPermission: vi.fn(() => true),
+      hasAllPermissions: vi.fn(() => true),
+    });
+
+    vi.mocked(apiModule.useResendStaffInvitationMutation).mockReturnValue([
+      resendStaffMock,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof apiModule.useResendStaffInvitationMutation>);
+
+    vi.mocked(apiModule.useResendUserInvitationMutation).mockReturnValue([
+      resendUserMock,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof apiModule.useResendUserInvitationMutation>);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -215,5 +253,36 @@ describe("AdminUsersView orchestrator", () => {
     fireEvent.click(refreshBtn);
 
     expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it("dispatches staff resends to the staff endpoint and other roles to the user endpoint", async () => {
+    render(<AdminUsersView />);
+
+    const staffUser = MOCK_USERS_LIST.find((u) => u.role === "staff")!;
+    const agentUser = MOCK_USERS_LIST.find((u) => u.role === "agent")!;
+
+    // Open each row's actions menu and click "Resend Invitation"
+    const openAndResend = (userId: string) => {
+      const trigger = screen.getByTestId(`user-actions-trigger-${userId}`);
+      fireEvent.click(trigger);
+      const menu = screen.getByTestId(`user-actions-menu-${userId}`);
+      const resendBtn = menu.querySelector(`[data-testid="action-resend-invitation-${userId}"]`) as HTMLElement | null;
+      if (resendBtn) {
+        fireEvent.click(resendBtn);
+      }
+      return { resendBtn };
+    };
+
+    await openAndResend(staffUser.id);
+    await openAndResend(agentUser.id);
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Staff member -> staff resend endpoint
+    expect(resendStaffMock).toHaveBeenCalledTimes(1);
+    expect(resendStaffMock).toHaveBeenCalledWith(staffUser.id);
+    // Agent -> generic user resend endpoint (admin rows have no resend action visible)
+    expect(resendUserMock).toHaveBeenCalledTimes(1);
+    expect(resendUserMock).toHaveBeenCalledWith(agentUser.id);
   });
 });

@@ -16,7 +16,6 @@ import type {
   AdminPaymentsReportData,
 } from "../../types/admin";
 import { Button } from "@/components/ui/button";
-
 export interface RevenueSummaryProps {
   revenueData?: AdminRevenueReportData | null;
   paymentsData?: AdminPaymentsReportData | null;
@@ -96,9 +95,6 @@ export function RevenueSummary({
           >
             Financial Totals
           </h3>
-          <p className="text-xs text-[#74818A]">
-            Financial aggregation based on verified booking &amp; payment transactions.
-          </p>
         </div>
         {currency && (
           <span className="rounded-md border border-[#E5EAED] bg-[#F5F8F9] px-2.5 py-1 text-xs font-medium text-[#74818A]">
@@ -115,7 +111,7 @@ export function RevenueSummary({
         >
           <Info className="h-4 w-4 shrink-0 text-[#2B9BA8]" />
           <span>
-            No booking or financial activity recorded for this period. Metrics represent confirmed zero balances ({formatReportMoney(0, currency)}), not an API or network issue.
+            No booking or financial activity recorded for this period.
           </span>
         </div>
       )}
@@ -126,11 +122,6 @@ export function RevenueSummary({
           testId="metric-revenue"
           title="Completed Revenue"
           value={formatReportMoney(revenueData?.revenue, currency)}
-          subtitle={
-            isZeroFinancialActivity
-              ? "No completed bookings in this period"
-              : "Final price sum of fully completed bookings"
-          }
           icon={DollarSign}
           tone="emerald"
           badge="Completed"
@@ -142,11 +133,6 @@ export function RevenueSummary({
           testId="metric-booked-value"
           title="Booked Pipeline Value"
           value={formatReportMoney(revenueData?.bookedValue, currency)}
-          subtitle={
-            isZeroFinancialActivity
-              ? "No active bookings in pipeline"
-              : "Confirmed, in-progress & completed bookings"
-          }
           icon={TrendingUp}
           tone="teal"
           badge="Active Pipeline"
@@ -158,11 +144,6 @@ export function RevenueSummary({
           testId="metric-collected"
           title="Collected Payments"
           value={formatReportMoney(revenueData?.collectedPayments, currency)}
-          subtitle={
-            isZeroFinancialActivity
-              ? "No customer payments collected"
-              : "Total verified customer payments received"
-          }
           icon={CreditCard}
           tone="blue"
           badge="Verified"
@@ -174,11 +155,6 @@ export function RevenueSummary({
           testId="metric-outstanding"
           title="Outstanding Balance"
           value={formatReportMoney(revenueData?.outstandingBalance, currency)}
-          subtitle={
-            isZeroFinancialActivity
-              ? "No unpaid balance (zero bookings)"
-              : "Unpaid amount for confirmed or active bookings"
-          }
           icon={AlertCircle}
           tone={
             revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
@@ -186,16 +162,12 @@ export function RevenueSummary({
               : "neutral"
           }
           badge={
-            isZeroFinancialActivity
-              ? "Zero Balance"
-              : revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
+            revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
               ? "Unpaid"
               : "Settled"
           }
           badgeTone={
-            isZeroFinancialActivity
-              ? "default"
-              : revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
+            revenueData?.outstandingBalance && revenueData.outstandingBalance > 0
               ? "warning"
               : "default"
           }
@@ -220,9 +192,6 @@ export function RevenueSummary({
                 <h4 className="font-outfit text-sm font-semibold text-[#18282A]">
                   Payment Reconciliation Summary
                 </h4>
-                <p className="text-xs text-[#74818A]">
-                  Compares value of paid bookings with verified received payments
-                </p>
               </div>
             </div>
             <span
@@ -291,15 +260,10 @@ export function RevenueSummary({
             data-testid="payment-comparison-chart"
             className="mt-5 rounded-lg border border-[#E5EAED] bg-[#F8FAFB] p-4"
           >
-            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h5 className="text-xs font-semibold uppercase tracking-wider text-[#74818A]">
-                  Payment Verification Comparison
-                </h5>
-                <p className="text-[11px] text-[#74818A]">
-                  Comparing Invoiced Paid Booking Target, Confirmed Ledger Receipts, and Unverified Submissions
-                </p>
-              </div>
+            <div className="mb-3 flex items-center justify-between">
+              <h5 className="text-xs font-semibold uppercase tracking-wider text-[#74818A]">
+                Payment Verification Comparison
+              </h5>
               <div className="flex items-center gap-3 text-[11px]">
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-[#2B9BA8]" />
@@ -318,7 +282,7 @@ export function RevenueSummary({
 
             {isZeroReconciliationActivity && (
               <div className="mb-3 rounded-md border border-[#E5EAED] bg-white p-2.5 text-xs text-[#74818A]">
-                No payment transactions recorded for reconciliation in this window. Invoiced orders, verified receipts, and pending submissions are all at zero.
+                No payment transactions recorded in this window.
               </div>
             )}
 
@@ -337,7 +301,7 @@ export function RevenueSummary({
                   <div>
                     <div className="mb-1 flex items-center justify-between text-xs">
                       <span className="font-medium text-[#18282A]">
-                        Paid Booking Value (Invoiced Target)
+                        Paid Booking Value
                       </span>
                       <span className="font-outfit font-bold text-[#18282A]">
                         {formatReportMoney(reconciliation.paidBookingsValue, currency)}
@@ -361,7 +325,7 @@ export function RevenueSummary({
                   <div>
                     <div className="mb-1 flex items-center justify-between text-xs">
                       <span className="font-medium text-emerald-800">
-                        Verified Payments (Confirmed Funds Collected)
+                        Verified Payments
                       </span>
                       <span className="font-outfit font-bold text-emerald-800">
                         {formatReportMoney(reconciliation.verifiedPaymentsValue, currency)}
@@ -385,7 +349,7 @@ export function RevenueSummary({
                   <div>
                     <div className="mb-1 flex items-center justify-between text-xs">
                       <span className="font-medium text-amber-800">
-                        Pending Verification ({reconciliation.pendingVerificationCount} items in queue)
+                        Pending Verification ({reconciliation.pendingVerificationCount} items)
                       </span>
                       <span className="font-outfit font-bold text-amber-800">
                         {formatReportMoney(reconciliation.pendingVerificationValue, currency)}
@@ -412,11 +376,10 @@ export function RevenueSummary({
             <div className="mt-4 flex items-start gap-2 rounded-md bg-white p-2.5 text-[11px] text-[#74818A] border border-[#E5EAED]">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#2B9BA8]" />
               <p>
-                <strong className="font-semibold text-[#18282A]">Metric Integrity:</strong> Paid
-                Booking Value is the final price of bookings marked as paid in orders. Verified
-                Payments are confirmed physical funds received in bank/cash. Pending Verification
-                represents unreviewed payment proof uploads awaiting verification and is not yet
-                counted as collected revenue.
+                <strong className="font-semibold text-[#18282A]">Metric Integrity:</strong>{" "}
+                Paid Booking Value is the invoiced amount of paid bookings. Verified Payments are
+                confirmed funds received. Pending Verification represents unreviewed payment proof
+                uploads awaiting verification and is not yet counted as collected revenue.
               </p>
             </div>
           </div>

@@ -137,9 +137,9 @@ describe("RevenueSummary component", () => {
 
     // Contains comparison titles and labels
     expect(comparisonChart).toHaveTextContent("Payment Verification Comparison");
-    expect(comparisonChart).toHaveTextContent("Paid Booking Value (Invoiced Target)");
-    expect(comparisonChart).toHaveTextContent("Verified Payments (Confirmed Funds Collected)");
-    expect(comparisonChart).toHaveTextContent("Pending Verification (3 items in queue)");
+    expect(comparisonChart).toHaveTextContent("Paid Booking Value");
+    expect(comparisonChart).toHaveTextContent("Verified Payments");
+    expect(comparisonChart).toHaveTextContent("Pending Verification (3 items)");
 
     // Clarification callout to protect data integrity and avoid equating incompatible values
     expect(comparisonChart).toHaveTextContent("Metric Integrity:");

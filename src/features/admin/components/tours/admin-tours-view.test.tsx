@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AdminToursView } from "./admin-tours-view";
 import * as adminApiModule from "@/features/admin/api/admin-api";
+import * as permissionsHookModule from "../../hooks/use-permissions";
 import type { AdminServiceRecord } from "../../types/admin";
 
 vi.mock("@/features/admin/api/admin-api", () => {
@@ -42,6 +43,10 @@ vi.mock("@/features/admin/api/admin-media-api", () => {
     })),
   };
 });
+
+vi.mock("../../hooks/use-permissions", () => ({
+  usePermissions: vi.fn(),
+}));
 
 const MOCK_TOUR: AdminServiceRecord = {
   id: "tour-101",
@@ -87,6 +92,17 @@ describe("AdminToursView component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Default: admin (unrestricted) so existing tests keep passing
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: ["tours.view", "tours.create", "tours.edit"],
+      isAdmin: true,
+      isStaff: false,
+      isLoading: false,
+      hasPermission: vi.fn(() => true),
+      hasAnyPermission: vi.fn(() => true),
+      hasAllPermissions: vi.fn(() => true),
+    });
 
     mockUpdateStatus.mockReturnValue({
       unwrap: vi.fn().mockResolvedValue({
@@ -307,5 +323,75 @@ describe("AdminToursView component", () => {
     expect(screen.getByTestId("tour-editor-tab-basic")).toBeInTheDocument();
     expect(screen.getByTestId("save-tour-draft-btn")).toBeInTheDocument();
     expect(screen.getByTestId("publish-tour-btn")).toBeInTheDocument();
+  });
+
+  it("hides Add New Tour when the user lacks tours.create (staff without permission)", () => {
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: ["tours.view"],
+      isAdmin: false,
+      isStaff: true,
+      isLoading: false,
+      hasPermission: vi.fn((p) => (p === "tours.view" ? true : false)),
+      hasAnyPermission: vi.fn(() => false),
+      hasAllPermissions: vi.fn(() => false),
+    });
+
+    render(<AdminToursView />);
+
+    expect(screen.queryByTestId("add-new-tour-button")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Tours Management" })).toBeInTheDocument();
+  });
+
+  it("hides tour edit actions when the user lacks tours.edit but grants them", () => {
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: ["tours.view"],
+      isAdmin: false,
+      isStaff: true,
+      isLoading: false,
+      hasPermission: vi.fn((p) => (p === "tours.view" ? true : false)),
+      hasAnyPermission: vi.fn(() => false),
+      hasAllPermissions: vi.fn(() => false),
+    });
+
+    render(<AdminToursView />);
+
+    // Header create is hidden because staff lacks tours.create
+    expect(screen.queryByTestId("add-new-tour-button")).not.toBeInTheDocument();
+
+    // Open the tour actions menu on the first row.
+    // Edit Tour and Publish/Draft/Unpublish buttons are gated by canEdit=tours.edit.
+    const trigger = screen.getByTestId("tour-actions-trigger-tour-101");
+    fireEvent.click(trigger);
+
+    const menu = screen.getByTestId("tour-actions-menu-tour-101");
+    expect(menu).toBeInTheDocument();
+    expect(screen.queryByText("Edit Tour")).not.toBeInTheDocument();
+    expect(screen.queryByText("Publish Tour")).not.toBeInTheDocument();
+    // View Details is always available
+    expect(screen.getByText("View Details")).toBeInTheDocument();
+  });
+
+  it("shows tour edit actions when the user holds tours.edit", () => {
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: ["tours.view", "tours.edit"],
+      isAdmin: false,
+      isStaff: true,
+      isLoading: false,
+      hasPermission: vi.fn((p) => p === "tours.view" || p === "tours.edit"),
+      hasAnyPermission: vi.fn(() => true),
+      hasAllPermissions: vi.fn(() => true),
+    });
+
+    render(<AdminToursView />);
+
+    // Create is still hidden (no tours.create) but edit is allowed
+    expect(screen.queryByTestId("add-new-tour-button")).not.toBeInTheDocument();
+
+    const trigger = screen.getByTestId("tour-actions-trigger-tour-101");
+    fireEvent.click(trigger);
+
+    // Edit button now visible; status transitions gated by same canEdit also visible
+    expect(screen.getByText("Edit Tour")).toBeInTheDocument();
+    expect(screen.getByText("Move to Draft")).toBeInTheDocument();
   });
 });

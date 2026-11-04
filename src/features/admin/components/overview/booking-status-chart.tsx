@@ -142,19 +142,14 @@ export function BookingStatusChart({
     >
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#E5EAED] pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <PieChart className="h-5 w-5 text-[#2B9BA8]" />
-            <h3
-              id="booking-status-heading"
-              className="font-outfit text-lg font-bold text-[#18282A]"
-            >
-              Booking Status Distribution
-            </h3>
-          </div>
-          <p className="mt-0.5 text-xs text-[#74818A]">
-            Comprehensive breakdown of all seven booking statuses across platform pipeline.
-          </p>
+        <div className="flex items-center gap-2">
+          <PieChart className="h-5 w-5 text-[#2B9BA8]" />
+          <h3
+            id="booking-status-heading"
+            className="font-outfit text-lg font-bold text-[#18282A]"
+          >
+            Booking Status Distribution
+          </h3>
         </div>
         <div className="flex items-center gap-2">
           <span
@@ -277,22 +272,10 @@ export function BookingStatusChart({
                   )}
                 </div>
               </div>
-              <p className="mt-2 text-center text-[11px] text-[#74818A]">
-                Hover or focus on chart segments or legend items to inspect proportions.
-              </p>
             </div>
 
             {/* Clear Legend & Status Distribution Overview */}
             <div className="space-y-3 lg:col-span-7">
-              <div className="flex items-center justify-between border-b border-[#E5EAED] pb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-[#74818A]">
-                  Status Legend ({allStatuses.length} Categories)
-                </span>
-                <span className="text-xs font-medium text-[#74818A]">
-                  Volume &amp; Share of Total
-                </span>
-              </div>
-
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {allStatuses.map((item) => {
                   const isHovered = hoveredStatus === item.status;
@@ -336,9 +319,6 @@ export function BookingStatusChart({
 
           {/* Cards for all 7 statuses with count, gross value, and percentage */}
           <div>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#74818A]">
-              Detailed Status Metrics
-            </h4>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {allStatuses.map((item) => {
                 const isHovered = hoveredStatus === item.status;

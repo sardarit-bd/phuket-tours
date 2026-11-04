@@ -324,16 +324,11 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
               <ShieldAlert className="h-6 w-6" aria-hidden="true" />
             </div>
             <h2 className="font-outfit text-lg font-bold text-[#18282A]">
-              Portal Access Denied
+              You Don&rsquo;t Have Access Yet
             </h2>
             <p className="mt-1 text-xs text-[#74818A] leading-relaxed">
-              Your Staff account does not have permission to enter the Staff
-              Portal (
-              <span className="font-mono text-[11px] font-semibold text-amber-700">
-                {STAFF_PORTAL_ENTRY_PERMISSION}
-              </span>
-              ). Module permissions alone do not grant portal entry. Please
-              contact your administrator.
+              Your account hasn&rsquo;t been granted access to the Staff Portal.
+              Please contact your administrator to request access.
             </p>
             <div className="mt-5 flex justify-center">
               <Button asChild size="sm" className="bg-[#176779] text-white text-xs px-5 h-9">

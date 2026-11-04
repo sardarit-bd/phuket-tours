@@ -139,13 +139,12 @@ describe("ServicePerformanceTable component", () => {
     expect(screen.getByTestId("service-row-svc-1")).toBeInTheDocument();
   });
 
-  it("displays contract boundary notice explaining omission of recent-orders table", () => {
+  it("does not display contract boundary notice (notice removed in UI polish pass)", () => {
     render(<ServicePerformanceTable servicesData={realisticServicesFixture} />);
 
-    expect(screen.getByText(/Backend Contract Boundary:/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Individual booking order item records are not part of the reporting contract/i)
-    ).toBeInTheDocument();
+    // The "Backend Contract Boundary" implementation-oriented notice was removed
+    // as part of the dashboard UI refinement pass.
+    expect(screen.queryByText(/Backend Contract Boundary:/i)).not.toBeInTheDocument();
   });
 
   it("displays empty state when no services are returned", () => {
