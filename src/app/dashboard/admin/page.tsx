@@ -26,8 +26,9 @@ export default function AdminOverviewPage() {
   const [filters, setFilters] = React.useState<AdminReportFiltersQuery>({});
   const { isStaff, hasAll } = useModulePermissions();
 
-  // Overview analytics require both dashboard.view and reports.view for Staff.
-  // Admins continue to bypass all permission checks.
+  // Overview analytics require reports.view for Staff. Admins bypass all
+  // permission checks. dashboard.view is no longer a mandatory entry
+  // permission — module access alone is sufficient.
   const canViewOverview =
     !isStaff || hasAll(STAFF_OVERVIEW_PERMISSIONS);
 

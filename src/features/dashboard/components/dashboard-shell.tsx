@@ -31,21 +31,20 @@ export function DashboardShell({
   const [isMobileNavOpen, setIsMobileNavOpen] = React.useState(false);
   const user = useAppSelector(selectCurrentUser);
 
-  // Automatically select role config
+  // Automatically select role config.
+  // - Admin/Staff/Agent: strict role-based config (URL prefix no longer drives
+  //   the portal because Staff has its own /dashboard/staff/* tree).
+  // - Unauthenticated or customer: fall back to the pathname-based heuristic so
+  //   legacy deep-link tests still work.
   const activeConfig = React.useMemo(() => {
-    if (user?.role === "staff") {
-      return staffNavConfig;
-    }
-    if (user?.role === "admin") {
-      return adminNavConfig;
-    }
-    if (user?.role === "agent" || pathname.startsWith("/dashboard/agent")) {
-      return agentNavConfig;
-    }
+    const role = user?.role;
+    if (role === "staff") return staffNavConfig;
+    if (role === "admin") return adminNavConfig;
+    if (role === "agent") return agentNavConfig;
     if (navConfig) return navConfig;
-    if (pathname.startsWith("/dashboard/admin")) {
-      return adminNavConfig;
-    }
+    if (pathname.startsWith("/dashboard/admin")) return adminNavConfig;
+    if (pathname.startsWith("/dashboard/staff")) return staffNavConfig;
+    if (pathname.startsWith("/dashboard/agent")) return agentNavConfig;
     return userNavConfig;
   }, [navConfig, pathname, user?.role]);
 

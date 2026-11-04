@@ -21,6 +21,20 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+// Controllable Staff permissions for the effective-permissions query.
+let mockStaffPermissions: string[] = [];
+let mockPermsLoading = false;
+let mockPermsError: unknown = null;
+
+vi.mock("@/features/admin/api/admin-api", () => ({
+  useGetEffectivePermissionsQuery: vi.fn(() => ({
+    data: mockStaffPermissions.length ? { data: { permissions: mockStaffPermissions } } : undefined,
+    isLoading: mockPermsLoading,
+    isError: Boolean(mockPermsError),
+    refetch: vi.fn(),
+  })),
+}));
+
 describe("DashboardGuard Component", () => {
   let store: AppStore;
 
@@ -36,6 +50,9 @@ describe("DashboardGuard Component", () => {
     store = makeStore();
     mockPathname.mockReturnValue("/dashboard");
     mockReplace.mockClear();
+    mockStaffPermissions = [];
+    mockPermsLoading = false;
+    mockPermsError = null;
     vi.restoreAllMocks();
   });
 
@@ -180,7 +197,7 @@ describe("DashboardGuard Component", () => {
 
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
       expect(
-        screen.getByRole("status", { name: /restricted access/i })
+        screen.getByRole("status", { name: /access restricted/i })
       ).toBeInTheDocument();
     });
 
@@ -354,7 +371,7 @@ describe("DashboardGuard Component", () => {
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
     });
 
-    it("redirects authenticated staff visiting /dashboard to /dashboard/admin", async () => {
+    it("redirects authenticated staff visiting /dashboard to /dashboard/staff", async () => {
       mockPathname.mockReturnValue("/dashboard");
       store.dispatch(
         setCredentials({
@@ -368,16 +385,16 @@ describe("DashboardGuard Component", () => {
       renderGuard();
 
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith("/dashboard/admin");
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/staff");
       });
 
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
       expect(
-        screen.getByRole("status", { name: /redirecting to admin portal/i })
+        screen.getByRole("status", { name: /redirecting to staff portal/i })
       ).toBeInTheDocument();
     });
 
-    it("displays access restricted banner for staff attempting to access unauthorized route", async () => {
+    it("redirects authenticated staff visiting /dashboard/admin (admin portal) to /dashboard/staff", async () => {
       mockPathname.mockReturnValue("/dashboard/admin/users");
       store.dispatch(
         setCredentials({
@@ -391,10 +408,92 @@ describe("DashboardGuard Component", () => {
       renderGuard();
 
       await waitFor(() => {
-        expect(screen.getByTestId("staff-access-denied")).toBeInTheDocument();
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/staff");
       });
-      expect(screen.getByText("Access Restricted")).toBeInTheDocument();
+
       expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("status", { name: /redirecting to staff portal/i })
+      ).toBeInTheDocument();
+    });
+
+    it("shows No Modules Assigned for staff with no valid module view permission", async () => {
+      mockPathname.mockReturnValue("/dashboard/staff");
+      mockStaffPermissions = []; // no module view => portal entry denied
+      store.dispatch(
+        setCredentials({
+          id: "staff-1",
+          name: "Staff User",
+          email: "staff@phukettours.com",
+          role: "staff",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("staff-portal-access-denied")).toBeInTheDocument();
+      });
+      expect(screen.getByText("No Modules Assigned")).toBeInTheDocument();
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    });
+
+    it("lets staff with tours.view (but no dashboard.view) enter the Staff Portal tours module", async () => {
+      mockPathname.mockReturnValue("/dashboard/staff/tours");
+      mockStaffPermissions = ["tours.view"];
+      store.dispatch(
+        setCredentials({
+          id: "staff-1",
+          name: "Staff User",
+          email: "staff@phukettours.com",
+          role: "staff",
+        })
+      );
+
+      renderGuard();
+
+      expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+    });
+
+    it("redirects staff on the overview route to their first permitted module when reports.view is missing", async () => {
+      mockPathname.mockReturnValue("/dashboard/staff");
+      mockStaffPermissions = ["tours.view"]; // has a module but not reports.view
+      store.dispatch(
+        setCredentials({
+          id: "staff-1",
+          name: "Staff User",
+          email: "staff@phukettours.com",
+          role: "staff",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/staff/tours");
+      });
+    });
+
+    it("denies staff with only action-only permissions (tours.create) module entry", async () => {
+      mockPathname.mockReturnValue("/dashboard/staff/tours");
+      mockStaffPermissions = ["tours.create"]; // action-only, no module view
+      store.dispatch(
+        setCredentials({
+          id: "staff-1",
+          name: "Staff User",
+          email: "staff@phukettours.com",
+          role: "staff",
+        })
+      );
+
+      renderGuard();
+
+      // Action-only permissions grant no module view, so the portal-level
+      // "No Modules Assigned" check (staff-portal-access-denied) fires first.
+      await waitFor(() => {
+        expect(screen.getByTestId("staff-portal-access-denied")).toBeInTheDocument();
+      });
+      expect(screen.getByText("No Modules Assigned")).toBeInTheDocument();
     });
   });
 });

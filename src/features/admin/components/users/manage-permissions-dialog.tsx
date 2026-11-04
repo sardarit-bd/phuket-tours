@@ -104,8 +104,31 @@ export function ManagePermissionsDialog({
 
   const selectedPermissions = overridePermissions ?? savedPermissions;
 
-  const isMissingDashboardView =
-    selectedPermissions.size > 0 && !selectedPermissions.has("dashboard.view");
+  // dashboard.view is no longer a mandatory portal-entry permission. Staff
+  // portal entry now requires at least one valid module-view permission. Show
+  // a helpful reminder only when the admin has selected permissions but none
+  // of the module-view permissions that grant a Staff module.
+  const MODULE_VIEW_PERMISSION_IDS = [
+    "tours.view",
+    "media.view",
+    "bookings.view",
+    "payments.view",
+    "users.view",
+    "reports.view",
+    "settings.view",
+    "settings.general.manage",
+    "settings.payment.manage",
+    "settings.webhook.manage",
+    "settings.cloudinary.manage",
+    "settings.smtp.manage",
+    "settings.audit.view",
+  ] as const;
+
+  const hasAnyModuleViewSelected = MODULE_VIEW_PERMISSION_IDS.some((id) =>
+    selectedPermissions.has(id)
+  );
+  const isMissingModuleView =
+    selectedPermissions.size > 0 && !hasAnyModuleViewSelected;
 
   const hasUnsavedChanges = React.useMemo(() => {
     if (overridePermissions === null) return false;
@@ -308,22 +331,24 @@ export function ManagePermissionsDialog({
         </div>
       )}
 
-      {/* 2b. Portal-entry warning: dashboard.view is mandatory */}
-      {isMissingDashboardView && (
+      {/* 2b. Reminder: at least one module-view permission grants Staff portal entry */}
+      {isMissingModuleView && (
         <div
-          data-testid="dashboard-view-warning"
+          data-testid="module-view-reminder"
           role="alert"
           className="mx-6 mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900"
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <div className="space-y-0.5">
             <p className="font-semibold text-amber-900">
-              Staff Portal Access Required
+              No Module Access Yet
             </p>
             <p className="text-amber-800 leading-relaxed">
-              To let this staff member access the portal, enable Dashboard
-              Overview access. Without it, they won&rsquo;t be able to enter
-              the Staff Portal, even if other permissions are enabled.
+              Select at least one module view permission (for example
+              Tours, Media, Bookings, Payments, Users, Reports or Settings)
+              so this staff member can enter the Staff Portal.
+              Action-only permissions such as tours.create or media.upload do
+              not grant module access on their own.
             </p>
           </div>
         </div>

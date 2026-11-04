@@ -15,12 +15,12 @@ import { authApi } from "../api/auth-api";
 import { useGetEffectivePermissionsQuery } from "@/features/admin/api/admin-api";
 import { Button } from "@/components/ui/button";
 import {
-  STAFF_PORTAL_ENTRY_PERMISSION,
   canAccessStaffAdminRoute,
   canViewStaffOverview,
   getFirstPermittedModule,
   getStaffAdminRouteRule,
   isAdminPortalPath,
+  isStaffPortalPath,
 } from "@/features/dashboard/types/dashboard-nav";
 
 interface DashboardGuardProps {
@@ -46,22 +46,28 @@ function LoaderState({ label }: { label: string }) {
 }
 
 /**
- * DashboardGuard provides client-side route protection for /dashboard and /dashboard/admin.
+ * DashboardGuard provides client-side route protection for the /dashboard/*
+ * trees (customer, admin, staff and agent portals).
  *
- * Behaviors:
- * 1. While auth or Staff permissions are loading, renders a clean verification loader.
- * 2. On genuine server/network failure, renders an error fallback with retry capability.
- * 3. If unauthenticated (401 or logged out), redirects to /sign-in preserving a safe return path.
- * 4. Role separation: Admin/Staff use /dashboard/admin, Agent uses /dashboard/agent,
- *    Customer uses the personal dashboard.
- * 5. Staff Portal entry requires dashboard.view. Overview additionally requires reports.view.
- *    Staff without reports.view are redirected to their first permitted module, or shown
- *    "No Modules Assigned" when no module is available.
- * 6. Staff admin routes are allow-listed; unknown routes default-deny. Commissions is
- *    Admin-only and Categories requires tours.view.
+ * Role separation:
+ * - Admin: authorized on /dashboard/admin* only (Staff never access /dashboard/admin).
+ * - Staff: authorized on /dashboard/staff* only (Staff never access /dashboard/admin).
+ * - Agent: authorized on /dashboard/agent*.
+ * - Customer: authorized on the customer dashboard (/dashboard, /dashboard/bookings, etc.).
  *
- * Note: Client-side guards provide immediate UX protection. The backend API remains the
- * authoritative source of authorization and independently enforces permissions.
+ * Staff portal entry requires at least one valid module view permission
+ * (tours.view, media.view, bookings.view, payments.view, users.view,
+ * settings.view or reports.view). `dashboard.view` is no longer a mandatory
+ * entry permission; the admin assigns module permissions directly.
+ *
+ * The Staff Overview route (/dashboard/staff) requires `reports.view`.
+ * When Staff has `reports.view`, Overview is the landing page. Otherwise the
+ * Staff member is redirected to their first permitted module, or shown
+ * "No Modules Assigned" when no module is available.
+ *
+ * Note: client-side guards provide immediate UX protection. The backend API
+ * remains the authoritative source of authorization and independently enforces
+ * permissions.
  */
 export function DashboardGuard({ children }: DashboardGuardProps) {
   const router = useRouter();
@@ -75,48 +81,79 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
   const authStatus = useAppSelector(selectAuthStatus);
 
   const isAdminRoute = isAdminPortalPath(pathname);
+  const isStaffRoute = isStaffPortalPath(pathname);
   const isAgentRoute =
     pathname === "/dashboard/agent" || pathname.startsWith("/dashboard/agent/");
   const isCustomerRoute =
-    pathname.startsWith("/dashboard") && !isAdminRoute && !isAgentRoute;
+    pathname.startsWith("/dashboard") &&
+    !isAdminRoute &&
+    !isStaffRoute &&
+    !isAgentRoute;
 
   const userRole = user?.role;
   const isUserAdmin = userRole === "admin";
   const isUserStaff = userRole === "staff";
   const isUserAgent = userRole === "agent";
-  const hasAdminPortalAccess = isUserAdmin || isUserStaff;
+  // Admin may access the admin portal only. Staff may access the staff portal
+  // only. They never cross into each other's portal.
+  const adminAuthorizedPath = isUserAdmin && isAdminRoute;
+  const staffAuthorizedPath = isUserStaff && isStaffRoute;
+  const hasPortalAccess = adminAuthorizedPath || staffAuthorizedPath;
 
+  // Fetch Staff effective permissions only when a Staff user is inside the
+  // Staff portal. Admin users bypass the permission list entirely.
   const {
     data: effectivePermsData,
     isLoading: isPermissionsLoading,
     isError: isPermissionsError,
     refetch: refetchPermissions,
   } = useGetEffectivePermissionsQuery(undefined, {
-    skip: !isInitialized || !isAuthenticated || !isUserStaff || !isAdminRoute,
+    skip:
+      !isInitialized ||
+      !isAuthenticated ||
+      !isUserStaff ||
+      !isStaffRoute,
   });
 
   const staffPermissions = React.useMemo(() => {
     return effectivePermsData?.data?.permissions ?? [];
   }, [effectivePermsData?.data?.permissions]);
 
-  const canEnterStaffPortal = staffPermissions.includes(
-    STAFF_PORTAL_ENTRY_PERMISSION
-  );
+  // Staff portal entry: at least one valid module view permission.
+  const hasAnyModuleView = React.useMemo(() => {
+    const moduleViewPerms = [
+      "tours.view",
+      "media.view",
+      "bookings.view",
+      "payments.view",
+      "users.view",
+      "reports.view",
+      "settings.view",
+      "settings.general.manage",
+      "settings.payment.manage",
+      "settings.webhook.manage",
+      "settings.cloudinary.manage",
+      "settings.smtp.manage",
+      "settings.audit.view",
+    ] as const;
+    return moduleViewPerms.some((p) => staffPermissions.includes(p));
+  }, [staffPermissions]);
+
   const canViewOverview = canViewStaffOverview(staffPermissions);
   const firstPermittedModule = getFirstPermittedModule(staffPermissions);
   const canAccessCurrentStaffRoute = canAccessStaffAdminRoute(
     pathname,
     staffPermissions
   );
-  const isStaffOverviewRoute = pathname === "/dashboard/admin";
+  const isStaffOverviewRoute = pathname === "/dashboard/staff";
   const staffRouteRule = getStaffAdminRouteRule(pathname);
   const isCommissionsRoute =
-    pathname === "/dashboard/admin/commissions" ||
-    pathname.startsWith("/dashboard/admin/commissions/");
+    pathname === "/dashboard/staff/commissions" ||
+    pathname.startsWith("/dashboard/staff/commissions/");
   const isUnknownStaffRoute = !staffRouteRule;
 
   const safeReturnHref = canViewOverview
-    ? "/dashboard/admin"
+    ? "/dashboard/staff"
     : firstPermittedModule ?? "/";
   const safeReturnLabel = canViewOverview
     ? "Return to Overview"
@@ -124,15 +161,14 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     ? "Go to Available Module"
     : "Back to Website";
 
-  // Strict role-based authorization:
-  // - Admin & Staff: authorized ONLY on admin routes (/dashboard/admin*)
-  // - Agent: authorized ONLY on agent routes (/dashboard/agent*)
-  // - Customer: authorized ONLY on customer routes (/dashboard, /dashboard/bookings, etc.)
+  // Strict role-based authorization. Each role is authorized only on its own
+  // portal prefix (or customer routes for the customer role).
   const isAuthorized = React.useMemo(() => {
-    if (hasAdminPortalAccess) return isAdminRoute;
+    if (isUserAdmin) return isAdminRoute;
+    if (isUserStaff) return isStaffRoute;
     if (isUserAgent) return isAgentRoute;
     return isCustomerRoute;
-  }, [hasAdminPortalAccess, isAdminRoute, isUserAgent, isAgentRoute, isCustomerRoute]);
+  }, [isUserAdmin, isUserStaff, isUserAgent, isAdminRoute, isStaffRoute, isAgentRoute, isCustomerRoute]);
 
   // Effect: Handle unauthenticated redirection to /sign-in with return path
   React.useEffect(() => {
@@ -148,29 +184,36 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
   }, [isInitialized, isAuthenticated, authStatus, pathname, router]);
 
   // Effect: Handle strict role-based separation
-  // 1. Admin/Staff accessing non-admin routes -> redirect to /dashboard/admin
-  // 2. Agent accessing non-agent routes -> redirect to /dashboard/agent
-  // 3. Customer accessing admin/agent routes -> redirect to /dashboard
+  // 1. Admin visiting a non-admin route -> redirect to /dashboard/admin
+  // 2. Staff visiting a non-staff route -> redirect to /dashboard/staff
+  // 3. Agent visiting a non-agent route -> redirect to /dashboard/agent
+  // 4. Customer visiting a non-customer route -> redirect to /dashboard
   React.useEffect(() => {
     if (isInitialized && isAuthenticated && !isAuthorized) {
-      if (hasAdminPortalAccess) {
+      if (isUserAdmin) {
         router.replace("/dashboard/admin");
+      } else if (isUserStaff) {
+        // If Staff has no permitted module yet, still land them on the staff
+        // portal root and let the portal-level checks render "No Modules
+        // Assigned".
+        router.replace("/dashboard/staff");
       } else if (isUserAgent) {
         router.replace("/dashboard/agent");
       } else {
         router.replace("/dashboard");
       }
     }
-  }, [isInitialized, isAuthenticated, isAuthorized, hasAdminPortalAccess, isUserAgent, router]);
+  }, [isInitialized, isAuthenticated, isAuthorized, isUserAdmin, isUserStaff, isUserAgent, router]);
 
-  // Effect: Staff without reports.view must not mount Overview analytics.
-  // Redirect to the first module they can actually access.
+  // Effect: When a Staff user lands on the Overview route without reports.view,
+  // redirect to their first permitted module (or let the render check show
+  // "No Modules Assigned" when none exists).
   React.useEffect(() => {
     if (
       !isInitialized ||
       !isAuthenticated ||
       !isUserStaff ||
-      !isAdminRoute ||
+      !isStaffRoute ||
       isPermissionsLoading ||
       isPermissionsError
     ) {
@@ -178,9 +221,9 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     }
 
     if (
-      canEnterStaffPortal &&
       isStaffOverviewRoute &&
       !canViewOverview &&
+      hasAnyModuleView &&
       firstPermittedModule
     ) {
       router.replace(firstPermittedModule);
@@ -189,12 +232,12 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     isInitialized,
     isAuthenticated,
     isUserStaff,
-    isAdminRoute,
+    isStaffRoute,
     isPermissionsLoading,
     isPermissionsError,
-    canEnterStaffPortal,
     isStaffOverviewRoute,
     canViewOverview,
+    hasAnyModuleView,
     firstPermittedModule,
     router,
   ]);
@@ -257,8 +300,10 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
 
   // 4. Role mismatch state (while redirecting)
   if (!isAuthorized) {
-    const redirectLabel = hasAdminPortalAccess
+    const redirectLabel = isUserAdmin
       ? "Redirecting to admin portal..."
+      : isUserStaff
+      ? "Redirecting to staff portal..."
       : isUserAgent
       ? "Redirecting to agent portal..."
       : "Access restricted. Redirecting to dashboard...";
@@ -266,8 +311,8 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     return <LoaderState label={redirectLabel} />;
   }
 
-  // 5. Staff authorization on the admin portal
-  if (isUserStaff && isAdminRoute) {
+  // 5. Staff authorization on the Staff portal
+  if (isUserStaff && isStaffRoute) {
     if (isPermissionsLoading) {
       return <LoaderState label="Verifying permissions..." />;
     }
@@ -312,8 +357,9 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
       );
     }
 
-    // Staff Portal entry is mandatory and cannot be replaced by module access.
-    if (!canEnterStaffPortal) {
+    // Staff portal entry: at least one valid module view permission.
+    // dashboard.view is no longer mandatory.
+    if (!hasAnyModuleView) {
       return (
         <div
           data-testid="staff-portal-access-denied"
@@ -324,11 +370,11 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
               <ShieldAlert className="h-6 w-6" aria-hidden="true" />
             </div>
             <h2 className="font-outfit text-lg font-bold text-[#18282A]">
-              You Don&rsquo;t Have Access Yet
+              No Modules Assigned
             </h2>
             <p className="mt-1 text-xs text-[#74818A] leading-relaxed">
-              Your account hasn&rsquo;t been granted access to the Staff Portal.
-              Please contact your administrator to request access.
+              You have not been assigned any modules in the Staff Portal yet.
+              Please contact your administrator to request module access.
             </p>
             <div className="mt-5 flex justify-center">
               <Button asChild size="sm" className="bg-[#176779] text-white text-xs px-5 h-9">
@@ -340,37 +386,14 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
       );
     }
 
-    // Overview analytics require both dashboard.view and reports.view.
+    // Overview analytics require reports.view. When the Staff member is on the
+    // Overview route but lacks reports.view, redirect to their first permitted
+    // module. If no module is available, the "No Modules Assigned" state above
+    // would already have rendered (because hasAnyModuleView would be false).
     if (isStaffOverviewRoute && !canViewOverview) {
       if (firstPermittedModule) {
         return <LoaderState label="Redirecting to your available module..." />;
       }
-
-      return (
-        <div
-          data-testid="staff-no-modules"
-          className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFB] p-4"
-        >
-          <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-sm text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-3">
-              <ShieldAlert className="h-6 w-6" aria-hidden="true" />
-            </div>
-            <h2 className="font-outfit text-lg font-bold text-[#18282A]">
-              No Modules Assigned
-            </h2>
-            <p className="mt-1 text-xs text-[#74818A] leading-relaxed">
-              You can access the Staff Portal, but no modules or Overview
-              analytics have been assigned to your account yet. Please contact
-              your administrator to request module access.
-            </p>
-            <div className="mt-5 flex justify-center">
-              <Button asChild size="sm" className="bg-[#176779] text-white text-xs px-5 h-9">
-                <Link href="/">Back to Website</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
     }
 
     // Known routes require their module permission; unknown routes default-deny.

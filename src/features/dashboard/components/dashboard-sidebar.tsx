@@ -42,12 +42,13 @@ export function DashboardSidebar({
   const isViewAdmin = config.role === "admin";
   const isViewStaff = config.role === "staff";
   const isViewAgent = config.role === "agent";
-  const homeHref =
-    isViewAdmin || isViewStaff
-      ? "/dashboard/admin"
-      : isViewAgent
-      ? "/dashboard/agent"
-      : "/dashboard";
+  const homeHref = isViewAdmin
+    ? "/dashboard/admin"
+    : isViewStaff
+    ? "/dashboard/staff"
+    : isViewAgent
+    ? "/dashboard/agent"
+    : "/dashboard";
 
   const visibleItems = React.useMemo(() => {
     return config.items.filter((item) => {

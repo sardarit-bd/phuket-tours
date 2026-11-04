@@ -37,18 +37,26 @@ export interface DashboardNavConfig {
   items: DashboardNavItem[];
 }
 
-/** Mandatory permission for any Staff Portal entry. */
-export const STAFF_PORTAL_ENTRY_PERMISSION: PermissionId = "dashboard.view";
+/**
+ * Staff Overview requires only `reports.view`. `dashboard.view` is no longer
+ * a mandatory Staff Portal entry permission; module access alone is sufficient.
+ */
+export const STAFF_OVERVIEW_PERMISSIONS: PermissionId[] = ["reports.view"];
 
-/** Overview analytics require both dashboard access and report access. */
-export const STAFF_OVERVIEW_PERMISSIONS: PermissionId[] = [
-  "dashboard.view",
-  "reports.view",
-];
+const ADMIN_OVERVIEW_PERMISSIONS: PermissionId[] = ["reports.view"];
 
-const ADMIN_OVERVIEW_PERMISSIONS: PermissionId[] = [
-  "dashboard.view",
-  "reports.view",
+/**
+ * Settings access is granted by `settings.view` or any of the
+ * settings-management sub-permissions supported by the backend.
+ */
+export const SETTINGS_ACCESS_PERMISSIONS: PermissionId[] = [
+  "settings.view",
+  "settings.general.manage",
+  "settings.payment.manage",
+  "settings.webhook.manage",
+  "settings.cloudinary.manage",
+  "settings.smtp.manage",
+  "settings.audit.view",
 ];
 
 export const userNavConfig: DashboardNavConfig = {
@@ -150,58 +158,52 @@ export const staffNavConfig: DashboardNavConfig = {
   items: [
     {
       title: "Overview",
-      href: "/dashboard/admin",
+      href: "/dashboard/staff",
       icon: LayoutDashboard,
       exact: true,
       permissions: STAFF_OVERVIEW_PERMISSIONS,
     },
     {
       title: "Tours Management",
-      href: "/dashboard/admin/tours",
+      href: "/dashboard/staff/tours",
       icon: Compass,
       permission: "tours.view",
     },
     {
       title: "Media Library",
-      href: "/dashboard/admin/media",
+      href: "/dashboard/staff/media",
       icon: ImageIcon,
       permission: "media.view",
     },
     {
       title: "Bookings Management",
-      href: "/dashboard/admin/bookings",
+      href: "/dashboard/staff/bookings",
       icon: ClipboardList,
       permission: "bookings.view",
     },
     {
       title: "Payments Management",
-      href: "/dashboard/admin/payments",
+      href: "/dashboard/staff/payments",
       icon: CreditCard,
       permission: "payments.view",
     },
     {
-      title: "Commissions Management",
-      href: "/dashboard/admin/commissions",
-      icon: Percent,
-      adminOnly: true,
-    },
-    {
       title: "Users Management",
-      href: "/dashboard/admin/users",
+      href: "/dashboard/staff/users",
       icon: Users,
       permission: "users.view",
     },
     {
       title: "Categories",
-      href: "/dashboard/admin/categories",
+      href: "/dashboard/staff/categories",
       icon: Tag,
       permission: "tours.view",
     },
     {
       title: "Settings",
-      href: "/dashboard/admin/settings",
+      href: "/dashboard/staff/settings",
       icon: Sliders,
-      permission: "settings.view",
+      permissions: SETTINGS_ACCESS_PERMISSIONS,
     },
   ],
 };
@@ -276,26 +278,49 @@ export interface StaffAdminRouteRule {
  */
 export const staffAdminRouteRules: StaffAdminRouteRule[] = [
   {
-    href: "/dashboard/admin",
+    href: "/dashboard/staff",
     permissions: STAFF_OVERVIEW_PERMISSIONS,
     exact: true,
   },
-  { href: "/dashboard/admin/tours", permissions: ["tours.view"] },
-  { href: "/dashboard/admin/media", permissions: ["media.view"] },
-  { href: "/dashboard/admin/bookings", permissions: ["bookings.view"] },
-  { href: "/dashboard/admin/payments", permissions: ["payments.view"] },
+  { href: "/dashboard/staff/tours", permissions: ["tours.view"] },
+  { href: "/dashboard/staff/media", permissions: ["media.view"] },
+  { href: "/dashboard/staff/bookings", permissions: ["bookings.view"] },
+  { href: "/dashboard/staff/payments", permissions: ["payments.view"] },
   {
-    href: "/dashboard/admin/commissions",
+    // Commissions is Admin-only and is not present in the Staff portal, so the
+    // rule is absent from the staff allow-list (unknown staff routes default-deny).
+    href: "/dashboard/staff/commissions",
     permissions: [],
     adminOnly: true,
   },
-  { href: "/dashboard/admin/users", permissions: ["users.view"] },
-  { href: "/dashboard/admin/categories", permissions: ["tours.view"] },
-  { href: "/dashboard/admin/settings", permissions: ["settings.view"] },
+  { href: "/dashboard/staff/users", permissions: ["users.view"] },
+  { href: "/dashboard/staff/categories", permissions: ["tours.view"] },
+  {
+    href: "/dashboard/staff/settings",
+    permissions: SETTINGS_ACCESS_PERMISSIONS,
+  },
 ];
 
 export function isAdminPortalPath(pathname: string): boolean {
   return pathname === "/dashboard/admin" || pathname.startsWith("/dashboard/admin/");
+}
+
+/**
+ * True when the pathname is inside the Staff Portal (/dashboard/staff*).
+ * The Staff portal mirrors the Admin portal's module set but is addressed at
+ * its own URL prefix so Staff URLs never read "/dashboard/admin".
+ */
+export function isStaffPortalPath(pathname: string): boolean {
+  return (
+    pathname === "/dashboard/staff" || pathname.startsWith("/dashboard/staff/")
+  );
+}
+
+export function hasAllPermissions(
+  granted: readonly string[],
+  required: readonly PermissionId[]
+): boolean {
+  return required.every((permission) => granted.includes(permission));
 }
 
 export function getStaffAdminRouteRule(
@@ -308,16 +333,11 @@ export function getStaffAdminRouteRule(
   );
 }
 
-export function hasAllPermissions(
-  granted: readonly string[],
-  required: readonly PermissionId[]
-): boolean {
-  return required.every((permission) => granted.includes(permission));
-}
-
 /**
- * Staff may enter a known admin route only when every permission listed for it
- * is granted. Commissions is admin-only and all unknown routes default-deny.
+ * Staff may enter a known staff-portal route only when every permission
+ * listed for it is granted. Commissions is admin-only and all unknown routes
+ * default-deny. `hasAllPermissions` returns true for an empty required list,
+ * but the `adminOnly` flag is checked separately, so that case is handled.
  */
 export function canAccessStaffAdminRoute(
   pathname: string,
@@ -336,7 +356,7 @@ export function getFirstPermittedModule(
   granted: readonly string[]
 ): string | null {
   for (const item of staffNavConfig.items) {
-    if (item.href === "/dashboard/admin" || item.adminOnly) continue;
+    if (item.href === "/dashboard/staff" || item.adminOnly) continue;
     if (item.permissions && !hasAllPermissions(granted, item.permissions)) {
       continue;
     }

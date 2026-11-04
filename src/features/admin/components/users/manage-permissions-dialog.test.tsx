@@ -290,7 +290,8 @@ describe("ManagePermissionsDialog", () => {
     });
   });
 
-  it("warns when permissions are granted without dashboard.view", () => {
+  it("does not show the module-view reminder when module-view permissions are selected", () => {
+    // Default mock grants tours.view + bookings.view (both module-view).
     render(
       <ManagePermissionsDialog
         staff={MOCK_STAFF}
@@ -300,11 +301,39 @@ describe("ManagePermissionsDialog", () => {
       />
     );
 
-    expect(screen.getByTestId("dashboard-view-warning")).toBeInTheDocument();
-    expect(screen.getByText("Staff Portal Access Required")).toBeInTheDocument();
+    expect(screen.queryByTestId("module-view-reminder")).not.toBeInTheDocument();
   });
 
-  it("does not warn when dashboard.view is granted", () => {
+  it("shows the module-view reminder when only action-only permissions are selected", () => {
+    mockStaffQuery = vi.fn(() => ({
+      data: {
+        success: true,
+        data: {
+          staffId: "staff-uuid-1",
+          staffName: "Sarah Staff",
+          staffEmail: "sarah@phukettours.com",
+          permissions: ["tours.create", "media.upload"],
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    }));
+
+    render(
+      <ManagePermissionsDialog
+        staff={MOCK_STAFF}
+        isOpen={true}
+        onClose={mockClose}
+        onSuccess={mockSuccess}
+      />
+    );
+
+    expect(screen.getByTestId("module-view-reminder")).toBeInTheDocument();
+    expect(screen.getByText("No Module Access Yet")).toBeInTheDocument();
+  });
+
+  it("does not show the reminder when a module-view permission is present", () => {
     mockStaffQuery = vi.fn(() => ({
       data: {
         success: true,
@@ -329,7 +358,7 @@ describe("ManagePermissionsDialog", () => {
       />
     );
 
-    expect(screen.queryByTestId("dashboard-view-warning")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("module-view-reminder")).not.toBeInTheDocument();
   });
 
   it("renders catalog error state with retry button", () => {

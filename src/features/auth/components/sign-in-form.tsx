@@ -76,8 +76,10 @@ export function SignInForm() {
 
       const role = response.data.role;
       let targetRoute = "/dashboard";
-      if (role === "admin" || role === "staff") {
+      if (role === "admin") {
         targetRoute = "/dashboard/admin";
+      } else if (role === "staff") {
+        targetRoute = "/dashboard/staff";
       } else if (role === "agent") {
         targetRoute = "/dashboard/agent";
       } else {
@@ -90,21 +92,26 @@ export function SignInForm() {
         redirectParam.startsWith("/") &&
         !redirectParam.startsWith("//")
       ) {
-        if (role === "admin" || role === "staff") {
-          if (redirectParam.startsWith("/dashboard/admin")) {
-            targetRoute = redirectParam;
-          } else {
-            targetRoute = "/dashboard/admin";
-          }
-        } else if (role === "agent") {
-          if (redirectParam.startsWith("/dashboard/agent")) {
-            targetRoute = redirectParam;
-          } else {
-            targetRoute = "/dashboard/agent";
-          }
+        // A ?redirect= parameter is honored only when it points inside the
+        // role's own portal prefix. Anything else snaps back to the portal root.
+        const portalPrefix =
+          role === "admin"
+            ? "/dashboard/admin"
+            : role === "staff"
+            ? "/dashboard/staff"
+            : role === "agent"
+            ? "/dashboard/agent"
+            : null;
+
+        if (portalPrefix) {
+          targetRoute = redirectParam.startsWith(portalPrefix)
+            ? redirectParam
+            : `${portalPrefix}`;
         } else {
+          // Customer: redirect to the param unless it points at another role's portal.
           if (
             redirectParam.startsWith("/dashboard/admin") ||
+            redirectParam.startsWith("/dashboard/staff") ||
             redirectParam.startsWith("/dashboard/agent")
           ) {
             targetRoute = "/dashboard";
