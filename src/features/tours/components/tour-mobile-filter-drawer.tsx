@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TourFilterState } from "../types/tour";
+import { TourFilterState, FilterGroup } from "../types/tour";
 import { TourFiltersSidebar } from "./tour-filters-sidebar";
 
 interface TourMobileFilterDrawerProps {
@@ -15,6 +15,8 @@ interface TourMobileFilterDrawerProps {
   setPriceRange: (min: number, max: number) => void;
   clearAllFilters: () => void;
   totalFound: number;
+  destinationGroup?: FilterGroup | null;
+  dynamicMaxPrice?: number;
 }
 
 export function TourMobileFilterDrawer({
@@ -26,6 +28,8 @@ export function TourMobileFilterDrawer({
   setPriceRange,
   clearAllFilters,
   totalFound,
+  destinationGroup,
+  dynamicMaxPrice,
 }: TourMobileFilterDrawerProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -114,6 +118,8 @@ export function TourMobileFilterDrawer({
               toggleDuration={toggleDuration}
               setPriceRange={setPriceRange}
               clearAllFilters={clearAllFilters}
+              destinationGroup={destinationGroup}
+              dynamicMaxPrice={dynamicMaxPrice}
             />
           </div>
 

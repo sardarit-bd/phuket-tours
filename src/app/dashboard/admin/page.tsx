@@ -73,6 +73,9 @@ export default function AdminOverviewPage() {
   const isRefreshing =
     isRevenueFetching || isBookingsFetching || isPaymentsFetching || isServicesFetching;
 
+  // Determine the portal prefix for internal links (View All, etc.)
+  const portalPrefix = isStaff ? "/dashboard/staff" : "/dashboard/admin";
+
   const handleRefreshAll = () => {
     refetchRevenue();
     refetchBookings();
@@ -221,6 +224,7 @@ export default function AdminOverviewPage() {
           isLoading={isServicesFetching}
           error={servicesError}
           onRetry={refetchServices}
+          viewAllHref={`${portalPrefix}/tours`}
         />
       </div>
 
@@ -235,7 +239,10 @@ export default function AdminOverviewPage() {
       />
 
       {/* Recent Bookings */}
-      <RecentBookingsTable limit={6} />
+      <RecentBookingsTable
+        limit={6}
+        viewAllHref={`${portalPrefix}/bookings`}
+      />
     </div>
   );
 }

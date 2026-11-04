@@ -335,6 +335,29 @@ describe("DashboardGuard Component", () => {
       expect(mockReplace).not.toHaveBeenCalled();
     });
 
+    it("redirects admin visiting /dashboard/staff to /dashboard/admin (portal separation)", async () => {
+      mockPathname.mockReturnValue("/dashboard/staff/tours");
+      store.dispatch(
+        setCredentials({
+          id: "admin-1",
+          name: "Admin User",
+          email: "admin@phukettours.com",
+          role: "admin",
+        })
+      );
+
+      renderGuard();
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith("/dashboard/admin");
+      });
+
+      expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("status", { name: /redirecting to admin portal/i })
+      ).toBeInTheDocument();
+    });
+
     it("redirects non-admin customer attempting to access /dashboard/admin/tours to /dashboard", async () => {
       mockPathname.mockReturnValue("/dashboard/admin/tours");
       store.dispatch(

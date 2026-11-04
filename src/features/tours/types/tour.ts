@@ -122,3 +122,69 @@ export interface ToursResponse {
   limit: number;
   totalPages: number;
 }
+
+/**
+ * Backend response shape from GET /services (public).
+ * The backend wraps data in a standard envelope: { success, message, data }
+ * where data contains { items, pagination }.
+ */
+export interface ServicePricingSummary {
+  currency: string;
+  basePrice: number;
+  discountedPrice: number | null;
+  taxRate: number;
+  validFrom: string | null;
+  validTo: string | null;
+}
+
+export interface ServiceAvailabilitySummary {
+  availableDateCount: number;
+  unavailableDateCount: number;
+  totalCapacity: number | null;
+  bookedCount: number;
+}
+
+export interface ServiceRecord {
+  id: string;
+  name: string;
+  description: string | null;
+  type: "HOTEL" | "PACKAGE" | "TOUR";
+  status: "DRAFT" | "PUBLISHED" | "UNPUBLISHED";
+  providerName: string | null;
+  providerId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  pricingSummary?: ServicePricingSummary | null;
+  availabilitySummary?: ServiceAvailabilitySummary | null;
+  relevanceScore?: number;
+}
+
+export interface ServicePagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface ServicesApiResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    items: ServiceRecord[];
+    pagination: ServicePagination;
+  };
+}
+
+/**
+ * Parameters for the public services query.
+ * Maps to the backend GET /services query params.
+ */
+export interface GetServicesParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: TourSortOption;
+}
