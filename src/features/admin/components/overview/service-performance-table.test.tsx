@@ -1,17 +1,19 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { ServicePerformanceTable } from "./service-performance-table";
+import { ServiceLevelPerformance } from "./service-performance-table";
 import type { AdminServicesReportData } from "../../types/admin";
 
-describe("ServicePerformanceTable component", () => {
+describe("ServiceLevelPerformance component", () => {
+  const baseFilters = {
+    from: null,
+    to: null,
+    serviceType: null,
+    agentId: null,
+    status: null,
+  };
+
   const realisticServicesFixture: AdminServicesReportData = {
-    filters: {
-      from: null,
-      to: null,
-      serviceType: null,
-      agentId: null,
-      status: null,
-    },
+    filters: baseFilters,
     items: [
       {
         serviceId: "svc-1",
@@ -37,140 +39,69 @@ describe("ServicePerformanceTable component", () => {
     total: 2,
   };
 
-  it("renders service table rows with accurate metric data", () => {
-    render(<ServicePerformanceTable servicesData={realisticServicesFixture} />);
+  it("renders service rows with booking counts and completion rate", () => {
+    render(<ServiceLevelPerformance servicesData={realisticServicesFixture} />);
 
-    expect(screen.getAllByText("Phi Phi Island Day Trip").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("James Bond Island Speedboat").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByTestId("service-row-svc-1")).toHaveTextContent("15");
-    expect(screen.getByTestId("service-row-svc-1")).toHaveTextContent("36,000.00");
+    expect(screen.getByTestId("service-bar-svc-1")).toBeInTheDocument();
+    const row = screen.getByTestId("service-bar-svc-1");
+    expect(row).toHaveTextContent("Phi Phi Island Day Trip");
+    // Total booking count for the service
+    expect(row).toHaveTextContent("15");
+    // Completion rate: 12 / 15 = 80.0%
+    expect(row).toHaveTextContent("80.0%");
   });
 
-  it("renders horizontal bar chart showing volume comparison of completed vs total bookings", () => {
-    render(<ServicePerformanceTable servicesData={realisticServicesFixture} />);
+  it("shows a View All link to the tours dashboard", () => {
+    render(<ServiceLevelPerformance servicesData={realisticServicesFixture} />);
 
-    // Horizontal volume chart container
-    expect(screen.getByTestId("service-volume-chart")).toBeInTheDocument();
-
-    // Svc-1 bar item
-    const barSvc1 = screen.getByTestId("service-bar-svc-1");
-    expect(barSvc1).toBeInTheDocument();
-    // Total bookings count
-    expect(barSvc1).toHaveTextContent("15");
-    // Completed bookings count
-    expect(barSvc1).toHaveTextContent("12");
-    // Completion rate percentage: 12 / 15 = 80.0%
-    expect(barSvc1).toHaveTextContent("80.0%");
+    const link = screen.getByRole("link", { name: /view all/i });
+    expect(link).toHaveAttribute("href", "/dashboard/admin/tours");
   });
 
-  it("handles long service names gracefully with truncation and title tooltip", () => {
-    const longNameFixture: AdminServicesReportData = {
-      filters: { from: null, to: null, serviceType: null, agentId: null, status: null },
-      items: [
-        {
-          serviceId: "svc-long",
-          name: "Super Ultra Luxury Sunset Catamaran Cruise Around Similan Archipelago with Gourmet Dining and Snorkeling Equipment Included",
-          type: "TOUR",
-          totalBookings: 25,
-          completedBookings: 20,
-          bookedValue: 120000,
-          revenue: 100000,
-        },
-      ],
-      page: 1,
-      limit: 10,
-      total: 1,
-    };
-
-    render(<ServicePerformanceTable servicesData={longNameFixture} />);
-
-    // Full name exists in title attribute for accessibility and hover tooltip
-    const elementsWithTitle = screen.getAllByTitle(longNameFixture.items[0].name!);
-    expect(elementsWithTitle.length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByTestId("service-bar-svc-long")).toBeInTheDocument();
-  });
-
-  it("handles large datasets gracefully and supports sorting", () => {
-    const largeDataset: AdminServicesReportData = {
-      filters: { from: null, to: null, serviceType: null, agentId: null, status: null },
-      items: Array.from({ length: 15 }, (_, i) => ({
+  it("shows the View All link with the default target and caps at five rows", () => {
+    const many: AdminServicesReportData = {
+      filters: baseFilters,
+      items: Array.from({ length: 8 }, (_, i) => ({
         serviceId: `svc-${i + 1}`,
-        name: `Excursion Package ${i + 1}`,
+        name: `Excursion ${i + 1}`,
         type: "TOUR",
-        totalBookings: (i + 1) * 3,
-        completedBookings: (i + 1) * 2,
-        bookedValue: (i + 1) * 3000,
-        revenue: (i + 1) * 2000,
+        // svc-1 has the most bookings; the rest decrease, so the top five
+        // by volume are svc-1 through svc-5 and svc-6..svc-8 are hidden.
+        totalBookings: (9 - i) * 10,
+        completedBookings: (9 - i) * 7,
+        bookedValue: (9 - i) * 1000,
+        revenue: (9 - i) * 800,
       })),
       page: 1,
       limit: 20,
-      total: 15,
+      total: 8,
     };
 
-    render(<ServicePerformanceTable servicesData={largeDataset} />);
+    render(<ServiceLevelPerformance servicesData={many} />);
 
-    // All items rendered in chart
-    expect(screen.getByTestId("service-bar-svc-15")).toBeInTheDocument();
+    // Only the top five render (maxItems default is 5).
     expect(screen.getByTestId("service-bar-svc-1")).toBeInTheDocument();
-
-    // Click sort by Revenue
-    const revenueSortBtn = screen.getByRole("button", { name: "Revenue" });
-    fireEvent.click(revenueSortBtn);
-    expect(revenueSortBtn).toHaveClass("bg-[#E8F6F8]");
+    expect(screen.getByTestId("service-bar-svc-5")).toBeInTheDocument();
+    expect(screen.queryByTestId("service-bar-svc-6")).not.toBeInTheDocument();
+    expect(screen.getByText(/Showing top 5 of 8 services/i)).toBeInTheDocument();
   });
 
-  it("allows switching between chart view, table view, and all", () => {
-    render(<ServicePerformanceTable servicesData={realisticServicesFixture} />);
-
-    // Initially both views are visible
-    expect(screen.getByTestId("service-volume-chart")).toBeInTheDocument();
-    expect(screen.getByTestId("service-row-svc-1")).toBeInTheDocument();
-
-    // Switch to Chart Only
-    const chartOnlyBtn = screen.getByRole("button", { name: /chart/i });
-    fireEvent.click(chartOnlyBtn);
-    expect(screen.getByTestId("service-volume-chart")).toBeInTheDocument();
-    expect(screen.queryByTestId("service-row-svc-1")).not.toBeInTheDocument();
-
-    // Switch to Table Only
-    const tableOnlyBtn = screen.getByRole("button", { name: /table/i });
-    fireEvent.click(tableOnlyBtn);
-    expect(screen.queryByTestId("service-volume-chart")).not.toBeInTheDocument();
-    expect(screen.getByTestId("service-row-svc-1")).toBeInTheDocument();
-  });
-
-  it("does not display contract boundary notice (notice removed in UI polish pass)", () => {
-    render(<ServicePerformanceTable servicesData={realisticServicesFixture} />);
-
-    // The "Backend Contract Boundary" implementation-oriented notice was removed
-    // as part of the dashboard UI refinement pass.
-    expect(screen.queryByText(/Backend Contract Boundary:/i)).not.toBeInTheDocument();
-  });
-
-  it("displays empty state when no services are returned", () => {
+  it("displays an empty state when no services are returned", () => {
     render(
-      <ServicePerformanceTable
-        servicesData={{
-          filters: { from: null, to: null, serviceType: null, agentId: null, status: null },
-          items: [],
-          page: 1,
-          limit: 10,
-          total: 0,
-        }}
+      <ServiceLevelPerformance
+        servicesData={{ filters: baseFilters, items: [], page: 1, limit: 10, total: 0 }}
       />
     );
 
     expect(screen.getByText("No service records found")).toBeInTheDocument();
+    // No View All link when there is no data.
+    expect(screen.queryByRole("link", { name: /view all/i })).not.toBeInTheDocument();
   });
 
-  it("renders error state with retry button", () => {
+  it("renders the error state with a working retry button", () => {
     const handleRetry = vi.fn();
-
     render(
-      <ServicePerformanceTable
-        error={new Error("Network failed")}
-        onRetry={handleRetry}
-      />
+      <ServiceLevelPerformance error={new Error("Network failed")} onRetry={handleRetry} />
     );
 
     expect(screen.getByTestId("service-performance-error")).toBeInTheDocument();

@@ -8,9 +8,13 @@ import {
   useGetAdminServicesReportQuery,
   type AdminReportFiltersQuery,
 } from "@/features/admin/api/admin-api";
-import { RevenueSummary } from "@/features/admin/components/overview/revenue-summary";
-import { BookingStatusChart } from "@/features/admin/components/overview/booking-status-chart";
-import { ServicePerformanceTable } from "@/features/admin/components/overview/service-performance-table";
+import { FinancialKpiCards } from "@/features/admin/components/overview/financial-kpi-cards";
+import { RevenueTrendChart } from "@/features/admin/components/overview/revenue-trend-chart";
+import { BookingVolumeChart } from "@/features/admin/components/overview/booking-volume-chart";
+import { BookingStatusDonut } from "@/features/admin/components/overview/booking-status-donut";
+import { ServiceLevelPerformance } from "@/features/admin/components/overview/service-performance-table";
+import { PaymentReconciliationCard } from "@/features/admin/components/overview/payment-reconciliation-card";
+import { RecentBookingsTable } from "@/features/admin/components/overview/recent-bookings-table";
 import { OverviewSkeleton } from "@/features/admin/components/overview/overview-skeleton";
 import { ReportFiltersBar } from "@/features/admin/components/overview/report-filters-bar";
 import { Button } from "@/components/ui/button";
@@ -114,9 +118,17 @@ export default function AdminOverviewPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
-            {isStaff ? "Staff Overview Analytics" : "Admin Overview Analytics"}
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
+              {isStaff ? "Staff Overview Analytics" : "Admin Overview Analytics"}
+            </h1>
+            <span className="hidden rounded-full border border-[#E5EAED] bg-[#F8FAFB] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#74818A] sm:inline-block">
+              Report Overview
+            </span>
+          </div>
+          <p className="mt-1.5 text-sm text-[#74818A]">
+            Monitor bookings, revenue and overall platform performance.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -125,7 +137,7 @@ export default function AdminOverviewPage() {
             disabled={isRefreshing}
             variant="outline"
             size="sm"
-            className="border-[#E5EAED] bg-white text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9]"
+            className="h-9 border-[#E5EAED] bg-white px-4 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9]"
             aria-label="Refresh all dashboard analytics"
           >
             <RefreshCw
@@ -170,33 +182,59 @@ export default function AdminOverviewPage() {
         isLoading={isRefreshing}
       />
 
-      {/* Financial Totals & Payment Reconciliation */}
-      <RevenueSummary
+      {/* Financial KPI Cards */}
+      <FinancialKpiCards
+        revenueData={revenueResponse?.data}
+        currency={null}
+        isLoading={isRevenueFetching}
+      />
+
+      {/* Analytics charts: Revenue Trend + Booking Volume */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <RevenueTrendChart
+          revenueData={revenueResponse?.data}
+          currency={null}
+          isLoading={isRevenueFetching}
+          error={revenueError}
+          onRetry={refetchRevenue}
+        />
+        <BookingVolumeChart
+          bookingsData={bookingsResponse?.data}
+          isLoading={isBookingsFetching}
+          error={bookingsError}
+          onRetry={refetchBookings}
+        />
+      </div>
+
+      {/* Secondary analytics: status donut + service-level performance */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <BookingStatusDonut
+          bookingsData={bookingsResponse?.data}
+          isLoading={isBookingsFetching}
+          error={bookingsError}
+          onRetry={refetchBookings}
+        />
+        <ServiceLevelPerformance
+          servicesData={servicesResponse?.data}
+          currency={null}
+          isLoading={isServicesFetching}
+          error={servicesError}
+          onRetry={refetchServices}
+        />
+      </div>
+
+      {/* Payment Reconciliation Summary */}
+      <PaymentReconciliationCard
         revenueData={revenueResponse?.data}
         paymentsData={paymentsResponse?.data}
         currency={null}
-        isLoading={isRevenueFetching}
-        error={revenueError}
-        onRetry={refetchRevenue}
+        isLoading={isPaymentsFetching}
+        error={paymentsError}
+        onRetry={refetchPayments}
       />
 
-      {/* Booking Status Distribution */}
-      <BookingStatusChart
-        bookingsData={bookingsResponse?.data}
-        currency={null}
-        isLoading={isBookingsFetching}
-        error={bookingsError}
-        onRetry={refetchBookings}
-      />
-
-      {/* Service-Level Booking Performance */}
-      <ServicePerformanceTable
-        servicesData={servicesResponse?.data}
-        currency={null}
-        isLoading={isServicesFetching}
-        error={servicesError}
-        onRetry={refetchServices}
-      />
+      {/* Recent Bookings */}
+      <RecentBookingsTable limit={6} />
     </div>
   );
 }

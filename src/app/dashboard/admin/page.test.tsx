@@ -9,6 +9,7 @@ vi.mock("@/features/admin/api/admin-api", () => {
     useGetAdminBookingsReportQuery: vi.fn(),
     useGetAdminPaymentsReportQuery: vi.fn(),
     useGetAdminServicesReportQuery: vi.fn(),
+    useGetAdminOperationsBookingsQuery: vi.fn(),
   };
 });
 
@@ -117,16 +118,32 @@ describe("AdminOverviewPage component", () => {
       error: undefined,
       refetch: mockRefetchServices,
     } as unknown as ReturnType<typeof adminApiModule.useGetAdminServicesReportQuery>);
+
+    // The Recent Bookings section uses the operations bookings endpoint.
+    // Default to an empty list so the section renders its empty state.
+    vi.mocked(adminApiModule.useGetAdminOperationsBookingsQuery).mockReturnValue({
+      data: {
+        success: true,
+        message: "Bookings retrieved",
+        data: { items: [], page: 1, limit: 6, total: 0 },
+      },
+      isLoading: false,
+      isFetching: false,
+      error: undefined,
+    } as unknown as ReturnType<typeof adminApiModule.useGetAdminOperationsBookingsQuery>);
   });
 
   it("renders page header, metrics, booking status breakdown, and service table", () => {
     render(<AdminOverviewPage />);
 
     expect(screen.getByRole("heading", { level: 1, name: /admin overview analytics/i })).toBeInTheDocument();
-    expect(screen.getByTestId("metric-revenue-value")).toHaveTextContent("95,400.00");
-    expect(screen.getByTestId("metric-booked-value-value")).toHaveTextContent("125,000.50");
-    expect(screen.getByTestId("total-bookings-badge")).toHaveTextContent("Total Bookings: 40");
+    expect(screen.getByText("Report Overview")).toBeInTheDocument();
+    expect(screen.getByText("Monitor bookings, revenue and overall platform performance.")).toBeInTheDocument();
+    expect(screen.getByTestId("metric-revenue")).toHaveTextContent("95,400.00");
+    expect(screen.getByTestId("metric-booked-value")).toHaveTextContent("125,000.50");
+    expect(screen.getByTestId("total-bookings-badge")).toHaveTextContent("Total: 40");
     expect(screen.getAllByText("James Bond Island Adventure").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("recent-bookings-card")).toBeInTheDocument();
   });
 
   it("renders OverviewSkeleton when queries are initially loading", () => {
