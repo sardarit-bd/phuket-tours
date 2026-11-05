@@ -26,7 +26,7 @@ export function FaqSection({
   return (
     <section
       id="faq"
-      className="bg-white py-16 sm:py-20 lg:py-24"
+      className="bg-[#FAFEFF] py-12 sm:py-14 lg:py-16"
       aria-labelledby="faq-section-heading"
     >
       <Container className="max-w-[1320px] lg:px-0">

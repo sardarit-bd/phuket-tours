@@ -10,7 +10,7 @@ import { featuredToursData, type FeaturedTourItem } from "@/features/tours/data/
 
 export function FeaturedToursSection() {
   return (
-    <section className="bg-white py-16 sm:py-20 lg:py-24" aria-labelledby="featured-tours-heading">
+    <section className="bg-white pt-16 pb-12 sm:pt-20 sm:pb-14 lg:pt-24 lg:pb-16" aria-labelledby="featured-tours-heading">
       <Container className="max-w-[1320px] lg:px-0">
         {/* Section Heading Block */}
         <div className="mb-8 sm:mb-10 lg:mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -80,7 +80,7 @@ function TourCard({
 
   return (
     <article
-      className={`group flex flex-col overflow-hidden rounded-[12px] border border-[#E5EAEB] bg-white shadow-xs transition-all duration-300 hover:shadow-md ${className}`}
+      className={`group flex flex-col overflow-hidden rounded-[12px] border border-[#E5EAEB] bg-white shadow-[0px_16px_45px_0px_rgba(20,52,55,0.08)] transition-all duration-300 ${className}`}
     >
       {/* Top Image Area: 16:10 aspect ratio, neutral fallback if file is pending */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#EEF4F5]">

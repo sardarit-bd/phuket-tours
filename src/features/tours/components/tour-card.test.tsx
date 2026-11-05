@@ -2,6 +2,7 @@ import * as React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TourCard } from "./tour-card";
+import { Tour } from "../types/tour";
 import { mockTours } from "../data/tours-data";
 
 describe("TourCard component", () => {
@@ -18,7 +19,10 @@ describe("TourCard component", () => {
     expect(screen.getByText(curatedTour.destination)).toBeInTheDocument();
     expect(screen.getByText("4.9")).toBeInTheDocument();
     expect(screen.getByText("(892 reviews)")).toBeInTheDocument();
-    expect(screen.getByText(`$${curatedTour.price.amount}`)).toBeInTheDocument();
+    expect(screen.getByText("From")).toBeInTheDocument();
+    // Price is formatted via formatPrice; for "$" currency (mock data)
+    // the fallback renders "$ 120" — verify the amount is present
+    expect(screen.getByText(/120/)).toBeInTheDocument();
     expect(screen.getByText(/from/i)).toBeInTheDocument();
   });
 
@@ -33,7 +37,7 @@ describe("TourCard component", () => {
       name: new RegExp(`view tour details for ${curatedTour.title}`, "i"),
     });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute("href", `/tours?slug=${curatedTour.slug}`);
+    expect(link).toHaveAttribute("href", `/tours/${curatedTour.id}`);
   });
 
   it("calls onToggleFavorite when the favorite heart button is clicked", () => {
@@ -60,5 +64,36 @@ describe("TourCard component", () => {
     expect(screen.getByText(placeholderTour.title)).toBeInTheDocument();
     // Reviews are undefined for placeholder tours to avoid presenting invented data
     expect(screen.queryByText(/reviews\)/i)).not.toBeInTheDocument();
+  });
+
+  it("displays 'Price unavailable' in a compact style when hasPrice is false", () => {
+    const tourNoPrice: Tour = {
+      ...curatedTour,
+      price: { amount: 0, currency: "USD", hasPrice: false },
+    };
+    render(<TourCard tour={tourNoPrice} />);
+
+    // "Price unavailable" text is present
+    expect(screen.getByText("Price unavailable")).toBeInTheDocument();
+    // It should use a smaller font than the regular price display
+    const priceEl = screen.getByText("Price unavailable");
+    expect(priceEl).toHaveClass("text-sm");
+    expect(priceEl).toHaveClass("font-semibold");
+    expect(priceEl).toHaveClass("text-[#8A9A9C]");
+  });
+
+  it("does not display 'Price unavailable' for valid-priced tours", () => {
+    render(<TourCard tour={curatedTour} />);
+    // curatedTour has a valid price (120) — "Price unavailable" should not appear
+    expect(screen.queryByText("Price unavailable")).not.toBeInTheDocument();
+  });
+
+  it("displays 'Free' for zero-amount tours with hasPrice true", () => {
+    const freeTour: Tour = {
+      ...curatedTour,
+      price: { amount: 0, currency: "USD", hasPrice: true },
+    };
+    render(<TourCard tour={freeTour} />);
+    expect(screen.getByText("Free")).toBeInTheDocument();
   });
 });

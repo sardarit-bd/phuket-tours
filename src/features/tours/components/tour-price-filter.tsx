@@ -8,6 +8,8 @@ interface TourPriceFilterProps {
   maxPrice: number;
   onChange: (min: number, max: number) => void;
   defaultOpen?: boolean;
+  /** Maximum value for the slider. Defaults to 500. */
+  maxLimit?: number;
 }
 
 export function TourPriceFilter({
@@ -15,6 +17,7 @@ export function TourPriceFilter({
   maxPrice,
   onChange,
   defaultOpen = true,
+  maxLimit = 500,
 }: TourPriceFilterProps) {
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
@@ -31,8 +34,20 @@ export function TourPriceFilter({
   };
 
   // Percentage for track highlight
-  const minPercent = Math.min(100, Math.max(0, (minPrice / 500) * 100));
-  const maxPercent = Math.min(100, Math.max(0, (maxPrice / 500) * 100));
+  const minPercent = Math.min(
+    100,
+    Math.max(0, (minPrice / maxLimit) * 100)
+  );
+  const maxPercent = Math.min(
+    100,
+    Math.max(0, (maxPrice / maxLimit) * 100)
+  );
+
+  // Determine step based on max limit
+  const step = maxLimit <= 100 ? 5 : maxLimit <= 500 ? 10 : 50;
+
+  // Display: if maxPrice >= maxLimit, show "maxLimit+"
+  const maxLabel = maxPrice >= maxLimit ? `${maxLimit}+` : String(maxPrice);
 
   return (
     <div className="pb-5 pt-1">
@@ -63,7 +78,7 @@ export function TourPriceFilter({
               className="absolute h-1.5 bg-primary rounded-full"
               style={{
                 left: `${minPercent}%`,
-                width: `${maxPercent - minPercent}%`,
+                width: `${Math.max(0, maxPercent - minPercent)}%`,
               }}
             />
 
@@ -71,8 +86,8 @@ export function TourPriceFilter({
             <input
               type="range"
               min={0}
-              max={500}
-              step={10}
+              max={maxLimit}
+              step={step}
               value={minPrice}
               onChange={handleMinChange}
               aria-label="Minimum price"
@@ -83,8 +98,8 @@ export function TourPriceFilter({
             <input
               type="range"
               min={0}
-              max={500}
-              step={10}
+              max={maxLimit}
+              step={step}
               value={maxPrice}
               onChange={handleMaxChange}
               aria-label="Maximum price"
@@ -92,10 +107,10 @@ export function TourPriceFilter({
             />
           </div>
 
-          {/* Price Label display matching screenshot ($0 - $500+) */}
+          {/* Price Label display */}
           <div className="mt-2.5 flex items-center justify-between text-xs font-medium text-[#5C6C6E]">
             <span>
-              ${minPrice} - ${maxPrice >= 500 ? "500+" : maxPrice}
+              ${minPrice} - ${maxLabel}
             </span>
           </div>
         </div>

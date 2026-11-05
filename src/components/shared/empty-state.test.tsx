@@ -54,4 +54,17 @@ describe("EmptyState component", () => {
     rerender(<EmptyState title="No results" onAction={() => {}} />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("renders compact variant with smaller padding and typography", () => {
+    const { container } = render(
+      <EmptyState
+        compact
+        title="Compact Title"
+        description="Compact description"
+      />
+    );
+
+    expect(screen.getByRole("heading", { level: 3, name: /compact title/i })).toHaveClass("text-sm");
+    expect(container.firstChild).toHaveClass("py-6");
+  });
 });

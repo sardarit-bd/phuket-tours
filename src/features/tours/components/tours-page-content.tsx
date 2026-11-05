@@ -13,6 +13,62 @@ import {
 } from "./index";
 import { useTourFilters } from "../hooks/use-tour-filters";
 import { useGetToursQuery } from "../api/tours-api";
+import { FilterGroup } from "../types/tour";
+
+/**
+ * Derives destination filter options from the loaded tour data.
+ * Returns a FilterGroup with destination options and their counts.
+ */
+function useDestinationFilterGroup(
+  tours: import("../types/tour").Tour[]
+): FilterGroup | null {
+  return React.useMemo(() => {
+    if (tours.length === 0) return null;
+
+    const destCounts: Record<string, { count: number; label: string }> = {};
+    tours.forEach((tour) => {
+      const key = tour.destinationCategory;
+      if (!key || !tour.destination) return;
+      if (!destCounts[key]) {
+        destCounts[key] = { count: 0, label: tour.destination };
+      }
+      destCounts[key].count += 1;
+    });
+
+    const options = Object.entries(destCounts)
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([id, info]) => ({
+        id,
+        label: info.label,
+        count: info.count,
+      }));
+
+    if (options.length === 0) return null;
+
+    return {
+      id: "destination",
+      title: "Destination",
+      options,
+    };
+  }, [tours]);
+}
+
+/**
+ * Derives the maximum price from the loaded tour data
+ * so the price slider can adapt to real prices.
+ */
+function useMaxPriceFromData(
+  tours: import("../types/tour").Tour[]
+): number {
+  return React.useMemo(() => {
+    if (tours.length === 0) return 500; // fallback
+    const maxPrice = Math.max(
+      ...tours.map((t) => t.price.amount)
+    );
+    // Round up to nearest 50 for a clean slider
+    return Math.ceil(maxPrice / 50) * 50;
+  }, [tours]);
+}
 
 export function ToursPageContent() {
   const {
@@ -32,8 +88,8 @@ export function ToursPageContent() {
     favorites,
   } = useTourFilters();
 
-  // Query tours via RTK Query with local mock provider and server-ready pagination
-  const { data, isLoading } = useGetToursQuery({
+  // Query tours via RTK Query with the backend /services endpoint
+  const { data, isLoading, isError, refetch } = useGetToursQuery({
     search: filters.search,
     category: filters.category,
     destinations: filters.destinations,
@@ -52,6 +108,12 @@ export function ToursPageContent() {
   const totalPages = data?.totalPages ?? 1;
   const limit = data?.limit ?? filters.limit;
 
+  // Dynamic destination filter group from real data
+  const destinationGroup = useDestinationFilterGroup(tours);
+
+  // Dynamic max price from real data
+  const dynamicMaxPrice = useMaxPriceFromData(tours);
+
   return (
     <div className="py-8 sm:py-10 lg:py-12 bg-white">
       <Container className="max-w-[1320px] lg:px-0">
@@ -65,6 +127,8 @@ export function ToursPageContent() {
               toggleDuration={toggleDuration}
               setPriceRange={setPriceRange}
               clearAllFilters={clearAllFilters}
+              destinationGroup={destinationGroup}
+              dynamicMaxPrice={dynamicMaxPrice}
             />
           </div>
 
@@ -102,25 +166,53 @@ export function ToursPageContent() {
                   setPriceRange={setPriceRange}
                   clearAllFilters={clearAllFilters}
                   totalFound={total}
+                  destinationGroup={destinationGroup}
+                  dynamicMaxPrice={dynamicMaxPrice}
                 />
               }
             />
 
+            {/* Error State */}
+            {isError && (
+              <div
+                role="alert"
+                className="flex flex-col items-center justify-center rounded-2xl border border-red-200 bg-red-50 p-8 text-center"
+              >
+                <p className="text-sm font-semibold text-red-800">
+                  Something went wrong loading tours
+                </p>
+                <p className="mt-1 text-xs text-red-600">
+                  Please check your connection and try again.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="mt-4 rounded-full bg-primary px-6 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-primary-dark cursor-pointer"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
             {/* Tour Cards Grid (Renders only active paginated page: 12 cards) */}
-            <TourGrid
-              tours={tours}
-              isLoading={isLoading}
-              onResetFilters={resetEverything}
-              favorites={favorites}
-              onToggleFavorite={toggleFavorite}
-            />
+            {!isError && (
+              <TourGrid
+                tours={tours}
+                isLoading={isLoading}
+                onResetFilters={resetEverything}
+                favorites={favorites}
+                onToggleFavorite={toggleFavorite}
+              />
+            )}
 
             {/* Accessible Pagination Navigation */}
-            <TourPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setPage}
-            />
+            {!isError && (
+              <TourPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            )}
           </main>
         </div>
       </Container>

@@ -66,4 +66,13 @@ describe("FeaturedToursSection component", () => {
       expect(link.getAttribute("href")).toContain("/tours");
     });
   });
+
+  it("applies the reference shadow box-shadow: 0px 16px 45px 0px rgba(20, 52, 55, 0.08) to all tour cards", () => {
+    const { container } = render(<FeaturedToursSection />);
+    const cards = container.querySelectorAll("article");
+    expect(cards).toHaveLength(3);
+    cards.forEach((card) => {
+      expect(card).toHaveClass("shadow-[0px_16px_45px_0px_rgba(20,52,55,0.08)]");
+    });
+  });
 });

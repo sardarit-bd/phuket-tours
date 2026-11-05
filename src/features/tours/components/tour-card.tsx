@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Clock, MapPin, Star, Heart, ArrowRight } from "lucide-react";
 import { Tour } from "../types/tour";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 
 interface TourCardProps {
   tour: Tour;
@@ -43,7 +43,30 @@ export function TourCard({
     }
   };
 
-  const tourHref = `/tours?slug=${tour.slug}`;
+  const tourHref = `/tours/${tour.id}`;
+
+  // Price display:
+  //  - hasPrice explicitly false (no pricing record from backend) → "Price unavailable"
+  //  - hasPrice true or undefined (legacy/mock data) with amount===0 → "Free"
+  //  - otherwise → formatted currency amount (e.g. "$89", "€120", "₹450")
+  //  - If currency code is non-ISO (e.g. "$"), falls back to "currency amount"
+  const priceDisplay =
+    tour.price.hasPrice === false
+      ? "Price unavailable"
+      : tour.price.amount === 0
+        ? "Free"
+        : (() => {
+            try {
+              return formatPrice(tour.price.amount, tour.price.currency);
+            } catch {
+              // Non-ISO currency code (e.g. "$") — fall back to
+              // a plain prefix so we never render a malformed string.
+              return `${tour.price.currency} ${tour.price.amount.toLocaleString(
+                "en-US",
+                { maximumFractionDigits: 0 }
+              )}`;
+            }
+          })();
 
   return (
     <article
@@ -142,22 +165,31 @@ export function TourCard({
         </div>
 
         {/* Card Footer: Price & CTA Button */}
-        <div className="mt-4 flex items-center justify-between border-t border-[#EEF2F3] pt-3">
-          <div className="flex flex-col">
-            <span className="text-[11px] text-[#8A9A9C] leading-none">From</span>
-            <span className="text-lg sm:text-[21px] font-bold text-primary leading-tight">
-              {tour.price.currency}
-              {tour.price.amount}
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#EEF2F3] pt-3">
+          {/* Price block: constrained width so "Price unavailable" stays compact */}
+          <div className="min-w-0 flex-1">
+            <span className="block text-[11px] text-[#8A9A9C] leading-none">
+              From
             </span>
+            {tour.price.hasPrice === false ? (
+              <span className="mt-0.5 block text-sm font-semibold text-[#8A9A9C] leading-tight">
+                Price unavailable
+              </span>
+            ) : (
+              <span className="mt-0.5 block text-lg sm:text-[21px] font-bold text-primary leading-tight">
+                {priceDisplay}
+              </span>
+            )}
           </div>
 
+          {/* CTA button: fixed, non-shrinking, label on one line */}
           <Link
             href={tourHref}
-            className="inline-flex items-center gap-1 rounded-full bg-primary px-3 sm:px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-primary-dark group-hover:bg-primary-dark"
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary px-3 sm:px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-primary-dark group-hover:bg-primary-dark"
             aria-label={`View tour details for ${tour.title}`}
           >
             <span>View Tour</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+            <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
           </Link>
         </div>
       </div>
