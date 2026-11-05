@@ -87,8 +87,11 @@ export const authSlice = createSlice({
           state.isAuthenticated = false;
           state.status = "idle";
         } else {
-          state.user = null;
-          state.isAuthenticated = false;
+          // On transient/non-401 errors (500, network failures, parsing
+          // errors, or a conditional 304 that should never occur with the
+          // no-store backend headers), preserve the existing user and
+          // isAuthenticated flag so a single failed refresh cannot erase a
+          // valid authenticated session. Only mark the status as failed.
           state.status = "failed";
         }
       })

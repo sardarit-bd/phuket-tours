@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  User,
 } from "lucide-react";
 import {
   useGetAdminSettingsQuery,
@@ -31,6 +32,7 @@ import { WebhookSettingsTab } from "./webhook-settings-tab";
 import { CloudinarySettingsTab } from "./cloudinary-settings-tab";
 import { SmtpSettingsTab } from "./smtp-settings-tab";
 import { SettingsAuditLogsTab } from "./settings-audit-logs-tab";
+import { AdminProfileSettings } from "./admin-profile-settings";
 import type {
   UpdateGeneralSettingsInput,
   UpdatePaymentSettingsInput,
@@ -41,6 +43,7 @@ import type {
 } from "../../types/admin-settings";
 
 type SettingsTab =
+  | "profile"
   | "general"
   | "payment"
   | "webhook"
@@ -56,6 +59,12 @@ interface TabItem {
 }
 
 const SETTINGS_TABS: TabItem[] = [
+  {
+    id: "profile",
+    label: "Profile",
+    description: "Your account name, contact details & role",
+    icon: User,
+  },
   {
     id: "general",
     label: "General Settings",
@@ -344,7 +353,9 @@ export function AdminSettingsView() {
       </div>
 
       {/* Main Tab Content */}
-      {isSettingsLoading ? (
+      {activeTab === "profile" ? (
+        <AdminProfileSettings />
+      ) : isSettingsLoading ? (
         <div className="rounded-[12px] border border-[#E5EAED] bg-white p-12 text-center">
           <RotateCcw className="h-6 w-6 animate-spin mx-auto text-[#00A699] mb-3" />
           <p className="font-outfit text-sm font-semibold text-[#18282A]">

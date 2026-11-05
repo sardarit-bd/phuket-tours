@@ -1,29 +1,83 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Profile Settings — User Dashboard",
-};
+import * as React from "react";
+import { useGetMeQuery } from "@/features/auth/api/auth-api";
+import { useUpdateProfileMutation } from "@/features/customer/api/customer-api";
+import { ProfileSettingsView } from "@/features/dashboard/components/profile-settings-view";
+import type { UserProfile } from "@/features/auth/types/auth";
 
 export default function UserSettingsPage() {
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A]">
-          Profile Settings
-        </h2>
-        <p className="text-sm text-[#74818A]">
-          Manage guest details, contact numbers, and hotel pickup defaults.
-        </p>
-      </div>
+  const {
+    data: meResponse,
+    isLoading: isMeLoading,
+    error: meError,
+    refetch: refetchMe,
+  } = useGetMeQuery();
 
-      <div className="rounded-[12px] border border-dashed border-[#E5EAED] bg-white p-8 text-center sm:p-12">
-        <p className="font-outfit text-base font-semibold text-[#18282A]">
-          Profile Settings Form Placeholder
-        </p>
-        <p className="mt-1.5 text-xs text-[#74818A]">
-          User profile preferences and emergency contacts will be configured in the next phase.
-        </p>
-      </div>
-    </div>
+  const [updateProfile, { isLoading: isSaving, error: saveError, reset: resetSaveError }] =
+    useUpdateProfileMutation();
+
+  const profile: UserProfile | null = meResponse?.data ?? null;
+
+  const [name, setName] = React.useState("");
+  const [phone, setPhone] = React.useState("");
+
+  const hasChanges =
+    profile &&
+    (name !== profile.name || phone !== (profile.phone ?? ""));
+
+  const enterEdit = () => {
+    if (profile) {
+      setName(profile.name);
+      setPhone(profile.phone ?? "");
+    }
+    resetSaveError();
+  };
+
+  const handleCancel = () => {
+    if (profile) {
+      setName(profile.name);
+      setPhone(profile.phone ?? "");
+    }
+    resetSaveError();
+  };
+
+  const handleSave = async (): Promise<boolean> => {
+    if (!hasChanges || !profile) return false;
+    resetSaveError();
+    try {
+      await updateProfile({
+        name: name.trim() || undefined,
+        phone: phone.trim() || null,
+      }).unwrap();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  return (
+    <ProfileSettingsView
+      profile={profile}
+      isProfileLoading={isMeLoading}
+      profileLoadError={meError}
+      onRefetchProfile={() => {
+        void refetchMe();
+      }}
+      draftName={name}
+      draftPhone={phone}
+      onDraftNameChange={setName}
+      onDraftPhoneChange={setPhone}
+      isDirty={!!hasChanges}
+      isSaving={isSaving}
+      saveError={saveError}
+      roleLabel="Customer"
+      badgeLabel="Customer"
+      description="Manage your contact details. Your email address is used for login and cannot be changed here."
+      onEnterEdit={enterEdit}
+      onHandleSave={handleSave}
+      onHandleCancel={handleCancel}
+      testIdPrefix="customer-settings"
+    />
   );
 }

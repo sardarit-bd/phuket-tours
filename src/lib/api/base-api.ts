@@ -28,6 +28,8 @@ export const baseApi = createApi({
     "AdminCommissionRule",
     "AdminPayment",
     "AdminSetting",
+    "CustomerBookings",
+    "CustomerPayments",
   ],
   endpoints: () => ({}),
 });

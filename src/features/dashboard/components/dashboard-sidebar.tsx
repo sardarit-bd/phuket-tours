@@ -140,7 +140,7 @@ export function DashboardSidebar({
             : isViewStaff
             ? "Staff"
             : isViewAgent
-            ? "Agent Portal"
+            ? "Agent"
             : "User"}
         </span>
       </div>

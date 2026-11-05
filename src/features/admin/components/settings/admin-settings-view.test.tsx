@@ -159,10 +159,11 @@ describe("AdminSettingsView Integration", () => {
     ] as any);
   });
 
-  it("renders the settings dashboard with all 6 navigation tabs", () => {
+  it("renders the settings dashboard with all 7 navigation tabs", () => {
     render(<AdminSettingsView />);
 
     expect(screen.getByText("System Settings & Security Center")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Profile$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^General Settings$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Payment Gateway$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Webhook Configuration$/i })).toBeInTheDocument();

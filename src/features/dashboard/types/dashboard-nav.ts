@@ -76,6 +76,11 @@ export const userNavConfig: DashboardNavConfig = {
       icon: CalendarCheck,
     },
     {
+      title: "Payment History",
+      href: "/dashboard/payments",
+      icon: CreditCard,
+    },
+    {
       title: "My Favorites",
       href: "/dashboard/favorites",
       icon: Heart,

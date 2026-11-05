@@ -39,6 +39,17 @@ export const authApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Auth", "User"],
     }),
+    updateProfile: builder.mutation<
+      UserProfileResponse,
+      { name?: string; phone?: string | null }
+    >({
+      query: (body) => ({
+        url: "/users/me",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["User"],
+    }),
     validateInvitation: builder.query<
       { success: boolean; data: { valid: boolean; user: { name: string; email: string; role: string } } },
       string
@@ -68,6 +79,7 @@ export const {
   useRegisterMutation,
   useLogoutMutation,
   useGetMeQuery,
+  useUpdateProfileMutation,
   useLazyGetMeQuery,
   useValidateInvitationQuery,
   useLazyValidateInvitationQuery,

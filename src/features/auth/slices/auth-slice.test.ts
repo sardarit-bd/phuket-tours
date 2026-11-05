@@ -242,6 +242,67 @@ describe("authSlice", () => {
       expect(nextState.status).toBe("failed");
     });
 
+    it("preserves an authenticated user on a conditional 304 rejection of getMe", () => {
+      const loggedInState: AuthState = {
+        user: sampleUser,
+        isAuthenticated: true,
+        isInitialized: false,
+        status: "loading",
+      };
+
+      const action = {
+        type: `${authApi.reducerPath}/executeQuery/rejected`,
+        payload: {
+          status: 304,
+          data: null,
+        },
+        meta: {
+          arg: {
+            endpointName: "getMe",
+          },
+        },
+      };
+
+      expect(authApi.endpoints.getMe.matchRejected(action)).toBe(true);
+      const nextState = authReducer(loggedInState, action);
+      expect(nextState.user).toEqual(sampleUser);
+      expect(nextState.isAuthenticated).toBe(true);
+      expect(nextState.isInitialized).toBe(true);
+      expect(nextState.status).toBe("failed");
+    });
+
+    it("preserves an authenticated user on a 500 rejection of getMe", () => {
+      const loggedInState: AuthState = {
+        user: sampleAdmin,
+        isAuthenticated: true,
+        isInitialized: false,
+        status: "loading",
+      };
+
+      const action = {
+        type: `${authApi.reducerPath}/executeQuery/rejected`,
+        payload: {
+          status: 500,
+          data: {
+            success: false,
+            message: "Internal server error",
+          },
+        },
+        meta: {
+          arg: {
+            endpointName: "getMe",
+          },
+        },
+      };
+
+      expect(authApi.endpoints.getMe.matchRejected(action)).toBe(true);
+      const nextState = authReducer(loggedInState, action);
+      expect(nextState.user).toEqual(sampleAdmin);
+      expect(nextState.isAuthenticated).toBe(true);
+      expect(nextState.isInitialized).toBe(true);
+      expect(nextState.status).toBe("failed");
+    });
+
     it("clears auth state on logout.matchFulfilled", () => {
       const loggedInState: AuthState = {
         user: sampleUser,

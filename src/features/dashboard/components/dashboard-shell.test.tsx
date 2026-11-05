@@ -275,7 +275,7 @@ describe("DashboardShell Component", () => {
     expect(screen.queryByText("My Favorites")).not.toBeInTheDocument();
   });
 
-  it("automatically switches to Agent navigation and renders AGENT PORTAL badge for agent accounts", () => {
+  it("automatically switches to Agent navigation and renders AGENT badge for agent accounts", () => {
     mockPathname.mockReturnValue("/dashboard/agent");
 
     renderWithStore(
@@ -289,8 +289,8 @@ describe("DashboardShell Component", () => {
     expect(screen.getByTestId("agent-content")).toBeInTheDocument();
     expect(screen.getByText("My Commissions")).toBeInTheDocument();
     expect(screen.getByText("Agency Profile")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-role-indicator")).toHaveTextContent("Agent Portal");
-    expect(screen.getAllByText("Agent Portal").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByTestId("sidebar-role-indicator")).toHaveTextContent("Agent");
+    expect(screen.getAllByText("Agent").length).toBeGreaterThanOrEqual(1);
 
     // Admin & Customer items absent
     expect(screen.queryByText("Tours Management")).not.toBeInTheDocument();
