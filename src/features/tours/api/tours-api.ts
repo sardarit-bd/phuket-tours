@@ -9,6 +9,11 @@ import {
   mockTourDataProvider,
   filterAndSortToursLocally,
 } from "../services/tour-data-provider";
+import type {
+  ServiceRecord,
+  ServicePricingRecord,
+  ServiceAvailabilityRecord,
+} from "../types/tour";
 
 export { filterAndSortToursLocally };
 
@@ -67,11 +72,15 @@ export const toursApi = baseApi.injectEndpoints({
 
           // Apply client-side price filter and sort if the backend
           // didn't handle them (progressive enhancement).
+          // Tours without pricing (hasPrice=false) are excluded from
+          // price filters since their price is genuinely unknown.
           let filteredTours = mappedTours;
 
           if (params?.minPrice !== undefined && params.minPrice > 0) {
             filteredTours = filteredTours.filter(
-              (tour) => tour.price.amount >= params.minPrice!
+              (tour) =>
+                tour.price.hasPrice !== false &&
+                tour.price.amount >= params.minPrice!
             );
           }
           if (
@@ -80,7 +89,9 @@ export const toursApi = baseApi.injectEndpoints({
             params.maxPrice < 500
           ) {
             filteredTours = filteredTours.filter(
-              (tour) => tour.price.amount <= params.maxPrice!
+              (tour) =>
+                tour.price.hasPrice !== false &&
+                tour.price.amount <= params.maxPrice!
             );
           }
 
@@ -89,12 +100,16 @@ export const toursApi = baseApi.injectEndpoints({
             switch (params.sortBy) {
               case "price-asc":
                 filteredTours = [...filteredTours].sort(
-                  (a, b) => a.price.amount - b.price.amount
+                  (a, b) =>
+                    (a.price.hasPrice === false ? Number.MAX_SAFE_INTEGER : a.price.amount) -
+                    (b.price.hasPrice === false ? Number.MAX_SAFE_INTEGER : b.price.amount)
                 );
                 break;
               case "price-desc":
                 filteredTours = [...filteredTours].sort(
-                  (a, b) => b.price.amount - a.price.amount
+                  (a, b) =>
+                    (b.price.hasPrice === false ? Number.MAX_SAFE_INTEGER : b.price.amount) -
+                    (a.price.hasPrice === false ? Number.MAX_SAFE_INTEGER : a.price.amount)
                 );
                 break;
               case "highest-rated":
@@ -169,6 +184,60 @@ export const toursApi = baseApi.injectEndpoints({
             ]
           : [{ type: "Tour", id: "LIST" }],
     }),
+
+    /**
+     * Fetch a single published tour by its backend UUID.
+     * Uses GET /services/:serviceId (public, no auth required).
+     * Returns 404 if the tour doesn't exist or is unpublished.
+     */
+    getTourById: builder.query<
+      import("../types/tour").Tour,
+      string
+    >({
+      queryFn: async (id, _api, _extraOptions, baseQuery) => {
+        const response = await baseQuery({
+          url: `/services/${id}`,
+          method: "GET",
+        });
+
+        if (response.error) {
+          // Map backend 404 to a consistent error the UI can handle
+          if (
+            "status" in response.error &&
+            (response.error as { status?: number }).status === 404
+          ) {
+            return {
+              error: {
+                status: "FETCH_ERROR",
+                error: "Tour not found",
+              },
+            };
+          }
+          return { error: response.error };
+        }
+
+        const apiResponse = response.data as unknown as import("../types/tour").ServiceDetailApiResponse;
+        const detail = apiResponse.data;
+
+        if (!detail) {
+          return {
+            error: {
+              status: "CUSTOM_ERROR",
+              error: "Tour not found",
+            },
+          };
+        }
+
+        return { data: mapServiceToTour(detail) };
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              { type: "Tour" as const, id: result.id },
+              { type: "Tour" as const, id: "LIST" },
+            ]
+          : [{ type: "Tour" as const, id: "LIST" }],
+    }),
   }),
 });
 
@@ -177,7 +246,8 @@ export const toursApi = baseApi.injectEndpoints({
  * Handles missing optional fields gracefully.
  */
 function mapServiceToTour(
-  record: import("../types/tour").ServiceRecord
+  record: import("../types/tour").ServiceRecord &
+    Partial<import("../types/tour").ServiceDetail>
 ): import("../types/tour").Tour {
   const metadata = record.metadata || {};
 
@@ -218,6 +288,19 @@ function mapServiceToTour(
     (metadata.category as string) ||
     undefined;
 
+  // Extract location from metadata
+  const locationMeta = metadata.location as
+    | { city?: string; country?: string; departurePoint?: string }
+    | undefined;
+  const location =
+    locationMeta?.city || locationMeta?.country
+      ? {
+          city: locationMeta.city || "Phuket",
+          country: locationMeta.country || "Thailand",
+          departurePoint: locationMeta.departurePoint || undefined,
+        }
+      : undefined;
+
   // Extract images from metadata
   const images: string[] =
     (metadata.images as string[]) ||
@@ -231,26 +314,43 @@ function mapServiceToTour(
     (metadata.image as string) ||
     undefined;
 
-  // Extract price from pricingSummary
-  const price = record.pricingSummary
+  // ── Price resolution ──────────────────────────────────────────────────
+  // The detail endpoint (GET /services/:id) returns a `pricing` array.
+  // The listing endpoint (GET /services) returns a `pricingSummary` object.
+  // Prefer the full pricing array when available (detail endpoint),
+  // fall back to pricingSummary (listing endpoint).
+  const pricingRecord =
+    (record as import("../types/tour").ServiceDetail).pricing?.[0];
+  const pricingSource = pricingRecord ?? record.pricingSummary;
+
+  const price = pricingSource
     ? {
-        amount: record.pricingSummary.basePrice,
-        currency: record.pricingSummary.currency || "USD",
-        originalAmount: record.pricingSummary.discountedPrice
-          ? record.pricingSummary.basePrice
+        amount: pricingSource.basePrice,
+        currency: pricingSource.currency || "USD",
+        originalAmount: pricingSource.discountedPrice
+          ? pricingSource.basePrice
           : undefined,
         discountPercentage:
-          record.pricingSummary.discountedPrice &&
-          record.pricingSummary.discountedPrice > 0
+          pricingSource.discountedPrice && pricingSource.discountedPrice > 0
             ? Math.round(
-                ((record.pricingSummary.basePrice -
-                  record.pricingSummary.discountedPrice) /
-                  record.pricingSummary.basePrice) *
+                ((pricingSource.basePrice - pricingSource.discountedPrice) /
+                  pricingSource.basePrice) *
                   100
               )
             : undefined,
+        hasPrice: true,
       }
-    : { amount: 0, currency: "USD" };
+    : { amount: 0, currency: "USD", hasPrice: false };
+
+  // Extract pricing tiers from metadata (child/infant/adult rates)
+  const pricingTiers = (metadata.pricingTiers as
+    | import("../types/tour").TourPricingTier[]
+    | undefined) || undefined;
+
+  // Extract schedule details from metadata
+  const scheduleDetails = (metadata.scheduleDetails as
+    | import("../types/tour").TourScheduleDetails
+    | undefined) || undefined;
 
   // Extract reviews from metadata
   const reviews =
@@ -304,10 +404,20 @@ function mapServiceToTour(
     badge,
     badgeVariant,
     isFeatured: metadata.isFeatured as boolean | undefined,
+    providerName: record.providerName || undefined,
     price,
+    pricingTiers,
+    availability: undefined,
+    location,
+    scheduleDetails,
     reviews,
     highlights: metadata.highlights as string[] | undefined,
+    itinerary: metadata.itinerary as
+      | import("../types/tour").TourItineraryItem[]
+      | undefined,
+    included: metadata.included as string[] | undefined,
+    excluded: metadata.excluded as string[] | undefined,
   };
 }
 
-export const { useGetToursQuery } = toursApi;
+export const { useGetToursQuery, useGetTourByIdQuery } = toursApi;
