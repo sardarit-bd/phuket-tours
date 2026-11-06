@@ -16,14 +16,6 @@ import { IncludedExcludedSection } from "@/features/tours/components/tour-includ
 import { TourDetailsTabsContent } from "@/features/tours/components/tour-details-content";
 import { useTourFavorites } from "@/features/tours/hooks/use-tour-favorites";
 
-/**
- * Public Tour Details page.
- * Route: /tours/[id]  (id = backend service UUID)
- *
- * Fetches the tour via GET /services/:id (public, no auth).
- * Premium travel-booking layout:
- *   header → gallery + booking card → tab navigation → content sections.
- */
 export default function TourDetailsPage() {
   const params = useParams<{ id: string }>();
   const tourId = params?.id ?? "";
@@ -36,8 +28,6 @@ export default function TourDetailsPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>("overview");
   const { favorites, toggleFavorite } = useTourFavorites();
   const isFavorite = tour ? favorites.includes(tour.id) : false;
-
-  // ── Loading state ──────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 sm:py-10">
@@ -53,8 +43,6 @@ export default function TourDetailsPage() {
       </div>
     );
   }
-
-  // ── Error / Not-found state ───────────────────────────────────────────
   if (isError || !tour) {
     return (
       <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6">
@@ -159,8 +147,6 @@ export default function TourDetailsPage() {
     </>
   );
 }
-
-// ── Tour Header ───────────────────────────────────────────────────────────
 
 function TourHeader({
   tour,
