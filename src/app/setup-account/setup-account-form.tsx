@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { ErrorAlert } from "@/components/ui/alert";
+import { FieldError } from "@/components/ui/field-error";
 import {
   useValidateInvitationQuery,
   useSetupPasswordMutation,
@@ -237,13 +238,10 @@ export function SetupAccountForm() {
 
       {/* General error alert */}
       {errors.general && (
-        <div
-          role="alert"
-          className="mb-4 flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>{errors.general}</span>
-        </div>
+        <ErrorAlert
+          className="mb-4"
+          description={errors.general}
+        />
       )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -270,11 +268,9 @@ export function SetupAccountForm() {
                 }
               }}
               aria-invalid={!!errors.password}
-              className={cn(
-                "pr-11",
-                errors.password &&
-                  "border-destructive focus-visible:ring-destructive/20"
-              )}
+              aria-describedby={errors.password ? "setup-password-error" : undefined}
+              error={!!errors.password}
+              className="pr-11"
               disabled={isSubmitting}
             />
             <button
@@ -292,11 +288,7 @@ export function SetupAccountForm() {
               )}
             </button>
           </div>
-          {errors.password && (
-            <p role="alert" className="mt-1 text-xs text-destructive">
-              {errors.password}
-            </p>
-          )}
+          <FieldError id="setup-password-error" error={errors.password} />
         </div>
 
         {/* Confirm Password Field */}
@@ -325,11 +317,9 @@ export function SetupAccountForm() {
                 }
               }}
               aria-invalid={!!errors.confirmPassword}
-              className={cn(
-                "pr-11",
-                errors.confirmPassword &&
-                  "border-destructive focus-visible:ring-destructive/20"
-              )}
+              aria-describedby={errors.confirmPassword ? "setup-confirm-password-error" : undefined}
+              error={!!errors.confirmPassword}
+              className="pr-11"
               disabled={isSubmitting}
             />
             <button
@@ -349,11 +339,7 @@ export function SetupAccountForm() {
               )}
             </button>
           </div>
-          {errors.confirmPassword && (
-            <p role="alert" className="mt-1 text-xs text-destructive">
-              {errors.confirmPassword}
-            </p>
-          )}
+          <FieldError id="setup-confirm-password-error" error={errors.confirmPassword} />
         </div>
 
         {/* Requirements helper */}

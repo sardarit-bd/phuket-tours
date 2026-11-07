@@ -16,6 +16,8 @@ import {
   useConfigureAdminCommissionRuleMutation,
 } from "../../api/admin-api";
 import { CommissionsPagination } from "./commissions-pagination";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type {
   CommissionRateType,
   AdminCommissionRule,
@@ -125,12 +127,12 @@ export function CommissionRulesTab() {
       );
       setIsConfirmed(false);
     } catch (err: unknown) {
-      const errorObj = err as { data?: { message?: string }; message?: string };
-      const serverMsg =
-        errorObj?.data?.message ||
-        errorObj?.message ||
-        "An unexpected error occurred while updating the commission policy.";
-      setErrorMessage(serverMsg);
+      setErrorMessage(
+        formatErrorMessage(err, {
+          context: "admin",
+          fallback: "An unexpected error occurred while updating the commission policy.",
+        })
+      );
     }
   };
 
@@ -290,26 +292,18 @@ export function CommissionRulesTab() {
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="configure-rule-form">
             {/* Success Alert */}
             {successMessage && (
-              <div
-                role="alert"
+              <SuccessAlert
                 data-testid="configure-rule-success"
-                className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-900"
-              >
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-                <p className="font-medium leading-relaxed">{successMessage}</p>
-              </div>
+                description={successMessage}
+              />
             )}
 
             {/* Error Alert */}
             {errorMessage && (
-              <div
-                role="alert"
+              <ErrorAlert
                 data-testid="configure-rule-error"
-                className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/5 p-3.5 text-xs text-destructive"
-              >
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <p className="font-medium leading-relaxed">{errorMessage}</p>
-              </div>
+                description={errorMessage}
+              />
             )}
 
             {/* Rate Type Selector */}

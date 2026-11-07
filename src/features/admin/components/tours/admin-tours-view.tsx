@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
+import { ErrorAlert, SuccessAlert, WarningAlert } from "@/components/ui/alert";
 import {
   useGetAdminServicesQuery,
   useUpdateAdminServiceStatusMutation,
@@ -229,12 +230,12 @@ export function AdminToursView() {
         message: `Tour status successfully updated to ${targetStatus}.`,
       });
     } catch (err: unknown) {
-      const errorObj = err as { data?: { message?: string } };
       setFeedback({
         type: "error",
-        message:
-          errorObj?.data?.message ||
-          "Failed to update tour status. Please try again.",
+        message: formatErrorMessage(
+          err,
+          "Failed to update tour status. Please try again."
+        ),
       });
     }
   };
@@ -275,12 +276,12 @@ export function AdminToursView() {
       setSelectedIds([]);
       setBulkConfirmModal({ isOpen: false, targetStatus: "PUBLISHED" });
     } catch (err: unknown) {
-      const errorObj = err as { data?: { message?: string } };
       setFeedback({
         type: "error",
-        message:
-          errorObj?.data?.message ||
-          "Failed to apply bulk status update. Please try again.",
+        message: formatErrorMessage(
+          err,
+          "Failed to apply bulk status update. Please try again."
+        ),
       });
       setBulkConfirmModal({ isOpen: false, targetStatus: "PUBLISHED" });
     }
@@ -310,34 +311,28 @@ export function AdminToursView() {
 
       {/* Feedback Toast / Alert Banner */}
       {feedback && (
-        <div
-          role="status"
-          aria-live="polite"
-          data-testid="tours-feedback-banner"
-          className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-xs sm:text-sm font-medium transition-all ${
-            feedback.type === "success"
-              ? "border-[#A3E5D9] bg-[#E8F8F5] text-[#0E7A67]"
-              : feedback.type === "warning"
-              ? "border-[#FCE8B2] bg-[#FEF9E7] text-[#B7791F]"
-              : "border-[#FCD2CD] bg-[#FDF0EE] text-[#C0392B]"
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {feedback.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0E7A67]" />
-            ) : (
-              <AlertCircle className="h-4 w-4 shrink-0" />
-            )}
-            <span>{feedback.message}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="rounded p-1 hover:opacity-70 transition-opacity"
-            aria-label="Dismiss feedback message"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        <div data-testid="tours-feedback-banner">
+          {feedback.type === "success" && (
+            <SuccessAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          )}
+          {feedback.type === "warning" && (
+            <WarningAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          )}
+          {feedback.type === "error" && (
+            <ErrorAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          )}
         </div>
       )}
 
@@ -369,10 +364,10 @@ export function AdminToursView() {
           <ToursTableSkeleton rowCount={pageSize > 10 ? 10 : pageSize} />
         ) : isListError ? (
           <ToursErrorState
-            errorMessage={
-              (listError as { data?: { message?: string } })?.data?.message ||
+            errorMessage={formatErrorMessage(
+              listError,
               "Failed to communicate with the tours service. Please retry."
-            }
+            )}
             onRetry={refetchList}
           />
         ) : tours.length === 0 ? (

@@ -5,7 +5,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useReviewBookingPriceApprovalMutation } from "../../api/admin-api";
 import type { OperationalBookingRecord } from "../../types/admin-bookings";
-import { CheckCircle, XCircle, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 
 export interface PriceApprovalDialogProps {
   isOpen: boolean;
@@ -57,35 +59,29 @@ function PriceApprovalForm({
         onClose();
       }, 700);
     } catch (err: unknown) {
-      const apiErr = err as { data?: { message?: string }; message?: string };
-      const msg =
-        apiErr?.data?.message || apiErr?.message || "Failed to process price approval review. Please retry.";
-      setErrorMessage(msg);
+      setErrorMessage(
+        formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to process price approval review. Please retry.",
+        })
+      );
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" data-testid="price-approval-dialog">
       {errorMessage && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800"
+        <ErrorAlert
           data-testid="price-approval-error"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-          <span>{errorMessage}</span>
-        </div>
+          description={errorMessage}
+        />
       )}
 
       {isSuccess && (
-        <div
-          role="status"
-          className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800"
+        <SuccessAlert
           data-testid="price-approval-success"
-        >
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <span>Price proposal {decision.toLowerCase()} successfully!</span>
-        </div>
+          description={`Price proposal ${decision.toLowerCase()} successfully!`}
+        />
       )}
 
       {/* Decision Toggle */}

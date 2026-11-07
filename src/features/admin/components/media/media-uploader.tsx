@@ -12,6 +12,7 @@ import {
   Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type { UploadQueueItem, MediaItem } from "../../types/admin-media";
 import {
   validateMediaFile,
@@ -221,15 +222,17 @@ export function MediaUploader({
         message?: string;
       };
 
-      let errorMsg =
-        errorObj?.data?.message ||
-        errorObj?.message ||
-        "Upload failed. Please check network connection.";
+      let errorMsg = formatErrorMessage(
+        err,
+        "Upload failed. Please check network connection."
+      );
 
       // Check for HTTP 503 Cloudinary not configured
       if (
         errorObj?.status === 503 ||
-        errorMsg.toLowerCase().includes("cloudinary is not configured")
+        errorMsg.toLowerCase().includes("cloudinary is not configured") ||
+        (typeof errorObj?.data?.message === "string" &&
+          errorObj.data.message.toLowerCase().includes("cloudinary"))
       ) {
         errorMsg = "Cloudinary is not configured on backend. Uploads will be enabled once live credentials are set.";
         setBackendConfigWarning(

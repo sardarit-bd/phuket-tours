@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
 import { useAssignBookingStaffMutation } from "../../api/admin-api";
 import type { OperationalBookingRecord, AdminStaffMember } from "../../types/admin-bookings";
-import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 
 export interface AssignStaffDialogProps {
   isOpen: boolean;
@@ -76,9 +78,11 @@ function AssignStaffForm({
         onClose();
       }, 1000);
     } catch (err: unknown) {
-      const apiErr = err as { data?: { message?: string } };
       setErrorMessage(
-        apiErr?.data?.message || "Failed to update staff assignment. Please try again."
+        formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to update staff assignment. Please try again.",
+        })
       );
     }
   };
@@ -87,25 +91,17 @@ function AssignStaffForm({
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
       {/* Status Messages */}
       {errorMessage && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"
+        <ErrorAlert
           data-testid="assign-staff-error"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-          <span>{errorMessage}</span>
-        </div>
+          description={errorMessage}
+        />
       )}
 
       {isSuccess && (
-        <div
-          role="status"
-          className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+        <SuccessAlert
           data-testid="assign-staff-success"
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          <span>Staff assignment updated successfully.</span>
-        </div>
+          description="Staff assignment updated successfully."
+        />
       )}
 
       {/* Staff Selection Dropdown */}

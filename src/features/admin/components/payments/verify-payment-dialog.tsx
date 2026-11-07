@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ErrorAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { useVerifyAdminPaymentMutation } from "../../api/admin-api";
 import type { AdminPaymentRecord } from "../../types/admin-payments";
 
@@ -71,10 +73,12 @@ export function VerifyPaymentDialog({
       onSuccess(response?.message || message);
       onClose();
     } catch (err: unknown) {
-      const errorObj = err as { data?: { message?: string }; message?: string };
-      const apiMsg =
-        errorObj?.data?.message || errorObj?.message || "Failed to submit payment verification decision.";
-      setValidationError(apiMsg);
+      setValidationError(
+        formatErrorMessage(err, {
+          context: "payment",
+          fallback: "Failed to submit payment verification decision.",
+        })
+      );
     }
   };
 
@@ -200,14 +204,10 @@ export function VerifyPaymentDialog({
 
         {/* 4. Error Message Alert */}
         {validationError && (
-          <div
-            role="alert"
-            className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-destructive"
+          <ErrorAlert
             data-testid="verify-payment-error"
-          >
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
-            <p className="text-xs font-medium leading-relaxed">{validationError}</p>
-          </div>
+            description={validationError}
+          />
         )}
 
         {/* 5. Footer Actions */}

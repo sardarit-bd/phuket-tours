@@ -6,11 +6,12 @@ import {
   Check,
   ExternalLink,
   Trash2,
-  AlertTriangle,
   Loader2,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ErrorAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type { MediaItem } from "../../types/admin-media";
 import { formatBytes } from "../../utils/cloudinary-upload";
 import { useDeleteAdminMediaMutation } from "../../api/admin-media-api";
@@ -67,8 +68,10 @@ export function MediaDetailDialog({
         );
       } else {
         setErrorMessage(
-          errorObj?.data?.message ||
-            "Failed to delete media asset. Please try again later."
+          formatErrorMessage(err, {
+            context: "admin",
+            fallback: "Failed to delete media asset. Please try again later.",
+          })
         );
       }
     }
@@ -206,13 +209,10 @@ export function MediaDetailDialog({
 
             {/* Error Message if deletion was blocked (e.g. 409 conflict) */}
             {errorMessage && (
-              <div
+              <ErrorAlert
                 data-testid="media-delete-error"
-                className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800"
-              >
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
-                <p className="leading-relaxed">{errorMessage}</p>
-              </div>
+                description={errorMessage}
+              />
             )}
           </div>
 

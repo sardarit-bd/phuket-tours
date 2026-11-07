@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
 import {
   useGetAdminPaymentsQuery,
   useGetAdminPaymentsReportQuery,
@@ -156,8 +157,9 @@ export function AdminPaymentsView() {
     handleRefresh();
   };
 
-  const errorObj = paymentsError as { data?: { message?: string }; message?: string } | undefined;
-  const errorMessage = errorObj?.data?.message || errorObj?.message;
+  const errorMessage = paymentsError
+    ? formatErrorMessage(paymentsError, "Failed to load payment records.")
+    : undefined;
 
   return (
     <div className="space-y-6" data-testid="admin-payments-view">
@@ -171,31 +173,20 @@ export function AdminPaymentsView() {
 
       {/* 2. Feedback Notification */}
       {feedback && (
-        <div
-          role="status"
-          className={`flex items-start justify-between gap-3 rounded-2xl border p-4 shadow-xs transition-all ${
-            feedback.type === "success"
-              ? "border-emerald-200 bg-emerald-50/80 text-emerald-900"
-              : "border-destructive/20 bg-destructive/10 text-destructive"
-          }`}
-          data-testid="payments-feedback-banner"
-        >
-          <div className="flex items-start gap-2.5">
-            {feedback.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" aria-hidden="true" />
-            ) : (
-              <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" aria-hidden="true" />
-            )}
-            <p className="text-xs font-medium leading-relaxed">{feedback.message}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="text-current opacity-70 hover:opacity-100 transition-opacity"
-            aria-label="Dismiss message"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
+        <div data-testid="payments-feedback-banner">
+          {feedback.type === "success" ? (
+            <SuccessAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          ) : (
+            <ErrorAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          )}
         </div>
       )}
 

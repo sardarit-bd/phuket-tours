@@ -11,6 +11,7 @@ import { MediaGalleryManager } from "./media-gallery-manager";
 import {
   useGetAdminMediaQuery,
 } from "../../api/admin-media-api";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type { MediaItem, GalleryImage } from "../../types/admin-media";
 import { Pagination } from "@/components/shared/pagination";
 
@@ -108,8 +109,7 @@ export function AdminMediaView() {
   // Error message formatting
   const errorMessage = React.useMemo(() => {
     if (!error) return "Unable to load media assets from server.";
-    const errObj = error as { status?: number; data?: { message?: string } };
-    return errObj?.data?.message || "An error occurred while loading media assets.";
+    return formatErrorMessage(error, "An error occurred while loading media assets.");
   }, [error]);
 
   const isFiltered = Boolean(debouncedSearch || filterUnattached !== "all");

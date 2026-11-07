@@ -6,7 +6,6 @@ import {
   Save,
   X,
   AlertCircle,
-  CheckCircle2,
   User,
   Mail,
   Phone,
@@ -15,6 +14,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 
 export type ProfileMode = "view" | "edit";
 
@@ -221,28 +222,21 @@ export function ProfileSettingsView({
 
       {/* Success banner */}
       {saved && (
-        <div
-          className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800"
+        <SuccessAlert
           data-testid={`${testIdPrefix}-saved`}
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          <span>Profile updated successfully.</span>
-        </div>
+          description="Profile updated successfully."
+        />
       )}
 
       {/* Save error banner */}
       {!!saveError && mode === "edit" && (
-        <div
-          className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800"
+        <ErrorAlert
           data-testid={`${testIdPrefix}-save-error`}
-        >
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-          <span>
-            {typeof saveError === "string"
-              ? saveError
-              : (saveError as { message?: string })?.message || "Failed to save profile."}
-          </span>
-        </div>
+          description={formatErrorMessage(saveError, {
+            context: "profile",
+            fallback: "Failed to save profile. Please verify your details and try again.",
+          })}
+        />
       )}
 
       {/* Profile card */}

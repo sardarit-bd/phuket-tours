@@ -1,39 +1,12 @@
+import { isTechnicalError } from "./error-mapper";
+
+export { isTechnicalError };
+
 /**
  * Safely extracts a user-facing error message from an RTK Query or network error
  * without exposing technical database errors, Prisma exceptions, SQL queries,
  * stack traces, tokens, or credentials.
  */
-
-// Patterns indicating technical/raw database/backend/stack trace errors
-const TECHNICAL_ERROR_PATTERNS = [
-  /prisma/i,
-  /database/i,
-  /syntax/i,
-  /stack\s*trace/i,
-  /internal\s*server\s*error/i,
-  /invocation/i,
-  /unknown\s*arg/i,
-  /query/i,
-  /select\s+/i,
-  /insert\s+into/i,
-  /update\s+/i,
-  /delete\s+from/i,
-  /column/i,
-  /relation/i,
-  /constraint/i,
-  /foreign\s*key/i,
-  /unique\s*key/i,
-  /null\s*constraint/i,
-  /typeerror/i,
-  /referenceerror/i,
-  /econnrefused/i,
-  /connect/i,
-];
-
-function isTechnicalError(message: string): boolean {
-  return TECHNICAL_ERROR_PATTERNS.some((pattern) => pattern.test(message));
-}
-
 export function getAuthErrorMessage(error: unknown): string {
   if (!error || typeof error !== "object") {
     return "Sign-in failed. Please check your details and try again.";
@@ -92,6 +65,17 @@ export function getAuthErrorMessage(error: unknown): string {
 
     // 6. Status 409 Conflict -> Already exists
     if (fetchError.status === 409) {
+      if (
+        fetchError.data &&
+        typeof fetchError.data === "object" &&
+        "message" in fetchError.data &&
+        typeof (fetchError.data as { message: unknown }).message === "string"
+      ) {
+        const msg = (fetchError.data as { message: string }).message;
+        if (!isTechnicalError(msg)) {
+          return msg;
+        }
+      }
       return "An account with this email address already exists.";
     }
 
@@ -121,4 +105,3 @@ export function getAuthErrorMessage(error: unknown): string {
 
   return "Sign-in failed. Please check your details and try again.";
 }
-

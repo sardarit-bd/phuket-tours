@@ -3,9 +3,11 @@
 import * as React from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { useUpdateAdminUserMutation } from "../../api/admin-api";
 import type { AdminUserRecord } from "../../types/admin-users";
-import { Loader2, AlertCircle, ShieldAlert, CheckCircle2, UserX, UserCheck } from "lucide-react";
+import { Loader2, ShieldAlert, UserX, UserCheck } from "lucide-react";
 
 export interface DeactivateUserDialogProps {
   isOpen: boolean;
@@ -80,9 +82,11 @@ function DeactivateUserForm({
         onClose();
       }, 1000);
     } catch (err: unknown) {
-      const apiErr = err as { data?: { message?: string } };
       setErrorMessage(
-        apiErr?.data?.message || `Failed to ${targetStatus === "active" ? "activate" : "deactivate"} account.`
+        formatErrorMessage(
+          err,
+          `Failed to ${targetStatus === "active" ? "activate" : "deactivate"} account.`
+        )
       );
     }
   };
@@ -98,26 +102,16 @@ function DeactivateUserForm({
       <div className="space-y-4 pt-2" data-testid="deactivate-user-modal">
         {/* Status Error Feedback */}
         {errorMessage && (
-          <div
-            role="alert"
-            className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"
-            data-testid="status-toggle-error"
-          >
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-            <span>{errorMessage}</span>
+          <div data-testid="status-toggle-error">
+            <ErrorAlert message={errorMessage} />
           </div>
         )}
 
         {isSuccess && (
-          <div
-            role="status"
-            className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
-            data-testid="status-toggle-success"
-          >
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span>
-              Account successfully {targetStatus === "active" ? "activated" : "deactivated"}.
-            </span>
+          <div data-testid="status-toggle-success">
+            <SuccessAlert
+              message={`Account successfully ${targetStatus === "active" ? "activated" : "deactivated"}.`}
+            />
           </div>
         )}
 

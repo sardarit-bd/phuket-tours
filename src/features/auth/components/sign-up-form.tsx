@@ -3,10 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { FieldError } from "@/components/ui/field-error";
 import { useRegisterMutation } from "@/features/auth/api/auth-api";
 import { useAppDispatch } from "@/store/hooks";
 import { setCredentials } from "@/features/auth/slices/auth-slice";
@@ -96,24 +97,18 @@ export function SignUpForm() {
     <div className="w-full">
       {/* General error alert */}
       {errors.general && (
-        <div
-          role="alert"
-          className="mb-4 flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>{errors.general}</span>
-        </div>
+        <ErrorAlert
+          className="mb-4"
+          description={errors.general}
+        />
       )}
 
       {/* Success alert */}
       {successMessage && (
-        <div
-          role="status"
-          className="mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-800"
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600" />
-          <span>{successMessage}</span>
-        </div>
+        <SuccessAlert
+          className="mb-4"
+          description={successMessage}
+        />
       )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -140,21 +135,10 @@ export function SignUpForm() {
             }}
             aria-invalid={!!errors.fullName}
             aria-describedby={errors.fullName ? "fullName-error" : undefined}
-            className={cn(
-              errors.fullName &&
-                "border-destructive focus-visible:ring-destructive/20"
-            )}
+            error={!!errors.fullName}
             disabled={isLoading}
           />
-          {errors.fullName && (
-            <p
-              id="fullName-error"
-              role="alert"
-              className="mt-1 text-xs text-destructive"
-            >
-              {errors.fullName}
-            </p>
-          )}
+          <FieldError id="fullName-error" error={errors.fullName} />
         </div>
 
         {/* Email Field */}
@@ -180,21 +164,10 @@ export function SignUpForm() {
             }}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "email-error" : undefined}
-            className={cn(
-              errors.email &&
-                "border-destructive focus-visible:ring-destructive/20"
-            )}
+            error={!!errors.email}
             disabled={isLoading}
           />
-          {errors.email && (
-            <p
-              id="email-error"
-              role="alert"
-              className="mt-1 text-xs text-destructive"
-            >
-              {errors.email}
-            </p>
-          )}
+          <FieldError id="email-error" error={errors.email} />
         </div>
 
         {/* Password Field */}
@@ -221,11 +194,8 @@ export function SignUpForm() {
               }}
               aria-invalid={!!errors.password}
               aria-describedby={errors.password ? "password-error" : undefined}
-              className={cn(
-                "pr-11",
-                errors.password &&
-                  "border-destructive focus-visible:ring-destructive/20"
-              )}
+              error={!!errors.password}
+              className="pr-11"
               disabled={isLoading}
             />
             <button
@@ -243,16 +213,7 @@ export function SignUpForm() {
               )}
             </button>
           </div>
-
-          {errors.password && (
-            <p
-              id="password-error"
-              role="alert"
-              className="mt-1 text-xs text-destructive"
-            >
-              {errors.password}
-            </p>
-          )}
+          <FieldError id="password-error" error={errors.password} />
         </div>
 
         {/* Submit Button */}
