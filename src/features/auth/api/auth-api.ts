@@ -38,6 +38,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "GET",
       }),
       providesTags: ["Auth", "User"],
+      keepUnusedDataFor: 300,
     }),
     updateProfile: builder.mutation<
       UserProfileResponse,
