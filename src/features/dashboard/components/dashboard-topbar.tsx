@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, Search, ChevronRight, LogOut } from "lucide-react";
+import {
+  Menu,
+  ChevronRight,
+  ChevronDown,
+  User,
+  LogOut,
+} from "lucide-react";
 import { DashboardNavConfig, getBreadcrumbInfo } from "../types/dashboard-nav";
-import { Input } from "@/components/ui/input";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   selectCurrentUser,
@@ -13,6 +19,7 @@ import {
 import { useLogoutMutation } from "@/features/auth/api/auth-api";
 import { baseApi } from "@/lib/api/base-api";
 import { getInitials } from "@/features/auth/utils/avatar";
+import { cn } from "@/lib/utils";
 
 interface DashboardTopbarProps {
   config: DashboardNavConfig;
@@ -29,17 +36,35 @@ export function DashboardTopbar({
   const pathname = rawPathname ?? "/dashboard";
   const { portal, current } = getBreadcrumbInfo(pathname, config);
 
+  const [accountDropdownOpen, setAccountDropdownOpen] = React.useState(false);
+  const accountDropdownRef = React.useRef<HTMLDivElement>(null);
+
   const user = useAppSelector(selectCurrentUser);
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
 
+  const isViewAdmin = config.role === "admin";
+  const isViewStaff = config.role === "staff";
+  const isViewAgent = config.role === "agent";
+
   const displayName =
     user?.name ||
-    (config.role === "admin"
+    (isViewAdmin
       ? "Admin Staff"
-      : config.role === "staff"
+      : isViewStaff
       ? "PhuketTours Staff"
+      : isViewAgent
+      ? "Partner Agent"
       : "Guest Account");
   const avatarInitials = getInitials(user?.name);
+
+  // Profile destination by portal role
+  const profileHref = isViewAdmin
+    ? "/dashboard/admin/settings"
+    : isViewStaff
+    ? "/dashboard/staff/settings"
+    : isViewAgent
+    ? "/dashboard/agent/profile"
+    : "/dashboard/settings";
 
   const handleLogout = async () => {
     try {
@@ -49,9 +74,39 @@ export function DashboardTopbar({
     } finally {
       dispatch(clearCredentials());
       dispatch(baseApi.util.resetApiState());
+      setAccountDropdownOpen(false);
       router.push("/sign-in");
     }
   };
+
+  // Close dropdown on click outside
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        accountDropdownRef.current &&
+        !accountDropdownRef.current.contains(event.target as Node)
+      ) {
+        setAccountDropdownOpen(false);
+      }
+    }
+    if (accountDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [accountDropdownOpen]);
+
+  // Close on Escape key
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setAccountDropdownOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-[#E5EAED] bg-white px-4 sm:px-6 lg:px-8 shadow-2xs">
@@ -80,44 +135,77 @@ export function DashboardTopbar({
         </nav>
       </div>
 
-      {/* Right: Search Placeholder, Avatar Indicator & Sign Out */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        {/* Compact Search Field */}
-        <div className="relative hidden sm:block w-48 md:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#8A9A9C] pointer-events-none" />
-          <Input
-            type="search"
-            placeholder="Quick search..."
-            aria-label="Quick search (demonstration placeholder)"
-            className="h-9 w-full rounded-full border-[#E5EAED] bg-[#F8FAFB] pl-9 pr-3 text-xs placeholder:text-[#8A9A9C] focus-visible:ring-[#3297A3] focus-visible:bg-white"
-            readOnly
-          />
-        </div>
-
-        {/* Dynamic Profile Representation */}
-        <div className="flex items-center gap-2">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#3297A3]/30 bg-[#3297A3]/10 text-[#3297A3] font-outfit text-xs font-bold"
+      {/* Right: Account Dropdown */}
+      <div className="relative" ref={accountDropdownRef}>
+        <button
+          type="button"
+          onClick={() => setAccountDropdownOpen((prev) => !prev)}
+          className="inline-flex items-center gap-2.5 rounded-full border border-[#E5EAED] bg-[#FAFEFF] py-1.5 pl-2 pr-3.5 text-xs font-semibold text-[#18282A] hover:border-primary/40 hover:bg-primary/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer select-none shadow-2xs"
+          aria-expanded={accountDropdownOpen}
+          aria-haspopup="menu"
+          aria-label="Account menu"
+        >
+          <span
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3297A3]/15 text-[#3297A3] font-outfit text-xs font-bold"
             aria-label="Current User Avatar"
           >
             {avatarInitials}
-          </div>
-          <span className="hidden xl:inline text-xs font-semibold text-[#18282A]">
+          </span>
+          <span className="hidden sm:inline font-medium text-[#18282A] max-w-[150px] truncate">
             {displayName}
           </span>
+          <ChevronDown
+            className={cn(
+              "h-3.5 w-3.5 text-[#74818A] transition-transform duration-200",
+              accountDropdownOpen && "rotate-180"
+            )}
+            aria-hidden="true"
+          />
+        </button>
 
-          {/* Quick Sign Out Action in Topbar */}
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#74818A] hover:bg-red-50 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive cursor-pointer disabled:opacity-50 ml-1"
-            aria-label="Sign Out"
-            title="Sign Out"
+        {/* Dropdown Menu */}
+        {accountDropdownOpen && (
+          <div
+            role="menu"
+            aria-label="Account options"
+            className="absolute right-0 mt-2 w-56 rounded-2xl border border-[#E5EAED] bg-white p-1.5 shadow-lg animate-in fade-in zoom-in-95 duration-150 z-50 focus:outline-none"
           >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
+            {/* User identity summary inside dropdown */}
+            <div className="px-3 py-2 border-b border-[#E5EAED] mb-1">
+              <p className="text-xs font-semibold text-[#18282A] truncate">
+                {displayName}
+              </p>
+              {user?.email && (
+                <p className="text-[11px] text-[#74818A] truncate">
+                  {user.email}
+                </p>
+              )}
+            </div>
+
+            <Link
+              href={profileHref}
+              role="menuitem"
+              onClick={() => setAccountDropdownOpen(false)}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-[#263238] hover:bg-muted hover:text-primary transition-colors focus-visible:outline-none focus-visible:bg-muted"
+            >
+              <User className="h-4 w-4 text-primary shrink-0" />
+              <span>My Profile</span>
+            </Link>
+
+            <div className="border-t border-[#E5EAED] my-1 pt-1">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:bg-red-50 disabled:opacity-50"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );

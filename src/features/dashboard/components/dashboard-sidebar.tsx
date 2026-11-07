@@ -3,21 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import {
   DashboardNavConfig,
   hasAllPermissions,
   isNavItemActive,
 } from "../types/dashboard-nav";
 import { cn } from "@/lib/utils";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  selectCurrentUser,
-  clearCredentials,
-} from "@/features/auth/slices/auth-slice";
-import { useLogoutMutation } from "@/features/auth/api/auth-api";
-import { baseApi } from "@/lib/api/base-api";
+import { useAppSelector } from "@/store/hooks";
+import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
 import { getInitials } from "@/features/auth/utils/avatar";
 import { usePermissions } from "@/features/admin/hooks/use-permissions";
 
@@ -32,11 +27,8 @@ export function DashboardSidebar({
   onNavigate,
   className,
 }: DashboardSidebarProps) {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
   const pathname = usePathname() ?? "/dashboard";
   const user = useAppSelector(selectCurrentUser);
-  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
   const { hasPermission, isAdmin, permissions } = usePermissions();
 
   const isViewAdmin = config.role === "admin";
@@ -81,21 +73,6 @@ export function DashboardSidebar({
       ? "agent@phukettours.com"
       : "guest@phukettours.com");
   const avatarInitials = getInitials(user?.name);
-
-  const handleLogout = async () => {
-    try {
-      await logout().unwrap();
-    } catch {
-      // Proceed with resilient local cleanup even if network request fails
-    } finally {
-      dispatch(clearCredentials());
-      dispatch(baseApi.util.resetApiState());
-      if (onNavigate) {
-        onNavigate();
-      }
-      router.push("/sign-in");
-    }
-  };
 
   return (
     <aside
@@ -205,8 +182,8 @@ export function DashboardSidebar({
         </Link>
 
         {/* Dynamic Profile Identity Representation */}
-        <div className="mt-2 flex items-center justify-between rounded-lg border border-[#E5EAED] bg-white p-2">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-1">
+        <div className="mt-2 flex items-center rounded-lg border border-[#E5EAED] bg-white p-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#3297A3]/10 text-[#3297A3] font-outfit text-xs font-bold"
               aria-label="User Avatar Initials"
@@ -222,18 +199,6 @@ export function DashboardSidebar({
               </p>
             </div>
           </div>
-
-          {/* Functional Sign Out Action */}
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#74818A] hover:bg-red-50 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive cursor-pointer disabled:opacity-50"
-            aria-label="Sign Out"
-            title="Sign Out"
-          >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-          </button>
         </div>
       </div>
     </aside>

@@ -7,7 +7,6 @@ import {
   Compass,
   ClipboardList,
   Users,
-  Tag,
   Sliders,
   Image as ImageIcon,
   Percent,
@@ -142,12 +141,6 @@ export const adminNavConfig: DashboardNavConfig = {
       permission: "users.view",
     },
     {
-      title: "Categories",
-      href: "/dashboard/admin/categories",
-      icon: Tag,
-      permission: "tours.view",
-    },
-    {
       title: "Settings",
       href: "/dashboard/admin/settings",
       icon: Sliders,
@@ -197,12 +190,6 @@ export const staffNavConfig: DashboardNavConfig = {
       href: "/dashboard/staff/users",
       icon: Users,
       permission: "users.view",
-    },
-    {
-      title: "Categories",
-      href: "/dashboard/staff/categories",
-      icon: Tag,
-      permission: "tours.view",
     },
     {
       title: "Settings",
@@ -299,7 +286,6 @@ export const staffAdminRouteRules: StaffAdminRouteRule[] = [
     adminOnly: true,
   },
   { href: "/dashboard/staff/users", permissions: ["users.view"] },
-  { href: "/dashboard/staff/categories", permissions: ["tours.view"] },
   {
     href: "/dashboard/staff/settings",
     permissions: SETTINGS_ACCESS_PERMISSIONS,
