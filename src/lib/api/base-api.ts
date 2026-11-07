@@ -7,6 +7,8 @@ export const baseApi = createApi({
     baseUrl: env.NEXT_PUBLIC_API_URL,
     credentials: "include",
   }),
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   tagTypes: [
     "Tour",
     "Experience",
