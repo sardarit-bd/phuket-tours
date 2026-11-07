@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
+import localFont from "next/font/local";
 import { siteConfig } from "@/config/site";
 import { StoreProvider } from "@/store/provider";
 import { PublicShell } from "@/components/layout/public-shell";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+const jakarta = localFont({
+  src: "../fonts/plus-jakarta-sans.woff2",
   variable: "--font-sans",
   display: "swap",
 });
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const outfit = localFont({
+  src: "../fonts/outfit.woff2",
   variable: "--font-outfit",
   display: "swap",
 });
