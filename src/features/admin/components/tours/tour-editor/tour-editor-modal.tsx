@@ -9,10 +9,11 @@ import {
   Image as ImageIcon,
   Check,
   Loader2,
-  AlertCircle,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ErrorAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { BasicInfoTab, type BasicInfoFormData, slugify } from "./basic-info-tab";
 import { PricingTab, type PricingFormData } from "./pricing-tab";
 import { ItineraryTab } from "./itinerary-tab";
@@ -480,17 +481,18 @@ function TourEditorFormContent({
       }
       onClose();
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
-      const rawErrMsg =
-        errObj?.data?.message || errObj?.message || "Operation failed.";
+      const sanitized = formatErrorMessage(err, {
+        context: "admin",
+        fallback: "Operation failed.",
+      });
 
-      let contextualMsg = rawErrMsg;
+      let contextualMsg = sanitized;
       if (currentPhase === "pricing") {
-        contextualMsg = `Tour basic info was saved, but saving pricing failed: "${rawErrMsg}". Click Retry to complete setup without creating a duplicate tour.`;
+        contextualMsg = `Tour basic info was saved, but saving pricing failed: "${sanitized}". Click Retry to complete setup without creating a duplicate tour.`;
       } else if (currentPhase === "availability") {
-        contextualMsg = `Tour info and pricing were saved, but saving calendar availability failed: "${rawErrMsg}". Click Retry to re-sync dates.`;
+        contextualMsg = `Tour info and pricing were saved, but saving calendar availability failed: "${sanitized}". Click Retry to re-sync dates.`;
       } else if (currentPhase === "status") {
-        contextualMsg = `Tour saved as Draft, but publishing failed: "${rawErrMsg}". The tour is currently in Draft status.`;
+        contextualMsg = `Tour saved as Draft, but publishing failed: "${sanitized}". The tour is currently in Draft status.`;
       }
 
       setSubmitError(contextualMsg);
@@ -520,18 +522,19 @@ function TourEditorFormContent({
       {/* Error notification banner */}
       {submitError && (
         <div className="shrink-0 px-4 sm:px-6 pt-3 pb-1">
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 font-medium space-y-1">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
-              <span className="font-bold">Submission Notice</span>
-            </div>
-            <p className="pl-6">{submitError}</p>
-            {persistedTourId && !isEdit && (
-              <p className="pl-6 text-[11px] text-red-600/80">
-                Note: Core tour record exists. Retrying will update this draft without creating duplicates.
-              </p>
-            )}
-          </div>
+          <ErrorAlert
+            title="Submission Notice"
+            description={
+              <div className="space-y-1">
+                <p>{submitError}</p>
+                {persistedTourId && !isEdit && (
+                  <p className="text-[11px] text-destructive/80">
+                    Note: Core tour record exists. Retrying will update this draft without creating duplicates.
+                  </p>
+                )}
+              </div>
+            }
+          />
         </div>
       )}
 

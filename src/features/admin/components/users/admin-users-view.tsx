@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
+import { ErrorAlert, SuccessAlert, WarningAlert } from "@/components/ui/alert";
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
 import {
@@ -220,11 +221,9 @@ export function AdminUsersView() {
         });
         refetchUsers();
       } catch (err: unknown) {
-        const apiErr = err as { data?: { message?: string } };
         setFeedback({
           type: "error",
-          message:
-            apiErr?.data?.message || "Failed to resend invitation email.",
+          message: formatErrorMessage(err, "Failed to resend invitation email."),
         });
       }
     },
@@ -233,45 +232,35 @@ export function AdminUsersView() {
 
   const errorMessage = React.useMemo(() => {
     if (!usersError) return undefined;
-    if (typeof usersError === "object" && "data" in usersError) {
-      const data = (usersError as { data?: { message?: string } }).data;
-      return data?.message || "Failed to load user records from the server.";
-    }
-    return "An unexpected error occurred while communicating with the server.";
+    return formatErrorMessage(usersError, "Failed to load user records from the server.");
   }, [usersError]);
 
   return (
     <div className="space-y-6" data-testid="admin-users-container">
       {/* Feedback Banner */}
       {feedback && (
-        <div
-          role="status"
-          aria-live="polite"
-          data-testid="admin-users-feedback-banner"
-          className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-xs font-medium shadow-xs transition-all ${
-            feedback.type === "success"
-              ? "border-emerald-200 bg-emerald-50/90 text-emerald-900"
-              : feedback.type === "warning"
-              ? "border-amber-200 bg-amber-50/90 text-amber-900"
-              : "border-rose-200 bg-rose-50/90 text-rose-900"
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            {feedback.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            ) : (
-              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-            )}
-            <span>{feedback.message}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="rounded-lg p-1 text-slate-500 hover:bg-black/5 hover:text-slate-800 cursor-pointer"
-            aria-label="Dismiss message"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+        <div data-testid="admin-users-feedback-banner">
+          {feedback.type === "success" && (
+            <SuccessAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          )}
+          {feedback.type === "warning" && (
+            <WarningAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          )}
+          {feedback.type === "error" && (
+            <ErrorAlert
+              message={feedback.message}
+              dismissible
+              onDismiss={() => setFeedback(null)}
+            />
+          )}
         </div>
       )}
 

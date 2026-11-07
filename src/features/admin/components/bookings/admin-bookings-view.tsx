@@ -6,6 +6,7 @@ import {
   useGetAdminOperationsBookingsQuery,
   useGetAdminStaffQuery,
 } from "../../api/admin-api";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { BookingsHeader } from "./bookings-header";
 import { BookingsSummaryCards } from "./bookings-summary-cards";
 import { BookingsToolbar } from "./bookings-toolbar";
@@ -251,12 +252,10 @@ export function AdminBookingsView() {
             Failed to load operational bookings
           </h3>
           <p className="mt-1 text-xs text-rose-700">
-            {typeof bookingsError === "object" && bookingsError && "data" in bookingsError
-              ? String(
-                  (bookingsError as { data?: { message?: string } }).data?.message ||
-                    "An unexpected error occurred while contacting the server."
-                )
-              : "Unable to retrieve operational bookings queue."}
+            {formatErrorMessage(
+              bookingsError,
+              "Unable to retrieve operational bookings queue."
+            )}
           </p>
           <button
             type="button"

@@ -10,13 +10,13 @@ import {
 } from "../../api/admin-api";
 import {
   Loader2,
-  AlertCircle,
-  CheckCircle2,
   Mail,
   UserCheck,
   Briefcase,
   Info,
 } from "lucide-react";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { cn } from "@/lib/utils";
 
 export interface InviteUserDialogProps {
@@ -88,9 +88,11 @@ function InviteUserForm({
         onClose();
       }, 1200);
     } catch (err: unknown) {
-      const apiErr = err as { data?: { message?: string } };
       setErrorMessage(
-        apiErr?.data?.message || "Failed to send invitation. Please verify details and try again."
+        formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to send invitation. Please verify details and try again.",
+        })
       );
     }
   };
@@ -146,27 +148,17 @@ function InviteUserForm({
 
       {/* Status Messages */}
       {errorMessage && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"
+        <ErrorAlert
           data-testid="invite-user-error"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-          <span>{errorMessage}</span>
-        </div>
+          description={errorMessage}
+        />
       )}
 
       {isSuccess && (
-        <div
-          role="status"
-          className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+        <SuccessAlert
           data-testid="invite-user-success"
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          <span>
-            Invitation sent successfully to {email}. The account has been provisioned.
-          </span>
-        </div>
+          description={`Invitation sent successfully to ${email}. The account has been provisioned.`}
+        />
       )}
 
       {/* Full Name */}

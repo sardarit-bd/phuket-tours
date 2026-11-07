@@ -12,6 +12,7 @@ import {
   Send,
   Activity,
 } from "lucide-react";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
 import type {
   SmtpConfigSummary,
@@ -108,10 +109,12 @@ export function SmtpSettingsTab({
       const result = await onTestConnection();
       setTestResult(result);
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setTestResult({
         success: false,
-        message: errObj?.data?.message || errObj.message || "Failed to verify SMTP server connection.",
+        message: formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to verify SMTP server connection.",
+        }),
         verifiedAt: new Date().toISOString(),
       });
     }
@@ -125,10 +128,12 @@ export function SmtpSettingsTab({
       const result = await onSendTestEmail(recipientEmail.trim());
       setSendResult(result);
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setSendResult({
         success: false,
-        message: errObj?.data?.message || errObj.message || "Failed to deliver test email.",
+        message: formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to deliver test email.",
+        }),
         recipient: recipientEmail.trim(),
       });
     }

@@ -18,6 +18,7 @@ import { RecentBookingsTable } from "@/features/admin/components/overview/recent
 import { OverviewSkeleton } from "@/features/admin/components/overview/overview-skeleton";
 import { ReportFiltersBar } from "@/features/admin/components/overview/report-filters-bar";
 import { Button } from "@/components/ui/button";
+import { ErrorAlert } from "@/components/ui/alert";
 import { RefreshCw, ShieldAlert } from "lucide-react";
 import { useModulePermissions } from "@/features/admin/context/module-permissions";
 import { STAFF_OVERVIEW_PERMISSIONS } from "@/features/dashboard/types/dashboard-nav";
@@ -154,28 +155,24 @@ export default function AdminOverviewPage() {
 
       {/* Global Error Banner if any endpoint failed */}
       {hasAnyError && (
-        <div
-          role="alert"
+        <ErrorAlert
           data-testid="admin-overview-global-error"
-          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-red-600" />
+          description={
+            <div className="flex items-center justify-between gap-3">
               <span>
                 One or more report queries encountered an issue. Metrics below show available data.
               </span>
+              <Button
+                onClick={handleRefreshAll}
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-destructive/30 bg-white text-xs text-destructive hover:bg-destructive/10"
+              >
+                Retry All
+              </Button>
             </div>
-            <Button
-              onClick={handleRefreshAll}
-              variant="outline"
-              size="sm"
-              className="border-red-300 bg-white text-xs text-red-700 hover:bg-red-100"
-            >
-              Retry All
-            </Button>
-          </div>
-        </div>
+          }
+        />
       )}
 
       {/* Report Date Window Filter */}

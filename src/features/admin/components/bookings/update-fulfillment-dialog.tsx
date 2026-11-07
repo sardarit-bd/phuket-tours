@@ -9,7 +9,9 @@ import type {
   OperationalBookingRecord,
   FulfillmentStatusValue,
 } from "../../types/admin-bookings";
-import { Loader2, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { ErrorAlert, SuccessAlert, WarningAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 
 export interface UpdateFulfillmentDialogProps {
   isOpen: boolean;
@@ -97,9 +99,11 @@ function UpdateFulfillmentForm({
         onClose();
       }, 1000);
     } catch (err: unknown) {
-      const apiErr = err as { data?: { message?: string } };
       setErrorMessage(
-        apiErr?.data?.message || "Failed to update fulfillment status. Please verify permissions."
+        formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to update fulfillment status. Please verify permissions.",
+        })
       );
     }
   };
@@ -108,39 +112,30 @@ function UpdateFulfillmentForm({
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
       {/* Error message */}
       {errorMessage && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"
+        <ErrorAlert
           data-testid="fulfillment-error-banner"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-          <span>{errorMessage}</span>
-        </div>
+          description={errorMessage}
+        />
       )}
 
       {/* Success message */}
       {isSuccess && (
-        <div
-          role="status"
-          className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+        <SuccessAlert
           data-testid="fulfillment-success-banner"
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          <span>Fulfillment status updated successfully.</span>
-        </div>
+          description="Fulfillment status updated successfully."
+        />
       )}
 
       {/* Backend validation notice for PAID requirement */}
       {isBlockedByPayment && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-          <div className="space-y-1">
-            <p className="font-semibold">Backend Constraint: Unpaid Booking</p>
-            <p className="text-[11px] leading-relaxed text-amber-800">
+        <WarningAlert
+          title="Backend Constraint: Unpaid Booking"
+          description={
+            <p className="text-[11px] leading-relaxed">
               The backend system strictly requires payment status to be <strong>PAID</strong> before a booking can transition to <strong>FULFILLED</strong>. Current payment status is <strong>{booking.paymentStatus}</strong>.
             </p>
-          </div>
-        </div>
+          }
+        />
       )}
 
       {/* Current status info */}

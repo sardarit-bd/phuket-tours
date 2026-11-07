@@ -12,6 +12,7 @@ import {
   Cloud,
   FolderOpen,
 } from "lucide-react";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
 import type {
   CloudinaryConfigSummary,
@@ -82,10 +83,12 @@ export function CloudinarySettingsTab({
       const result = await onTestConnection();
       setTestResult(result);
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setTestResult({
         success: false,
-        message: errObj?.data?.message || errObj.message || "Failed to connect to Cloudinary API.",
+        message: formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to connect to Cloudinary API.",
+        }),
         verifiedAt: new Date().toISOString(),
       });
     }

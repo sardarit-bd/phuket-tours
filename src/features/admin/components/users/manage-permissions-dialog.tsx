@@ -22,6 +22,8 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { ErrorAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import {
   useGetAdminPermissionsQuery,
   useGetStaffPermissionsQuery,
@@ -232,14 +234,9 @@ export function ManagePermissionsDialog({
       }
       handleClose();
     } catch (err: unknown) {
-      const apiError = err as
-        | { data?: { message?: string }; message?: string }
-        | undefined;
-      const msg =
-        apiError?.data?.message ||
-        apiError?.message ||
-        "Failed to update permissions. Please try again.";
-      setErrorMessage(msg);
+      setErrorMessage(
+        formatErrorMessage(err, "Failed to update permissions. Please try again.")
+      );
     }
   };
 
@@ -325,9 +322,8 @@ export function ManagePermissionsDialog({
 
       {/* 2. Error Banner */}
       {errorMessage && (
-        <div data-testid="permissions-error-banner" className="mx-6 mt-4 flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
-          <span>{errorMessage}</span>
+        <div data-testid="permissions-error-banner" className="mx-6 mt-4">
+          <ErrorAlert message={errorMessage} />
         </div>
       )}
 

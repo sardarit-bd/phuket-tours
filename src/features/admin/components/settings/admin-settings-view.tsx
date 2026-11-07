@@ -10,10 +10,10 @@ import {
   ShieldCheck,
   RotateCcw,
   AlertCircle,
-  CheckCircle2,
-  X,
   User,
 } from "lucide-react";
+import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import {
   useGetAdminSettingsQuery,
   useUpdateAdminGeneralSettingsMutation,
@@ -170,10 +170,12 @@ export function AdminSettingsView() {
         message: "General platform settings saved and applied successfully.",
       });
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setFeedback({
         type: "error",
-        message: errObj?.data?.message || errObj.message || "Failed to update general settings.",
+        message: formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to update general settings.",
+        }),
       });
     }
   };
@@ -186,10 +188,12 @@ export function AdminSettingsView() {
         message: "Payment gateway credentials saved and active at runtime.",
       });
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setFeedback({
         type: "error",
-        message: errObj?.data?.message || errObj.message || "Failed to update payment settings.",
+        message: formatErrorMessage(err, {
+          context: "payment",
+          fallback: "Failed to update payment settings.",
+        }),
       });
     }
   };
@@ -202,10 +206,12 @@ export function AdminSettingsView() {
         message: "Webhook configuration saved successfully.",
       });
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setFeedback({
         type: "error",
-        message: errObj?.data?.message || errObj.message || "Failed to update webhook settings.",
+        message: formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to update webhook settings.",
+        }),
       });
     }
   };
@@ -218,10 +224,12 @@ export function AdminSettingsView() {
         message: "Cloudinary settings persisted and applied to media operations.",
       });
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setFeedback({
         type: "error",
-        message: errObj?.data?.message || errObj.message || "Failed to update Cloudinary settings.",
+        message: formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to update Cloudinary settings.",
+        }),
       });
     }
   };
@@ -245,10 +253,12 @@ export function AdminSettingsView() {
         message: "Email & SMTP configuration updated successfully.",
       });
     } catch (err: unknown) {
-      const errObj = err as { data?: { message?: string }; message?: string };
       setFeedback({
         type: "error",
-        message: errObj?.data?.message || errObj.message || "Failed to update SMTP settings.",
+        message: formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to update SMTP settings.",
+        }),
       });
     }
   };
@@ -301,30 +311,17 @@ export function AdminSettingsView() {
 
       {/* Global Feedback Banner */}
       {feedback && (
-        <div
-          role="alert"
-          className={`flex items-start justify-between gap-3 rounded-[10px] p-4 text-xs font-medium transition-all ${
-            feedback.type === "success"
-              ? "bg-[#E8F8F5] border border-[#A2E2D8] text-[#006A62]"
-              : "bg-[#FFF0E6] border border-[#FFC7A8] text-[#9B2C2C]"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {feedback.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#00A699]" />
-            ) : (
-              <AlertCircle className="h-4 w-4 shrink-0 text-[#FF5A5F]" />
-            )}
-            <span>{feedback.message}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="text-[#74818A] hover:text-[#18282A]"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+        feedback.type === "success" ? (
+          <SuccessAlert
+            description={feedback.message}
+            onDismiss={() => setFeedback(null)}
+          />
+        ) : (
+          <ErrorAlert
+            description={feedback.message}
+            onDismiss={() => setFeedback(null)}
+          />
+        )
       )}
 
       {/* Navigation Tabs Bar */}
@@ -366,13 +363,16 @@ export function AdminSettingsView() {
           </p>
         </div>
       ) : isSettingsError || !settingsOverview ? (
-        <div className="rounded-[12px] border border-[#FFC7A8] bg-[#FFF0E6] p-8 text-center">
-          <AlertCircle className="h-6 w-6 mx-auto text-[#FF5A5F] mb-2" />
-          <p className="font-outfit text-sm font-bold text-[#9B2C2C]">
+        <div className="rounded-[12px] border border-destructive/20 bg-destructive/10 p-8 text-center">
+          <AlertCircle className="h-6 w-6 mx-auto text-destructive mb-2" />
+          <p className="font-outfit text-sm font-bold text-destructive">
             Failed to Load System Settings
           </p>
-          <p className="text-xs text-[#74818A] mt-1">
-            {(settingsError as { data?: { message?: string } })?.data?.message || "Please ensure you have authorized administrator permissions."}
+          <p className="text-xs text-destructive/80 mt-1">
+            {formatErrorMessage(settingsError, {
+              context: "admin",
+              fallback: "Please ensure you have authorized administrator permissions.",
+            })}
           </p>
           <button
             type="button"

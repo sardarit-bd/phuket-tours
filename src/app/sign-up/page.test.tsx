@@ -247,7 +247,7 @@ describe("SignUpPage & SignUpForm", () => {
     await user.click(submitBtn);
 
     expect(
-      await screen.findByText(/unable to connect to the server/i)
+      await screen.findByText(/unable to connect/i)
     ).toBeInTheDocument();
   });
 

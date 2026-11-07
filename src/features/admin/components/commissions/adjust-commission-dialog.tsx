@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import {
-  AlertCircle,
   Sliders,
   ArrowRight,
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
+import { ErrorAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { useAdjustAdminCommissionMutation } from "../../api/admin-api";
 import type { AdminCommissionRecord } from "../../types/admin-commissions";
 
@@ -98,12 +99,12 @@ export function AdjustCommissionDialog({
       onSuccess?.(successMsg);
       onClose();
     } catch (err: unknown) {
-      const errorObj = err as { data?: { message?: string }; message?: string };
-      const serverMsg =
-        errorObj?.data?.message ||
-        errorObj?.message ||
-        "An unexpected error occurred while adjusting the commission.";
-      setErrorMessage(serverMsg);
+      setErrorMessage(
+        formatErrorMessage(err, {
+          context: "admin",
+          fallback: "An unexpected error occurred while adjusting the commission.",
+        })
+      );
     }
   };
 
@@ -127,17 +128,11 @@ export function AdjustCommissionDialog({
       <form onSubmit={handleSubmit} className="space-y-5" data-testid="adjust-commission-form">
         {/* Error Alert */}
         {errorMessage && (
-          <div
-            role="alert"
+          <ErrorAlert
             data-testid="adjust-commission-error"
-            className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/5 p-3.5 text-xs text-destructive"
-          >
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <span className="font-semibold block">Adjustment Rejected</span>
-              <p className="mt-0.5 text-[11px] leading-relaxed">{errorMessage}</p>
-            </div>
-          </div>
+            title="Adjustment Rejected"
+            description={errorMessage}
+          />
         )}
 
         {/* Entity Context Card */}

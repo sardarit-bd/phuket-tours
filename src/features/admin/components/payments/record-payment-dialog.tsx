@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, Loader2, Calendar, Hash } from "lucide-react";
+import { Loader2, Calendar, Hash } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { ErrorAlert } from "@/components/ui/alert";
+import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { useRecordAdminPaymentMutation } from "../../api/admin-api";
 import type { AdminPaymentRecord } from "../../types/admin-payments";
 
@@ -116,10 +118,12 @@ export function RecordPaymentDialog({
       onSuccess(response?.message || "Manual payment recorded successfully.");
       onClose();
     } catch (err: unknown) {
-      const errorObj = err as { data?: { message?: string }; message?: string };
-      const apiMsg =
-        errorObj?.data?.message || errorObj?.message || "Failed to record manual payment.";
-      setValidationError(apiMsg);
+      setValidationError(
+        formatErrorMessage(err, {
+          context: "payment",
+          fallback: "Failed to record manual payment.",
+        })
+      );
     }
   };
 
@@ -273,14 +277,10 @@ export function RecordPaymentDialog({
 
         {/* 5. Error Alert */}
         {validationError && (
-          <div
-            role="alert"
-            className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-destructive"
+          <ErrorAlert
             data-testid="record-payment-error"
-          >
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
-            <p className="text-xs font-medium leading-relaxed">{validationError}</p>
-          </div>
+            description={validationError}
+          />
         )}
 
         {/* 6. Footer Actions */}

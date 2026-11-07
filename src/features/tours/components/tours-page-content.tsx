@@ -11,6 +11,8 @@ import {
   TourGrid,
   TourPagination,
 } from "./index";
+import { ErrorAlert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useTourFilters } from "../hooks/use-tour-filters";
 import { useGetToursQuery } from "../api/tours-api";
 import { FilterGroup } from "../types/tour";
@@ -174,24 +176,21 @@ export function ToursPageContent() {
 
             {/* Error State */}
             {isError && (
-              <div
-                role="alert"
-                className="flex flex-col items-center justify-center rounded-2xl border border-red-200 bg-red-50 p-8 text-center"
-              >
-                <p className="text-sm font-semibold text-red-800">
-                  Something went wrong loading tours
-                </p>
-                <p className="mt-1 text-xs text-red-600">
-                  Please check your connection and try again.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => refetch()}
-                  className="mt-4 rounded-full bg-primary px-6 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-primary-dark cursor-pointer"
-                >
-                  Retry
-                </button>
-              </div>
+              <ErrorAlert
+                className="p-6"
+                title="Unable to load tours"
+                description="We couldn't reach the tours directory. Please check your internet connection and try again."
+                action={
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => refetch()}
+                    className="rounded-full bg-primary hover:bg-primary-dark text-white text-xs px-5 font-semibold"
+                  >
+                    Retry Loading
+                  </Button>
+                }
+              />
             )}
 
             {/* Tour Cards Grid (Renders only active paginated page: 12 cards) */}
