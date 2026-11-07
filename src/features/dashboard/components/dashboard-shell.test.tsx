@@ -127,7 +127,7 @@ describe("DashboardShell Component", () => {
     expect(screen.getAllByText("Tours Management").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Bookings Management")).toBeInTheDocument();
     expect(screen.getByText("Users Management")).toBeInTheDocument();
-    expect(screen.getByText("Categories")).toBeInTheDocument();
+    expect(screen.queryByText("Categories")).not.toBeInTheDocument();
 
     // Topbar breadcrumb for admin
     expect(screen.getByText("Admin Portal")).toBeInTheDocument();
@@ -295,5 +295,44 @@ describe("DashboardShell Component", () => {
     // Admin & Customer items absent
     expect(screen.queryByText("Tours Management")).not.toBeInTheDocument();
     expect(screen.queryByText("My Favorites")).not.toBeInTheDocument();
+  });
+
+  it("renders the account dropdown in topbar, toggles menu, and handles profile navigation and sign out", async () => {
+    mockPathname.mockReturnValue("/dashboard/admin");
+
+    renderWithStore(
+      <DashboardShell>
+        <div>Admin Content</div>
+      </DashboardShell>,
+      "admin"
+    );
+
+    // Quick search input should not be in the document
+    expect(screen.queryByPlaceholderText(/quick search/i)).not.toBeInTheDocument();
+
+    // Dropdown trigger
+    const accountTrigger = screen.getByRole("button", { name: /account menu/i });
+    expect(accountTrigger).toBeInTheDocument();
+    expect(accountTrigger).toHaveAttribute("aria-expanded", "false");
+
+    // Open dropdown
+    fireEvent.click(accountTrigger);
+    expect(accountTrigger).toHaveAttribute("aria-expanded", "true");
+
+    const menu = screen.getByRole("menu", { name: /account options/i });
+    expect(menu).toBeInTheDocument();
+
+    // Verify My Profile links to Admin Settings
+    const profileLink = screen.getByRole("menuitem", { name: /my profile/i });
+    expect(profileLink).toHaveAttribute("href", "/dashboard/admin/settings");
+
+    // Click My Profile closes dropdown
+    fireEvent.click(profileLink);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    // Reopen and check Sign Out
+    fireEvent.click(accountTrigger);
+    const signOutBtn = screen.getByRole("menuitem", { name: /sign out/i });
+    expect(signOutBtn).toBeInTheDocument();
   });
 });

@@ -245,7 +245,7 @@ describe("SignInPage & SignInForm", () => {
     await user.click(submitBtn);
 
     expect(
-      await screen.findByText(/invalid email or password/i)
+      await screen.findByText(/email address or password is incorrect/i)
     ).toBeInTheDocument();
     expect(selectIsAuthenticated(store.getState())).toBe(false);
     expect(mockPush).not.toHaveBeenCalled();
@@ -292,7 +292,7 @@ describe("SignInPage & SignInForm", () => {
     await user.click(submitBtn);
 
     expect(
-      await screen.findByText(/unable to connect to the server/i)
+      await screen.findByText(/unable to connect\. please check your internet connection/i)
     ).toBeInTheDocument();
   });
 
