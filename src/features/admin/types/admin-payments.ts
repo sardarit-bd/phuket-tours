@@ -9,7 +9,7 @@
  * - src/modules/payment/paymentService.ts
  */
 
-export const PAYMENT_METHODS = ["BANK_TRANSFER", "CASH", "OTHER"] as const;
+export const PAYMENT_METHODS = ["BANK_TRANSFER", "CASH", "OTHER", "STRIPE"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_RECORD_STATUSES = [
@@ -17,6 +17,13 @@ export const PAYMENT_RECORD_STATUSES = [
   "SUBMITTED",
   "VERIFIED",
   "REJECTED",
+  "PROCESSING",
+  "FAILED",
+  "CANCELLED",
+  "REQUIRES_ACTION",
+  "REFUNDED",
+  "PARTIALLY_REFUNDED",
+  "DISPUTED",
 ] as const;
 export type PaymentRecordStatus = (typeof PAYMENT_RECORD_STATUSES)[number];
 

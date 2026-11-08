@@ -6,6 +6,8 @@ import type {
   CustomerPaymentDetailResponse,
   GetCustomerBookingsParams,
   GetCustomerPaymentsParams,
+  StripeCheckoutSessionResponse,
+  PaymentReconciliationResponse,
 } from "../types/customer";
 import type { UserProfileResponse } from "@/features/auth/types/auth";
 
@@ -81,6 +83,29 @@ export const customerApi = baseApi.injectEndpoints({
       keepUnusedDataFor: 60,
     }),
 
+    createStripeSession: builder.mutation<
+      StripeCheckoutSessionResponse,
+      { bookingId: string; successUrl?: string; cancelUrl?: string }
+    >({
+      query: ({ bookingId, successUrl, cancelUrl }) => ({
+        url: `/bookings/${bookingId}/stripe-session`,
+        method: "POST",
+        body: { successUrl, cancelUrl },
+      }),
+      invalidatesTags: ["CustomerBookings", "CustomerPayments"],
+    }),
+
+    reconcileCustomerPayment: builder.mutation<
+      PaymentReconciliationResponse,
+      string
+    >({
+      query: (paymentId) => ({
+        url: `/customer/payments/${paymentId}/reconcile`,
+        method: "POST",
+      }),
+      invalidatesTags: ["CustomerBookings", "CustomerPayments"],
+    }),
+
     /* ── Profile ──────────────────────────────────────────────── */
 
     updateProfile: builder.mutation<
@@ -102,5 +127,7 @@ export const {
   useGetCustomerBookingByIdQuery,
   useGetCustomerPaymentsQuery,
   useGetCustomerPaymentByIdQuery,
+  useCreateStripeSessionMutation,
+  useReconcileCustomerPaymentMutation,
   useUpdateProfileMutation,
 } = customerApi;
