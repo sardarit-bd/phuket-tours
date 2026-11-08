@@ -50,7 +50,6 @@ describe("Footer component", () => {
     expect(
       screen.getByText(/© 2026 phuket tours\. all rights reserved\./i)
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Terms of Service" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cookies" })).toBeInTheDocument();
   });
 });

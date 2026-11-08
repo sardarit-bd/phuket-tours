@@ -190,7 +190,7 @@ export function SignInForm() {
               Password
             </label>
             <Link
-              href="/forgot-password"
+              href="/reset-password"
               className="text-xs font-medium text-primary hover:text-primary-dark transition-colors focus-visible:outline-none focus-visible:underline"
             >
               Forgot password?

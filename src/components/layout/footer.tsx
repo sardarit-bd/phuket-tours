@@ -171,22 +171,6 @@ export function Footer() {
                     FAQs
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/privacy-policy"
-                    className="text-[#74818A] hover:text-[#18282A] transition-colors"
-                  >
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/terms"
-                    className="text-[#74818A] hover:text-[#18282A] transition-colors"
-                  >
-                    Terms &amp; Conditions
-                  </Link>
-                </li>
               </ul>
             </div>
 
@@ -229,18 +213,6 @@ export function Footer() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-7 font-outfit text-xs sm:text-[13px] text-[#74818A]">
             <p>© 2026 Phuket Tours. All rights reserved.</p>
             <div className="flex items-center gap-6 sm:gap-8">
-              <Link
-                href="/privacy-policy"
-                className="hover:text-[#18282A] transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                href="/terms"
-                className="hover:text-[#18282A] transition-colors"
-              >
-                Terms of Service
-              </Link>
               <Link
                 href="/cookies"
                 className="hover:text-[#18282A] transition-colors"
