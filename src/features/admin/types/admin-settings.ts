@@ -10,7 +10,7 @@ export interface GeneralSettingsSummary {
   platformName: string;
   supportEmail: string;
   supportPhone: string;
-  defaultCurrency: string;
+  defaultCurrency?: string;
   timezone: string;
   defaultLanguage: string;
   maintenanceMode: boolean;
