@@ -37,6 +37,7 @@ export interface CustomerBookingRecord {
     | "FAILED";
   paymentStatus: "UNPAID" | "PARTIALLY_PAID" | "PAID";
   fulfillmentStatus: "NOT_STARTED" | "IN_PROGRESS" | "FULFILLED";
+  currency?: string;
   basePrice: number;
   finalPrice: number;
   notes: string | null;
@@ -59,13 +60,20 @@ export type CustomerBookingDetailResponse = ApiResponse<CustomerBookingRecord>;
 
 /* ── Customer payment shape ────────────────────────────────────────── */
 
-export type CustomerPaymentMethod = "BANK_TRANSFER" | "CASH" | "OTHER";
+export type CustomerPaymentMethod = "BANK_TRANSFER" | "CASH" | "OTHER" | "STRIPE";
 
 export type CustomerPaymentStatus =
   | "INITIATED"
   | "SUBMITTED"
   | "VERIFIED"
-  | "REJECTED";
+  | "REJECTED"
+  | "PROCESSING"
+  | "FAILED"
+  | "CANCELLED"
+  | "REQUIRES_ACTION"
+  | "REFUNDED"
+  | "PARTIALLY_REFUNDED"
+  | "DISPUTED";
 
 export interface CustomerPaymentBookingInfo {
   id: string;
@@ -73,6 +81,7 @@ export interface CustomerPaymentBookingInfo {
   agentId: string | null;
   status: string;
   paymentStatus: string;
+  currency?: string;
   finalPrice: number | null;
 }
 
@@ -81,9 +90,13 @@ export interface CustomerPaymentRecord {
   bookingId: string;
   customerId: string;
   amount: number;
+  currency?: string;
   method: CustomerPaymentMethod;
   status: CustomerPaymentStatus;
   reference: string | null;
+  stripeSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  failureReason?: string | null;
   receiptNote: string | null;
   submittedAt: string | null;
   receivedAt: string | null;
@@ -94,6 +107,28 @@ export interface CustomerPaymentRecord {
   updatedAt: string;
   booking?: CustomerPaymentBookingInfo;
 }
+
+export interface StripeCheckoutSessionData {
+  sessionId: string;
+  sessionUrl: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  status: CustomerPaymentStatus;
+}
+
+export type StripeCheckoutSessionResponse = ApiResponse<StripeCheckoutSessionData>;
+
+export interface PaymentReconciliationData {
+  paymentId: string;
+  bookingId: string;
+  previousStatus: CustomerPaymentStatus;
+  newStatus: CustomerPaymentStatus;
+  reconciled: boolean;
+  notes?: string;
+}
+
+export type PaymentReconciliationResponse = ApiResponse<PaymentReconciliationData>;
 
 export interface GetCustomerPaymentsParams {
   page?: number;

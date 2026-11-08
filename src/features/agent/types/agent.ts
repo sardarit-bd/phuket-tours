@@ -67,6 +67,7 @@ export interface AgentBookingRecord {
     | "FAILED";
   paymentStatus: "UNPAID" | "PARTIALLY_PAID" | "PAID";
   fulfillmentStatus: "NOT_STARTED" | "IN_PROGRESS" | "FULFILLED";
+  currency?: string;
   basePrice: number;
   proposedPrice: number | null;
   finalPrice: number;

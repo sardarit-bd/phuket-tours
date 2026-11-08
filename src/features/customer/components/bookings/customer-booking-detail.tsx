@@ -17,6 +17,7 @@ import {
   Wallet,
   CheckCircle2,
 } from "lucide-react";
+import { StripePaymentButton } from "../payments/stripe-payment-button";
 
 function formatDate(dateStr?: string | null): string {
   if (!dateStr) return "N/A";
@@ -33,9 +34,12 @@ function formatDate(dateStr?: string | null): string {
   }
 }
 
-function formatPrice(amount?: number): string {
-  if (typeof amount !== "number") return "฿0";
-  return `฿${amount.toLocaleString("en-US")}`;
+function formatPrice(amount?: number, currency = "THB"): string {
+  if (typeof amount !== "number") return `${currency.toUpperCase()} 0.00`;
+  return `${currency.toUpperCase()} ${amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function CustomerBookingDetail({ bookingId }: { bookingId: string }) {
@@ -99,7 +103,9 @@ export function CustomerBookingDetail({ bookingId }: { bookingId: string }) {
 
   if (!booking) return null;
 
-  const isPayable = booking.paymentStatus === "UNPAID";
+  const isPayable =
+    booking.paymentStatus === "UNPAID" &&
+    (booking.status === "PENDING" || booking.status === "CONFIRMED");
   const isPaid = booking.paymentStatus === "PAID";
 
   return (
@@ -192,11 +198,11 @@ export function CustomerBookingDetail({ bookingId }: { bookingId: string }) {
               </h5>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-[#18282A]">
-                  {formatPrice(booking.finalPrice)}
+                  {formatPrice(booking.finalPrice, booking.currency)}
                 </span>
                 {booking.basePrice !== booking.finalPrice && (
                   <span className="text-xs text-[#74818A] line-through">
-                    {formatPrice(booking.basePrice)}
+                    {formatPrice(booking.basePrice, booking.currency)}
                   </span>
                 )}
               </div>
@@ -204,16 +210,12 @@ export function CustomerBookingDetail({ bookingId }: { bookingId: string }) {
 
             {/* Pay CTA — only when unpaid and booking is in a payable state */}
             {isPayable && (
-              <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-[#176779]" />
-                <Link href={`/dashboard/bookings/${booking.id}/pay`}>
-                  <Button
-                    size="sm"
-                    className="bg-[#176779] text-white text-xs hover:bg-[#135664] h-9 px-4"
-                  >
-                    Make Payment
-                  </Button>
-                </Link>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <StripePaymentButton
+                  bookingId={booking.id}
+                  amount={booking.finalPrice}
+                  currency={booking.currency || "THB"}
+                />
               </div>
             )}
             {isPaid && (

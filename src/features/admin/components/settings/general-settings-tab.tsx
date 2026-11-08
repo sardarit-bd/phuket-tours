@@ -14,15 +14,6 @@ interface GeneralSettingsTabProps {
   isLoading: boolean;
 }
 
-const CURRENCY_OPTIONS: SelectOption<string>[] = [
-  { value: "THB", label: "THB — Thai Baht (฿)" },
-  { value: "USD", label: "USD — US Dollar ($)" },
-  { value: "EUR", label: "EUR — Euro (€)" },
-  { value: "GBP", label: "GBP — British Pound (£)" },
-  { value: "AUD", label: "AUD — Australian Dollar (A$)" },
-  { value: "SGD", label: "SGD — Singapore Dollar (S$)" },
-];
-
 const TIMEZONE_OPTIONS: SelectOption<string>[] = [
   { value: "Asia/Bangkok", label: "Asia/Bangkok (UTC+07:00 — Phuket / Thailand)" },
   { value: "UTC", label: "UTC (Coordinated Universal Time)" },
@@ -49,7 +40,6 @@ export function GeneralSettingsTab({
   const [platformName, setPlatformName] = React.useState(initialData.platformName);
   const [supportEmail, setSupportEmail] = React.useState(initialData.supportEmail);
   const [supportPhone, setSupportPhone] = React.useState(initialData.supportPhone);
-  const [defaultCurrency, setDefaultCurrency] = React.useState(initialData.defaultCurrency);
   const [timezone, setTimezone] = React.useState(initialData.timezone);
   const [defaultLanguage, setDefaultLanguage] = React.useState(initialData.defaultLanguage);
   const [maintenanceMode, setMaintenanceMode] = React.useState(initialData.maintenanceMode);
@@ -59,7 +49,6 @@ export function GeneralSettingsTab({
     platformName !== initialData.platformName ||
     supportEmail !== initialData.supportEmail ||
     supportPhone !== initialData.supportPhone ||
-    defaultCurrency !== initialData.defaultCurrency ||
     timezone !== initialData.timezone ||
     defaultLanguage !== initialData.defaultLanguage ||
     maintenanceMode !== initialData.maintenanceMode;
@@ -70,7 +59,6 @@ export function GeneralSettingsTab({
       platformName: platformName.trim(),
       supportEmail: supportEmail.trim(),
       supportPhone: supportPhone.trim(),
-      defaultCurrency,
       timezone,
       defaultLanguage,
       maintenanceMode,
@@ -81,7 +69,6 @@ export function GeneralSettingsTab({
     setPlatformName(initialData.platformName);
     setSupportEmail(initialData.supportEmail);
     setSupportPhone(initialData.supportPhone);
-    setDefaultCurrency(initialData.defaultCurrency);
     setTimezone(initialData.timezone);
     setDefaultLanguage(initialData.defaultLanguage);
     setMaintenanceMode(initialData.maintenanceMode);
@@ -152,18 +139,6 @@ export function GeneralSettingsTab({
               onChange={(e) => setSupportPhone(e.target.value)}
               className="w-full rounded-[8px] border border-[#D5DDE2] bg-white px-3.5 py-2.5 text-sm text-[#18282A] placeholder-[#74818A] focus:border-[#00A699] focus:outline-none focus:ring-1 focus:ring-[#00A699]"
               placeholder="e.g. +66 76 123 4567"
-            />
-          </div>
-
-          {/* Default Currency */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-[#18282A] uppercase tracking-wider">
-              Default Currency
-            </label>
-            <CustomSelect<string>
-              options={CURRENCY_OPTIONS}
-              value={defaultCurrency}
-              onChange={setDefaultCurrency}
             />
           </div>
 
