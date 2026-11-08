@@ -87,7 +87,8 @@ export function SignInForm() {
         targetRoute = "/dashboard";
       }
 
-      const redirectParam = searchParams.get("redirect");
+      const redirectParam =
+        searchParams.get("redirect") || searchParams.get("next");
       if (
         redirectParam &&
         redirectParam.startsWith("/") &&
