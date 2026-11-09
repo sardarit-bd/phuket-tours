@@ -6,6 +6,7 @@ import {
   useGetAgentOverviewQuery,
 } from "../../api/agent-api";
 import { AgentCommissionStatusBadge } from "../common/agent-status-badges";
+import { formatAgentCurrency, formatAgentDate } from "../../utils/agent-formatters";
 import { Button } from "@/components/ui/button";
 import {
   Coins,
@@ -25,29 +26,6 @@ const STATUS_TABS = [
   { label: "Cancelled", value: "CANCELLED" },
 ];
 
-function formatDate(dateStr?: string | null): string {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "N/A";
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatCurrency(amount?: number): string {
-  if (typeof amount !== "number") return "฿0.00";
-  return `฿${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
 export function AgentCommissionsTable() {
   const [page, setPage] = React.useState(1);
   const [statusFilter, setStatusFilter] = React.useState("ALL");
@@ -55,6 +33,7 @@ export function AgentCommissionsTable() {
   const {
     data: overviewResponse,
     isLoading: isOverviewLoading,
+    error: overviewError,
     refetch: refetchOverview,
   } = useGetAgentOverviewQuery();
 
@@ -72,12 +51,18 @@ export function AgentCommissionsTable() {
 
   const overview = overviewResponse?.data;
   const commissions = commissionsResponse?.data?.items || [];
+  const rawTotal = commissionsResponse?.data?.total ?? 0;
+  const rawLimit = commissionsResponse?.data?.limit ?? 10;
+  const rawPage = commissionsResponse?.data?.page ?? page;
   const pagination = commissionsResponse?.data?.pagination || {
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 1,
+    page: rawPage,
+    limit: rawLimit,
+    total: rawTotal,
+    totalPages: Math.max(1, Math.ceil(rawTotal / rawLimit)),
   };
+
+  const hasOverviewError = Boolean(overviewError && !overview);
+  const sampleCurrency = commissions[0]?.booking?.currency || "THB";
 
   const handleTabChange = (status: string) => {
     setStatusFilter(status);
@@ -103,11 +88,15 @@ export function AgentCommissionsTable() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-outfit text-2xl font-bold tracking-tight text-emerald-950">
-              {formatCurrency(overview?.totalCommission)}
+            <p className="font-outfit text-2xl font-bold tracking-tight text-emerald-950" data-testid="commissions-summary-total">
+              {isOverviewLoading
+                ? "..."
+                : hasOverviewError
+                ? "—"
+                : formatAgentCurrency(overview?.totalCommission, sampleCurrency)}
             </p>
             <p className="mt-1 text-xs text-emerald-700">
-              Earned across {overview?.activeCommissionsCount ?? 0} active bookings
+              Earned across {hasOverviewError ? "—" : overview?.activeCommissionsCount ?? 0} active bookings
             </p>
           </div>
         </div>
@@ -122,8 +111,12 @@ export function AgentCommissionsTable() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-outfit text-2xl font-bold tracking-tight text-blue-950">
-              {formatCurrency(overview?.paidCommission)}
+            <p className="font-outfit text-2xl font-bold tracking-tight text-blue-950" data-testid="commissions-summary-paid">
+              {isOverviewLoading
+                ? "..."
+                : hasOverviewError
+                ? "—"
+                : formatAgentCurrency(overview?.paidCommission, sampleCurrency)}
             </p>
             <p className="mt-1 text-xs text-blue-700">Disbursed partner funds</p>
           </div>
@@ -139,8 +132,12 @@ export function AgentCommissionsTable() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-outfit text-2xl font-bold tracking-tight text-amber-950">
-              {formatCurrency(overview?.pendingCommission)}
+            <p className="font-outfit text-2xl font-bold tracking-tight text-amber-950" data-testid="commissions-summary-pending">
+              {isOverviewLoading
+                ? "..."
+                : hasOverviewError
+                ? "—"
+                : formatAgentCurrency(overview?.pendingCommission, sampleCurrency)}
             </p>
             <p className="mt-1 text-xs text-amber-700">Scheduled for settlement</p>
           </div>
@@ -156,8 +153,8 @@ export function AgentCommissionsTable() {
             </div>
           </div>
           <div className="mt-3">
-            <p className="font-outfit text-2xl font-bold tracking-tight text-[#18282A]">
-              {overview?.activeCommissionsCount ?? 0}
+            <p className="font-outfit text-2xl font-bold tracking-tight text-[#18282A]" data-testid="commissions-summary-active">
+              {isOverviewLoading ? "..." : hasOverviewError ? "—" : overview?.activeCommissionsCount ?? 0}
             </p>
             <p className="mt-1 text-xs text-[#74818A]">Audited ledger entries</p>
           </div>
@@ -169,7 +166,7 @@ export function AgentCommissionsTable() {
         <Lock className="h-4 w-4 shrink-0 text-sky-700" />
         <div className="flex-1">
           <span className="font-semibold">Audited Financial Ledger: </span>
-          Commissions are strictly read-only and automatically computed from authorized rates upon booking confirmation. Commission disputes or payout reconciliations are handled via your partner account representative.
+          Commissions are strictly read-only and automatically computed from authorized partner rules upon payment verification. Commission disputes or payout reconciliations are handled via your partner account representative.
         </div>
       </div>
 
@@ -297,25 +294,27 @@ export function AgentCommissionsTable() {
                     </td>
                     <td className="px-4 py-3.5 text-[#74818A]">
                       <span className="font-medium text-[#18282A]">
-                        {c.rateType === "PERCENTAGE" ? `${c.rateValue}%` : `฿${c.rateValue}`}
+                        {c.rateType === "PERCENTAGE"
+                          ? `${c.rateValue}%`
+                          : formatAgentCurrency(c.rateValue, c.booking?.currency)}
                       </span>
                       <span className="text-[10px] block text-[#74818A]">
                         {c.rateType}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-[#18282A]">
-                      {formatCurrency(c.baseAmount)}
+                      {formatAgentCurrency(c.baseAmount, c.booking?.currency)}
                     </td>
                     <td className="px-4 py-3.5">
                       <AgentCommissionStatusBadge status={c.status} />
                     </td>
                     <td className="px-4 py-3.5 text-right font-bold text-emerald-700">
-                      {formatCurrency(c.amount)}
+                      {formatAgentCurrency(c.amount, c.booking?.currency)}
                     </td>
                     <td className="px-4 py-3.5 text-right text-[#74818A]">
                       <div className="flex items-center justify-end gap-1">
                         <Calendar className="h-3 w-3 text-slate-400" />
-                        <span>{formatDate(c.createdAt)}</span>
+                        <span>{formatAgentDate(c.createdAt)}</span>
                       </div>
                     </td>
                   </tr>

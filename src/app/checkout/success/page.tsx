@@ -18,6 +18,13 @@ import {
   useReconcileCustomerPaymentMutation,
   useGetCustomerPaymentsQuery,
 } from "@/features/customer/api/customer-api";
+import {
+  useGetAgentBookingByIdQuery,
+  useGetAgentPaymentsQuery,
+  useReconcileAgentPaymentMutation,
+} from "@/features/agent/api/agent-api";
+import { useAppSelector } from "@/store/hooks";
+import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
 
 const MAX_POLL_COUNT = 6; // 6 polls * 3.5s = ~21 seconds max polling timeout
 const POLL_INTERVAL_MS = 3500;
@@ -27,35 +34,63 @@ function CheckoutSuccessContent() {
   const bookingId = searchParams.get("bookingId") || "";
   const sessionId = searchParams.get("session_id") || "";
 
+  const currentUser = useAppSelector(selectCurrentUser);
+  const isAgent = currentUser?.role === "agent";
+
   const [pollCount, setPollCount] = useState(0);
   const isReconcilingRef = useRef(false);
   const [reconciledOnce, setReconciledOnce] = useState(false);
 
-  // Query booking details to get latest paymentStatus
+  // Customer queries & mutations
   const {
-    data: bookingRes,
-    isLoading: isBookingLoading,
-    refetch: refetchBooking,
+    data: custBookingRes,
+    isLoading: isCustBookingLoading,
+    refetch: refetchCustBooking,
   } = useGetCustomerBookingByIdQuery(bookingId, {
-    skip: !bookingId,
-    pollingInterval: pollCount < MAX_POLL_COUNT ? POLL_INTERVAL_MS : 0,
+    skip: !bookingId || isAgent,
+    pollingInterval: pollCount < MAX_POLL_COUNT && !isAgent ? POLL_INTERVAL_MS : 0,
   });
 
-  // Query customer payment records for this booking to reconcile if needed
-  const { data: paymentsRes, refetch: refetchPayments } = useGetCustomerPaymentsQuery(
+  const { data: custPaymentsRes, refetch: refetchCustPayments } = useGetCustomerPaymentsQuery(
     { bookingId },
-    { skip: !bookingId },
+    { skip: !bookingId || isAgent },
   );
 
-  const [reconcilePayment, { isLoading: isReconcileMutationLoading }] =
+  const [reconcileCustomerPayment, { isLoading: isCustomerReconciling }] =
     useReconcileCustomerPaymentMutation();
 
-  const booking = bookingRes?.data;
+  // Agent queries & mutations
+  const {
+    data: agentBookingRes,
+    isLoading: isAgentBookingLoading,
+    refetch: refetchAgentBooking,
+  } = useGetAgentBookingByIdQuery(bookingId, {
+    skip: !bookingId || !isAgent,
+    pollingInterval: pollCount < MAX_POLL_COUNT && isAgent ? POLL_INTERVAL_MS : 0,
+  });
+
+  const { data: agentPaymentsRes, refetch: refetchAgentPayments } = useGetAgentPaymentsQuery(
+    { bookingId },
+    { skip: !bookingId || !isAgent },
+  );
+
+  const [reconcileAgentPayment, { isLoading: isAgentReconciling }] =
+    useReconcileAgentPaymentMutation();
+
+  const booking = isAgent ? agentBookingRes?.data : custBookingRes?.data;
   const isPaid = booking?.paymentStatus === "PAID";
 
-  const latestPayment = paymentsRes?.data?.items?.find(
+  const payments = isAgent ? agentPaymentsRes?.data?.items : custPaymentsRes?.data?.items;
+  const latestPayment = payments?.find(
     (p) => p.method === "STRIPE" || (sessionId && p.stripeSessionId === sessionId),
   );
+
+  const isReconcileMutationLoading = isAgent ? isAgentReconciling : isCustomerReconciling;
+  const isBookingLoading = isAgent ? isAgentBookingLoading : isCustBookingLoading;
+
+  const triggerReconcile = isAgent ? reconcileAgentPayment : reconcileCustomerPayment;
+  const refetchCurrentBooking = isAgent ? refetchAgentBooking : refetchCustBooking;
+  const refetchCurrentPayments = isAgent ? refetchAgentPayments : refetchCustPayments;
 
   // Trigger server-side reconciliation only once automatically if webhook hasn't finalized status
   useEffect(() => {
@@ -69,11 +104,11 @@ function CheckoutSuccessContent() {
       isReconcilingRef.current = true;
       setReconciledOnce(true);
 
-      reconcilePayment(latestPayment.id)
+      triggerReconcile(latestPayment.id)
         .unwrap()
         .then(() => {
-          refetchBooking();
-          refetchPayments();
+          refetchCurrentBooking();
+          refetchCurrentPayments();
         })
         .catch(() => {
           // Failure logged or handled, polling takes over
@@ -86,9 +121,9 @@ function CheckoutSuccessContent() {
     isPaid,
     reconciledOnce,
     latestPayment,
-    reconcilePayment,
-    refetchBooking,
-    refetchPayments,
+    triggerReconcile,
+    refetchCurrentBooking,
+    refetchCurrentPayments,
   ]);
 
   // Finite polling counter
@@ -103,14 +138,15 @@ function CheckoutSuccessContent() {
     if (isReconcilingRef.current) return;
     isReconcilingRef.current = true;
     try {
-      await refetchBooking();
-      const pRes = await refetchPayments();
-      const targetPayment = pRes.data?.data?.items?.find(
+      await refetchCurrentBooking();
+      const pRes = await refetchCurrentPayments();
+      const items = (pRes.data as { data?: { items?: Array<{ id: string; method: string; stripeSessionId?: string; status: string }> } })?.data?.items;
+      const targetPayment = items?.find(
         (p) => p.method === "STRIPE" || (sessionId && p.stripeSessionId === sessionId),
       );
       if (targetPayment && targetPayment.status !== "VERIFIED") {
-        await reconcilePayment(targetPayment.id).unwrap();
-        await refetchBooking();
+        await triggerReconcile(targetPayment.id).unwrap();
+        await refetchCurrentBooking();
       }
     } finally {
       isReconcilingRef.current = false;
@@ -155,18 +191,24 @@ function CheckoutSuccessContent() {
           </div>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Link href={`/dashboard/bookings/${bookingId}`} className="flex-1">
+            <Link
+              href={isAgent ? "/dashboard/agent/bookings" : `/dashboard/bookings/${bookingId}`}
+              className="flex-1"
+            >
               <Button className="w-full h-9 bg-[#176779] text-white hover:bg-[#135664] text-xs font-semibold gap-1.5">
-                <span>View Reservation</span>
+                <span>{isAgent ? "Agency Bookings" : "View Reservation"}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
-            <Link href="/dashboard/payments" className="flex-1">
+            <Link
+              href={isAgent ? "/dashboard/agent/commissions" : "/dashboard/payments"}
+              className="flex-1"
+            >
               <Button
                 variant="outline"
                 className="w-full h-9 border-[#E5EAED] text-xs font-semibold text-[#18282A]"
               >
-                Payment History
+                {isAgent ? "Commissions" : "Payment History"}
               </Button>
             </Link>
           </div>
@@ -185,9 +227,12 @@ function CheckoutSuccessContent() {
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Link href={`/dashboard/bookings/${bookingId}`} className="flex-1">
+            <Link
+              href={isAgent ? "/dashboard/agent/bookings" : `/dashboard/bookings/${bookingId}`}
+              className="flex-1"
+            >
               <Button className="w-full h-9 bg-[#176779] text-white hover:bg-[#135664] text-xs font-semibold">
-                Return to Booking
+                {isAgent ? "Agency Bookings" : "Return to Booking"}
               </Button>
             </Link>
           </div>

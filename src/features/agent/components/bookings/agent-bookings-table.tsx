@@ -1,16 +1,22 @@
 "use client";
 
 import * as React from "react";
-import {
-  useGetAgentBookingsQuery,
-} from "../../api/agent-api";
+import { useGetAgentBookingsQuery } from "../../api/agent-api";
 import type { AgentBookingRecord } from "../../types/agent";
 import {
   AgentBookingStatusBadge,
   AgentPaymentStatusBadge,
   AgentPriceApprovalBadge,
+  AgentFulfillmentStatusBadge,
 } from "../common/agent-status-badges";
 import { AgentBookingDetailsDialog } from "./agent-booking-details-dialog";
+import { CreateAgentBookingDialog } from "./create-agent-booking-dialog";
+import {
+  formatAgentCurrency,
+  extractTravelDateRaw,
+  extractGuestsFromNotes,
+  formatAgentDate,
+} from "../../utils/agent-formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +28,8 @@ import {
   RefreshCw,
   Compass,
   AlertCircle,
+  PlusCircle,
+  Users,
 } from "lucide-react";
 
 const STATUS_TABS = [
@@ -33,32 +41,13 @@ const STATUS_TABS = [
   { label: "Cancelled", value: "CANCELLED" },
 ];
 
-function formatDate(dateStr?: string | null): string {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "N/A";
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatPrice(amount?: number): string {
-  if (typeof amount !== "number") return "฿0";
-  return `฿${amount.toLocaleString("en-US")}`;
-}
-
 export function AgentBookingsTable() {
   const [page, setPage] = React.useState(1);
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [searchInput, setSearchInput] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [selectedBooking, setSelectedBooking] = React.useState<AgentBookingRecord | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
 
   // Debounce search input
   React.useEffect(() => {
@@ -111,6 +100,16 @@ export function AgentBookingsTable() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            size="sm"
+            className="h-9 bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664]"
+            data-testid="agent-create-booking-btn"
+          >
+            <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+            <span>Create Booking</span>
+          </Button>
+
           <Button
             onClick={() => refetch()}
             disabled={isFetching}
@@ -192,7 +191,7 @@ export function AgentBookingsTable() {
             <p className="mt-1 text-xs text-[#74818A] max-w-sm mx-auto">
               {debouncedSearch || statusFilter !== "ALL"
                 ? "No bookings match the specified filter criteria. Try resetting filters."
-                : "You haven't booked any tours yet. Explore available tours and start making bookings."}
+                : "You haven't booked any tours yet. Explore available tours or create a partner reservation."}
             </p>
           </div>
         ) : (
@@ -202,80 +201,107 @@ export function AgentBookingsTable() {
                 <tr className="border-b border-[#E5EAED] bg-[#F8FAFB] text-[11px] font-semibold uppercase text-[#74818A]">
                   <th className="px-4 py-3">Booking Ref</th>
                   <th className="px-4 py-3">Tour Details</th>
-                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Customer &amp; Guests</th>
                   <th className="px-4 py-3">Travel Date</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Payment</th>
+                  <th className="px-4 py-3">Payment &amp; Staff</th>
                   <th className="px-4 py-3 text-right">Price</th>
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5EAED]">
-                {bookings.map((booking) => (
-                  <tr
-                    key={booking.id}
-                    className="hover:bg-[#F8FAFB] transition-colors"
-                    data-testid={`booking-row-${booking.id}`}
-                  >
-                    <td className="px-4 py-3.5">
-                      <div className="font-mono font-medium text-[#18282A] select-all">
-                        {booking.id.slice(0, 8)}...
-                      </div>
-                      <span className="text-[10px] text-[#74818A]">
-                        {formatDate(booking.createdAt)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="font-semibold text-[#18282A] max-w-[220px] truncate" title={booking.service?.name}>
-                        {booking.service?.name || "Tour Service"}
-                      </div>
-                      <div className="text-[10px] text-[#74818A]">
-                        {booking.service?.type || "Tour"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="font-medium text-[#18282A] max-w-[160px] truncate">
-                        {booking.customer?.name || "Customer"}
-                      </div>
-                      <div className="text-[10px] text-[#74818A] max-w-[160px] truncate">
-                        {booking.customer?.email}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-[#18282A]">
-                      <div className="flex items-center gap-1 font-medium">
-                        <Calendar className="h-3 w-3 text-[#176779]" />
-                        <span>{formatDate(booking.availability?.date)}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex flex-col gap-1 items-start">
-                        <AgentBookingStatusBadge status={booking.status} />
-                        {booking.priceApproval && (
-                          <AgentPriceApprovalBadge status={booking.priceApproval.status} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <AgentPaymentStatusBadge status={booking.paymentStatus} />
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-semibold text-[#18282A]">
-                      {formatPrice(booking.finalPrice)}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedBooking(booking)}
-                        className="h-8 px-2.5 text-xs text-[#176779] hover:bg-teal-50 hover:text-[#135664] cursor-pointer"
-                        data-testid={`view-booking-${booking.id}`}
-                      >
-                        <Eye className="mr-1 h-3.5 w-3.5" />
-                        <span>Details</span>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {bookings.map((booking) => {
+                  const effectiveTravelDate = extractTravelDateRaw(
+                    booking.availability?.date,
+                    booking.notes,
+                  );
+                  const guests = extractGuestsFromNotes(booking.notes);
+
+                  return (
+                    <tr
+                      key={booking.id}
+                      className="hover:bg-[#F8FAFB] transition-colors"
+                      data-testid={`booking-row-${booking.id}`}
+                    >
+                      <td className="px-4 py-3.5">
+                        <div className="font-mono font-medium text-[#18282A] select-all">
+                          {booking.id.slice(0, 8)}...
+                        </div>
+                        <span className="text-[10px] text-[#74818A]">
+                          {formatAgentDate(booking.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div
+                          className="font-semibold text-[#18282A] max-w-[200px] truncate"
+                          title={booking.service?.name}
+                        >
+                          {booking.service?.name || "Tour Service"}
+                        </div>
+                        <div className="text-[10px] text-[#74818A]">
+                          {booking.service?.type || "Tour"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="font-medium text-[#18282A] max-w-[150px] truncate">
+                          {booking.customer?.name || "Customer"}
+                        </div>
+                        <div className="text-[10px] text-[#74818A] flex items-center gap-1">
+                          {guests ? (
+                            <>
+                              <Users className="h-3 w-3 text-[#176779]" />
+                              <span>
+                                {guests.adults}A
+                                {guests.children > 0 ? `/${guests.children}C` : ""}
+                                {guests.infants > 0 ? `/${guests.infants}I` : ""}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="truncate max-w-[140px]">{booking.customer?.email}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-[#18282A]">
+                        <div className="flex items-center gap-1 font-medium">
+                          <Calendar className="h-3 w-3 text-[#176779]" />
+                          <span>{formatAgentDate(effectiveTravelDate)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1 items-start">
+                          <AgentBookingStatusBadge status={booking.status} />
+                          {booking.priceApproval && (
+                            <AgentPriceApprovalBadge status={booking.priceApproval.status} />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1 items-start">
+                          <AgentPaymentStatusBadge status={booking.paymentStatus} />
+                          {booking.fulfillmentStatus && (
+                            <AgentFulfillmentStatusBadge status={booking.fulfillmentStatus} />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-semibold text-[#18282A]">
+                        {formatAgentCurrency(booking.finalPrice, booking.currency)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedBooking(booking)}
+                          className="h-8 px-2.5 text-xs text-[#176779] hover:bg-teal-50 hover:text-[#135664] cursor-pointer"
+                          data-testid={`view-booking-${booking.id}`}
+                        >
+                          <Eye className="mr-1 h-3.5 w-3.5" />
+                          <span>Details</span>
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -327,6 +353,14 @@ export function AgentBookingsTable() {
         isOpen={Boolean(selectedBooking)}
         onClose={() => setSelectedBooking(null)}
         booking={selectedBooking}
+        onBookingUpdated={() => refetch()}
+      />
+
+      {/* Create Agent Booking Modal */}
+      <CreateAgentBookingDialog
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => refetch()}
       />
     </div>
   );

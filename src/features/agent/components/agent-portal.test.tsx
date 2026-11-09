@@ -214,13 +214,16 @@ describe("AgentBookingDetailsDialog Component", () => {
     };
 
     const handleClose = vi.fn();
+    const store = makeStore();
 
     render(
-      <AgentBookingDetailsDialog
-        isOpen={true}
-        onClose={handleClose}
-        booking={mockBooking}
-      />
+      <Provider store={store}>
+        <AgentBookingDetailsDialog
+          isOpen={true}
+          onClose={handleClose}
+          booking={mockBooking}
+        />
+      </Provider>
     );
 
     expect(screen.getByTestId("agent-booking-details-dialog")).toBeInTheDocument();

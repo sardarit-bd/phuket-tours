@@ -34,6 +34,7 @@ export default function AgentOverviewPage() {
     data: bookingsResponse,
     isLoading: isBookingsLoading,
     isFetching: isBookingsFetching,
+    isError: isBookingsError,
     refetch: refetchBookings,
   } = useGetAgentBookingsQuery({ page: 1, limit: 5 });
 
@@ -41,6 +42,7 @@ export default function AgentOverviewPage() {
     data: commissionsResponse,
     isLoading: isCommissionsLoading,
     isFetching: isCommissionsFetching,
+    isError: isCommissionsError,
     refetch: refetchCommissions,
   } = useGetAgentCommissionsQuery({ page: 1, limit: 5 });
 
@@ -139,10 +141,12 @@ export default function AgentOverviewPage() {
         </div>
       )}
 
-      {/* 7 Supported Overview Metrics */}
+      {/* 8 Supported Overview Metrics */}
       <AgentMetricsCards
         metrics={metrics}
         isLoading={isOverviewLoading}
+        isError={Boolean(overviewError)}
+        currency={recentBookings[0]?.currency || recentCommissions[0]?.booking?.currency}
       />
 
       {/* Quick Navigation Cards */}
@@ -198,10 +202,14 @@ export default function AgentOverviewPage() {
         <RecentBookingsPreview
           bookings={recentBookings}
           isLoading={isBookingsLoading}
+          isError={isBookingsError}
+          onRetry={refetchBookings}
         />
         <RecentCommissionsPreview
           commissions={recentCommissions}
           isLoading={isCommissionsLoading}
+          isError={isCommissionsError}
+          onRetry={refetchCommissions}
         />
       </div>
     </div>

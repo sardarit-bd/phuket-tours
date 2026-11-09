@@ -20,6 +20,7 @@ import {
   Info,
   Banknote,
   Lock,
+  Coins,
 } from "lucide-react";
 import {
   StripeLogo,
@@ -41,6 +42,14 @@ import {
   useCreateCustomerPaymentMutation,
   useCreateStripeSessionMutation,
 } from "@/features/customer/api/customer-api";
+import {
+  useCreateAgentBookingMutation,
+  useCreateAgentCustomerMutation,
+  useCreateAgentPaymentMutation,
+  useCreateAgentStripeSessionMutation,
+  useGetAgentCustomersQuery,
+  useGetAgentPricingLimitsQuery,
+} from "@/features/agent/api/agent-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
@@ -55,6 +64,7 @@ function CheckoutContent() {
   const currentUser = useAppSelector(selectCurrentUser);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const isAuthInitialized = useAppSelector(selectIsAuthInitialized);
+  const isAgent = currentUser?.role === "agent";
 
   // Tour data query
   const {
@@ -65,13 +75,32 @@ function CheckoutContent() {
     skip: !tourId,
   });
 
-  // Booking & payment mutations
-  const [createBooking, { isLoading: isBookingLoading }] =
+  // Customer Booking & payment mutations
+  const [createCustomerBooking, { isLoading: isCustomerBookingLoading }] =
     useCreateCustomerBookingMutation();
-  const [createStripeSession, { isLoading: isStripeLoading }] =
+  const [createCustomerStripeSession, { isLoading: isCustomerStripeLoading }] =
     useCreateStripeSessionMutation();
-  const [createManualPayment, { isLoading: isManualPaymentLoading }] =
+  const [createCustomerManualPayment, { isLoading: isCustomerManualPaymentLoading }] =
     useCreateCustomerPaymentMutation();
+
+  // Agent Booking & payment mutations
+  const [createAgentCustomer, { isLoading: isCreatingAgentCustomer }] =
+    useCreateAgentCustomerMutation();
+  const [createAgentBooking, { isLoading: isAgentBookingLoading }] =
+    useCreateAgentBookingMutation();
+  const [createAgentStripeSession, { isLoading: isAgentStripeLoading }] =
+    useCreateAgentStripeSessionMutation();
+  const [createAgentManualPayment, { isLoading: isAgentManualPaymentLoading }] =
+    useCreateAgentPaymentMutation();
+
+  const { data: agentCustomersRes } = useGetAgentCustomersQuery(
+    { limit: 50 },
+    { skip: !isAgent },
+  );
+  const { data: agentPricingLimitsRes } = useGetAgentPricingLimitsQuery(
+    { serviceId: tourId || undefined },
+    { skip: !isAgent || !tourId },
+  );
 
   // Booking details form state
   const tomorrow = useMemo(() => {
@@ -85,10 +114,14 @@ function CheckoutContent() {
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
 
-  const [fullName, setFullName] = useState(currentUser?.name || "");
-  const [email, setEmail] = useState(currentUser?.email || "");
+  const [fullName, setFullName] = useState(!isAgent ? (currentUser?.name || "") : "");
+  const [email, setEmail] = useState(!isAgent ? (currentUser?.email || "") : "");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Agent Custom Rate state
+  const [useAgentRate, setUseAgentRate] = useState(false);
+  const [agentProposedPrice, setAgentProposedPrice] = useState("");
 
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>("STRIPE");
@@ -99,14 +132,15 @@ function CheckoutContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [manualSuccessBookingId, setManualSuccessBookingId] = useState<string | null>(null);
+  const [awaitingApprovalBookingId, setAwaitingApprovalBookingId] = useState<string | null>(null);
 
-  // Sync user info if loaded after mount
+  // Sync user info if loaded after mount (only for customer)
   React.useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !isAgent) {
       if (!fullName && currentUser.name) setFullName(currentUser.name);
       if (!email && currentUser.email) setEmail(currentUser.email);
     }
-  }, [currentUser, fullName, email]);
+  }, [currentUser, fullName, email, isAgent]);
 
   // Auth redirection check
   React.useEffect(() => {
@@ -140,9 +174,46 @@ function CheckoutContent() {
     ) / 100;
   }, [adults, children, infants, unitAdultPrice, unitChildPrice, unitInfantPrice]);
 
+  // Agent pricing limit logic
+  const pricingLimit = agentPricingLimitsRes?.data;
+  const maxDiscountPercentage = pricingLimit?.maxDiscountPercentage ?? 0;
+
+  const minAutoApprovePrice = useMemo(() => {
+    if (totalCalculatedPrice <= 0) return totalCalculatedPrice;
+    return (
+      Math.round(totalCalculatedPrice * (1 - maxDiscountPercentage / 100) * 100) / 100
+    );
+  }, [maxDiscountPercentage, totalCalculatedPrice]);
+
+  const effectiveAgentPrice = useMemo(() => {
+    if (!isAgent || !useAgentRate || !agentProposedPrice.trim()) {
+      return totalCalculatedPrice;
+    }
+    const parsed = Number(agentProposedPrice);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : totalCalculatedPrice;
+  }, [isAgent, useAgentRate, agentProposedPrice, totalCalculatedPrice]);
+
+  const willRequirePriceApproval =
+    isAgent &&
+    useAgentRate &&
+    effectiveAgentPrice < totalCalculatedPrice &&
+    effectiveAgentPrice < minAutoApprovePrice;
+
+  const effectiveFinalPrice = isAgent && useAgentRate ? effectiveAgentPrice : totalCalculatedPrice;
+
+  const isBusy =
+    isSubmitting ||
+    isCustomerBookingLoading ||
+    isCustomerStripeLoading ||
+    isCustomerManualPaymentLoading ||
+    isCreatingAgentCustomer ||
+    isAgentBookingLoading ||
+    isAgentStripeLoading ||
+    isAgentManualPaymentLoading;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || isBookingLoading || isStripeLoading || isManualPaymentLoading) {
+    if (isBusy) {
       return;
     }
     setErrorMsg(null);
@@ -158,7 +229,11 @@ function CheckoutContent() {
     }
 
     if (!fullName.trim() || !email.trim()) {
-      setErrorMsg("Please fill in contact name and email.");
+      setErrorMsg(
+        isAgent
+          ? "Please provide the client traveler's full name and email."
+          : "Please fill in contact name and email."
+      );
       return;
     }
 
@@ -175,55 +250,123 @@ function CheckoutContent() {
     setIsSubmitting(true);
 
     try {
-      // 1. Create booking in backend
+      let createdBookingId = "";
+      let requiresApproval = false;
+
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
       const contactSummary = `Contact: ${fullName.trim()} (${email.trim()}${phone.trim() ? `, ${phone.trim()}` : ""})`;
       const combinedNotes = notes.trim()
         ? `${contactSummary} | Notes: ${notes.trim()}`
         : contactSummary;
 
-      const bookingRes = await createBooking({
-        customerId: currentUser!.id,
-        serviceId: tour!.id,
-        travelDate,
-        adults,
-        children,
-        infants,
-        notes: combinedNotes,
-      }).unwrap();
-
-      const createdBookingId = bookingRes.data?.id;
-      if (!createdBookingId) {
-        throw new Error("Failed to receive booking confirmation from server.");
-      }
-
-      // 2. Initiate Payment based on selected method
-      if (paymentMethod === "STRIPE") {
-        const origin = typeof window !== "undefined" ? window.location.origin : "";
-        const successUrl = `${origin}/checkout/success?bookingId=${createdBookingId}&session_id={CHECKOUT_SESSION_ID}`;
-        const cancelUrl = `${origin}/checkout/cancel?bookingId=${createdBookingId}`;
-
-        const stripeRes = await createStripeSession({
-          bookingId: createdBookingId,
-          successUrl,
-          cancelUrl,
+      if (isAgent) {
+        // Step A: Resolve or create customer account for the client
+        const custRes = await createAgentCustomer({
+          name: fullName.trim(),
+          email: email.trim(),
+          phone: phone.trim() || null,
         }).unwrap();
 
-        if (stripeRes.data?.sessionUrl) {
-          window.location.href = stripeRes.data.sessionUrl;
+        const resolvedCustomerId = custRes.data.id;
+
+        // Step B: Create agent booking
+        const agentBookingRes = await createAgentBooking({
+          customerId: resolvedCustomerId,
+          serviceId: tour!.id,
+          travelDate,
+          adults,
+          children,
+          infants,
+          proposedPrice: effectiveAgentPrice,
+          notes: combinedNotes,
+        }).unwrap();
+
+        createdBookingId = agentBookingRes.data?.id;
+        requiresApproval = Boolean(
+          agentBookingRes.data?.requiresApproval ||
+          agentBookingRes.data?.status === "AWAITING_APPROVAL"
+        );
+
+        if (!createdBookingId) {
+          throw new Error("Failed to receive agent booking confirmation from server.");
+        }
+
+        // If price approval is needed, stop payment step and direct to confirmation screen
+        if (requiresApproval) {
+          setAwaitingApprovalBookingId(createdBookingId);
           return;
+        }
+
+        // Step C: Initiate agent payment
+        if (paymentMethod === "STRIPE") {
+          const successUrl = `${origin}/checkout/success?bookingId=${createdBookingId}&session_id={CHECKOUT_SESSION_ID}`;
+          const cancelUrl = `${origin}/checkout/cancel?bookingId=${createdBookingId}`;
+
+          const stripeRes = await createAgentStripeSession({
+            bookingId: createdBookingId,
+            successUrl,
+            cancelUrl,
+          }).unwrap();
+
+          if (stripeRes.data?.sessionUrl) {
+            window.location.href = stripeRes.data.sessionUrl;
+            return;
+          } else {
+            throw new Error("Unable to initialize Stripe Checkout session.");
+          }
         } else {
-          throw new Error("Unable to initialize Stripe Checkout session.");
+          await createAgentManualPayment({
+            bookingId: createdBookingId,
+            method: paymentMethod,
+            reference: transferReference.trim() || undefined,
+            receiptNote: receiptNote.trim() || undefined,
+          }).unwrap();
+
+          setManualSuccessBookingId(createdBookingId);
         }
       } else {
-        // Manual payment (BANK_TRANSFER or CASH)
-        await createManualPayment({
-          bookingId: createdBookingId,
-          method: paymentMethod,
-          reference: transferReference.trim() || undefined,
-          receiptNote: receiptNote.trim() || undefined,
+        // Customer Booking Flow
+        const bookingRes = await createCustomerBooking({
+          customerId: currentUser!.id,
+          serviceId: tour!.id,
+          travelDate,
+          adults,
+          children,
+          infants,
+          notes: combinedNotes,
         }).unwrap();
 
-        setManualSuccessBookingId(createdBookingId);
+        createdBookingId = bookingRes.data?.id;
+        if (!createdBookingId) {
+          throw new Error("Failed to receive booking confirmation from server.");
+        }
+
+        if (paymentMethod === "STRIPE") {
+          const successUrl = `${origin}/checkout/success?bookingId=${createdBookingId}&session_id={CHECKOUT_SESSION_ID}`;
+          const cancelUrl = `${origin}/checkout/cancel?bookingId=${createdBookingId}`;
+
+          const stripeRes = await createCustomerStripeSession({
+            bookingId: createdBookingId,
+            successUrl,
+            cancelUrl,
+          }).unwrap();
+
+          if (stripeRes.data?.sessionUrl) {
+            window.location.href = stripeRes.data.sessionUrl;
+            return;
+          } else {
+            throw new Error("Unable to initialize Stripe Checkout session.");
+          }
+        } else {
+          await createCustomerManualPayment({
+            bookingId: createdBookingId,
+            method: paymentMethod,
+            reference: transferReference.trim() || undefined,
+            receiptNote: receiptNote.trim() || undefined,
+          }).unwrap();
+
+          setManualSuccessBookingId(createdBookingId);
+        }
       }
     } catch (err: unknown) {
       const errorObj = err as { data?: { message?: string }; message?: string };
@@ -270,6 +413,35 @@ function CheckoutContent() {
     );
   }
 
+  // Price Approval required screen
+  if (awaitingApprovalBookingId) {
+    return (
+      <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6">
+        <div
+          className="mx-auto max-w-md rounded-2xl border border-[#E5EAED] bg-white p-8 text-center shadow-xs"
+          data-testid="awaiting-approval-success"
+        >
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-purple-50 border border-purple-200">
+            <ShieldCheck className="h-8 w-8 text-purple-600" />
+          </div>
+          <h2 className="mt-4 font-outfit text-2xl font-bold text-[#18282A]">
+            Submitted for Price Review
+          </h2>
+          <p className="mt-2 text-xs text-[#74818A] leading-relaxed">
+            Your custom partner rate request has been submitted to management for price approval. You will be notified once reviewed.
+          </p>
+          <div className="mt-6 space-y-3">
+            <Link href="/dashboard/agent/bookings" className="block">
+              <Button className="w-full bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664]">
+                Go to Agency Bookings
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Manual payment submitted success state
   if (manualSuccessBookingId) {
     return (
@@ -283,16 +455,21 @@ function CheckoutContent() {
             Your tour reservation has been received. Your payment record is now awaiting verification by our reservations team.
           </p>
           <div className="mt-6 space-y-3">
-            <Link href={`/dashboard/bookings/${manualSuccessBookingId}`} className="block">
+            <Link
+              href={isAgent ? "/dashboard/agent/bookings" : `/dashboard/bookings/${manualSuccessBookingId}`}
+              className="block"
+            >
               <Button className="w-full bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664]">
-                View Booking Details
+                {isAgent ? "View Agency Bookings" : "View Booking Details"}
               </Button>
             </Link>
-            <Link href="/dashboard/bookings" className="block">
-              <Button variant="outline" className="w-full border-[#E5EAED] text-xs font-medium text-[#18282A]">
-                Go to My Bookings
-              </Button>
-            </Link>
+            {!isAgent && (
+              <Link href="/dashboard/bookings" className="block">
+                <Button variant="outline" className="w-full border-[#E5EAED] text-xs font-medium text-[#18282A]">
+                  Go to My Bookings
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -441,13 +618,23 @@ function CheckoutContent() {
             <div className="rounded-2xl border border-[#E5EAED] bg-white p-6 shadow-2xs">
               <h2 className="font-outfit text-base font-bold text-[#18282A] flex items-center gap-2">
                 <Users className="h-4 w-4 text-[#176779]" />
-                <span>2. Lead Traveler Contact Details</span>
+                <span>
+                  {isAgent
+                    ? "2. Customer / Lead Traveler Details (Agency Client)"
+                    : "2. Lead Traveler Contact Details"}
+                </span>
               </h2>
+
+              {isAgent && (
+                <p className="mt-1 text-xs text-[#74818A]">
+                  Enter the details of your agency customer. Do not enter your own agent credentials.
+                </p>
+              )}
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="fullName" className="block text-xs font-semibold text-[#18282A] mb-1.5">
-                    Full Name
+                    {isAgent ? "Client Full Name *" : "Full Name"}
                   </label>
                   <Input
                     id="fullName"
@@ -462,7 +649,7 @@ function CheckoutContent() {
 
                 <div>
                   <label htmlFor="email" className="block text-xs font-semibold text-[#18282A] mb-1.5">
-                    Email Address
+                    {isAgent ? "Client Email Address *" : "Email Address"}
                   </label>
                   <Input
                     id="email"
@@ -478,7 +665,7 @@ function CheckoutContent() {
 
                 <div className="sm:col-span-2">
                   <label htmlFor="phone" className="block text-xs font-semibold text-[#18282A] mb-1.5">
-                    Phone Number / WhatsApp (Optional)
+                    {isAgent ? "Client Phone / WhatsApp" : "Phone Number / WhatsApp (Optional)"}
                   </label>
                   <Input
                     id="phone"
@@ -506,6 +693,88 @@ function CheckoutContent() {
                 </div>
               </div>
             </div>
+
+            {/* Agent Partner Pricing Card (Agents only) */}
+            {isAgent && (
+              <div className="rounded-2xl border border-[#E5EAED] bg-white p-6 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-outfit text-base font-bold text-[#18282A] flex items-center gap-2">
+                    <Coins className="h-4 w-4 text-[#176779]" />
+                    <span>Partner Pricing &amp; Custom Discount</span>
+                  </h2>
+                  <label className="inline-flex items-center gap-2 text-xs font-medium text-[#18282A] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useAgentRate}
+                      onChange={(e) => {
+                        setUseAgentRate(e.target.checked);
+                        if (e.target.checked && !agentProposedPrice) {
+                          setAgentProposedPrice(String(totalCalculatedPrice));
+                        }
+                      }}
+                      className="rounded border-[#E5EAED] text-[#176779] focus:ring-[#176779]"
+                      data-testid="agent-toggle-custom-rate"
+                    />
+                    <span>Propose Partner Rate</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-xs">
+                  <div className="rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-3">
+                    <span className="text-[11px] text-[#74818A] block">Retail Amount</span>
+                    <span className="mt-0.5 font-outfit text-base font-bold text-[#18282A] block">
+                      {formatPrice(totalCalculatedPrice, currency)}
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-3">
+                    <span className="text-[11px] text-[#74818A] block">Instant Floor</span>
+                    <span className="mt-0.5 font-outfit text-base font-bold text-emerald-700 block">
+                      {formatPrice(minAutoApprovePrice, currency)}
+                    </span>
+                    <span className="text-[10px] text-[#74818A]">
+                      {maxDiscountPercentage > 0
+                        ? `Up to ${maxDiscountPercentage}% discount`
+                        : "Standard rate"}
+                    </span>
+                  </div>
+                  <div className="rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-3">
+                    <span className="text-[11px] text-[#74818A] block">Approval Status</span>
+                    {willRequirePriceApproval ? (
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-purple-700">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Requires Review
+                      </span>
+                    ) : (
+                      <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Instant Confirm
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {useAgentRate && (
+                  <div>
+                    <label
+                      htmlFor="agentProposedPrice"
+                      className="block text-xs font-semibold text-[#18282A] mb-1"
+                    >
+                      Proposed Final Price ({currency}) *
+                    </label>
+                    <Input
+                      id="agentProposedPrice"
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      value={agentProposedPrice}
+                      onChange={(e) => setAgentProposedPrice(e.target.value)}
+                      className="h-9 text-xs border-[#E5EAED] rounded-xl"
+                      data-testid="agent-proposed-price-input"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Payment Method Selection Card */}
             <div className="rounded-2xl border border-[#E5EAED] bg-white p-6 shadow-2xs">
@@ -796,10 +1065,14 @@ function CheckoutContent() {
                 <div className="flex items-baseline justify-between border-t border-[#EEF2F3] pt-3">
                   <div>
                     <span className="text-sm font-bold text-[#18282A] block">Total Amount</span>
-                    <span className="text-[10px] text-[#74818A]">Verified &amp; calculated by server</span>
+                    <span className="text-[10px] text-[#74818A]">
+                      {isAgent && useAgentRate
+                        ? "Partner proposed pricing applied"
+                        : "Verified & calculated by server"}
+                    </span>
                   </div>
                   <span className="text-2xl font-bold text-[#176779]" data-testid="checkout-total-price">
-                    {formatPrice(totalCalculatedPrice, currency)}
+                    {formatPrice(effectiveFinalPrice, currency)}
                   </span>
                 </div>
               </div>
@@ -819,7 +1092,7 @@ function CheckoutContent() {
               {/* Submit CTA */}
               <Button
                 type="submit"
-                disabled={isSubmitting || isBookingLoading || isStripeLoading || isManualPaymentLoading}
+                disabled={isBusy}
                 className="mt-5 w-full h-11 rounded-full bg-[#176779] hover:bg-[#135664] text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer"
                 data-testid="checkout-submit-btn"
               >
@@ -828,6 +1101,8 @@ function CheckoutContent() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     <span>Processing Reservation...</span>
                   </>
+                ) : willRequirePriceApproval ? (
+                  <span>Submit for Price Approval</span>
                 ) : paymentMethod === "STRIPE" ? (
                   <span>Proceed to Stripe Payment</span>
                 ) : (
