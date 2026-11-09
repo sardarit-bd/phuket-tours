@@ -9,8 +9,9 @@ import {
   CalendarX,
   Copy,
   Check,
+  Users,
 } from "lucide-react";
-import { formatDate } from "../../utils/format";
+import { formatDate, formatReportMoney } from "../../utils/format";
 import type { OperationalBookingRecord } from "../../types/admin-bookings";
 import {
   BookingStatusBadge,
@@ -26,6 +27,17 @@ export interface BookingsTableProps {
   onAssignStaff: (booking: OperationalBookingRecord) => void;
   onUpdateFulfillment: (booking: OperationalBookingRecord) => void;
   onReviewPriceApproval?: (booking: OperationalBookingRecord) => void;
+  onConfirmPending?: (booking: OperationalBookingRecord) => void;
+  onRejectPending?: (booking: OperationalBookingRecord) => void;
+}
+
+function parseGuestsSummary(notes?: string | null): string {
+  if (!notes) return "1 Guest";
+  const match = notes.match(/Guests:\s*([^|]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return "1 Guest";
 }
 
 export function BookingsTable({
@@ -35,6 +47,8 @@ export function BookingsTable({
   onAssignStaff,
   onUpdateFulfillment,
   onReviewPriceApproval,
+  onConfirmPending,
+  onRejectPending,
 }: BookingsTableProps) {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
@@ -58,10 +72,11 @@ export function BookingsTable({
               <th scope="col" className="min-w-[170px] px-4 py-3.5 font-semibold">Customer</th>
               <th scope="col" className="min-w-[180px] px-4 py-3.5 font-semibold">Tour / Service</th>
               <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">Travel Date</th>
-              <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Status</th>
-              <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Fulfillment</th>
-              <th scope="col" className="min-w-[90px] px-4 py-3.5 font-semibold">Payment</th>
-              <th scope="col" className="min-w-[130px] px-4 py-3.5 font-semibold">Assigned Staff</th>
+              <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Guests</th>
+              <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Amount</th>
+              <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Payment Status</th>
+              <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Booking Status</th>
+              <th scope="col" className="min-w-[130px] px-4 py-3.5 font-semibold">Staff Assignment</th>
               <th scope="col" className="w-12 px-4 py-3.5 text-right font-semibold">
                 <span className="sr-only">Actions</span>
               </th>
@@ -70,39 +85,16 @@ export function BookingsTable({
           <tbody className="divide-y divide-[#E5EAED] bg-white">
             {Array.from({ length: 6 }).map((_, idx) => (
               <tr key={idx} className="animate-pulse">
-                <td className="px-4 py-3.5">
-                  <div className="h-4 w-20 rounded bg-slate-200" />
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="space-y-1.5">
-                    <div className="h-3.5 w-28 rounded bg-slate-200" />
-                    <div className="h-3 w-20 rounded bg-slate-100" />
-                  </div>
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="space-y-1.5">
-                    <div className="h-3.5 w-36 rounded bg-slate-200" />
-                    <div className="h-3 w-16 rounded bg-slate-100" />
-                  </div>
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="h-3.5 w-24 rounded bg-slate-200" />
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="h-5 w-20 rounded-full bg-slate-200" />
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="h-5 w-20 rounded-full bg-slate-200" />
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="h-5 w-16 rounded-full bg-slate-200" />
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="h-3.5 w-24 rounded bg-slate-200" />
-                </td>
-                <td className="px-4 py-3.5 text-right">
-                  <div className="h-7 w-7 rounded bg-slate-200 ml-auto" />
-                </td>
+                <td className="px-4 py-3.5"><div className="h-4 w-20 rounded bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-4 w-28 rounded bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-4 w-36 rounded bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-4 w-24 rounded bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-4 w-16 rounded bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-4 w-20 rounded bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-5 w-16 rounded-full bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-5 w-20 rounded-full bg-slate-200" /></td>
+                <td className="px-4 py-3.5"><div className="h-4 w-24 rounded bg-slate-200" /></td>
+                <td className="px-4 py-3.5 text-right"><div className="h-7 w-7 rounded bg-slate-200 ml-auto" /></td>
               </tr>
             ))}
           </tbody>
@@ -120,9 +112,9 @@ export function BookingsTable({
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F7F8] text-[#176779] shadow-inner mb-4">
           <CalendarX className="h-7 w-7" />
         </div>
-        <h3 className="text-sm font-semibold text-[#18282A]">No operational bookings found</h3>
+        <h3 className="text-sm font-semibold text-[#18282A]">No bookings found</h3>
         <p className="mt-1 max-w-sm text-xs text-[#74818A]">
-          No bookings match the selected filters. Only bookings with status CONFIRMED, IN_PROGRESS, or COMPLETED appear in this queue.
+          No customer bookings match the selected status or filters. Try adjusting your search query or status selection.
         </p>
       </div>
     );
@@ -137,28 +129,31 @@ export function BookingsTable({
         <thead>
           <tr className="border-b border-[#E5EAED] bg-[#F8FAFB] text-[#74818A]">
             <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">
-              Booking ID
+              Booking Reference
             </th>
             <th scope="col" className="min-w-[170px] px-4 py-3.5 font-semibold">
               Customer
             </th>
             <th scope="col" className="min-w-[180px] px-4 py-3.5 font-semibold">
-              Tour / Service
+              Tour
             </th>
             <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">
               Travel Date
             </th>
             <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">
-              Status
+              Guest Count
+            </th>
+            <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">
+              Amount
             </th>
             <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">
-              Fulfillment
+              Payment Status
             </th>
-            <th scope="col" className="min-w-[90px] px-4 py-3.5 font-semibold">
-              Payment
+            <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">
+              Booking Status
             </th>
             <th scope="col" className="min-w-[130px] px-4 py-3.5 font-semibold">
-              Assigned Staff
+              Staff Assignment
             </th>
             <th scope="col" className="w-12 px-4 py-3.5 text-right font-semibold">
               <span className="sr-only">Actions</span>
@@ -169,6 +164,9 @@ export function BookingsTable({
           {bookings.map((booking) => {
             const isCopied = copiedId === booking.id;
             const shortId = booking.id.length > 8 ? `${booking.id.slice(0, 8)}…` : booking.id;
+            const guestText = parseGuestsSummary(booking.notes);
+            const amountNum = Number(booking.finalPrice ?? booking.basePrice ?? 0);
+            const formattedPrice = formatReportMoney(amountNum, booking.currency || "USD");
 
             return (
               <tr
@@ -176,7 +174,7 @@ export function BookingsTable({
                 data-testid={`booking-row-${booking.id}`}
                 className="transition-colors hover:bg-[#F8FAFB]/80"
               >
-                {/* Booking ID */}
+                {/* Booking Reference */}
                 <td className="px-4 py-3.5 align-middle">
                   <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-[#18282A]">
                     <button
@@ -212,6 +210,11 @@ export function BookingsTable({
                     >
                       {booking.customer?.name || "Unknown Customer"}
                     </p>
+                    {booking.customer?.email && (
+                      <p className="text-[11px] text-[#74818A] truncate mt-0.5" title={booking.customer.email}>
+                        {booking.customer.email}
+                      </p>
+                    )}
                     {booking.customer?.phone ? (
                       <p className="flex items-center gap-1 text-[11px] text-[#74818A] truncate mt-0.5">
                         <Phone className="h-3 w-3 shrink-0 text-[#96A4AB]" />
@@ -223,7 +226,7 @@ export function BookingsTable({
                   </div>
                 </td>
 
-                {/* Tour / Service */}
+                {/* Tour */}
                 <td className="px-4 py-3.5 align-middle">
                   <div className="max-w-[180px]">
                     <p
@@ -253,14 +256,21 @@ export function BookingsTable({
                   </div>
                 </td>
 
-                {/* Booking Status */}
+                {/* Guest Count */}
                 <td className="px-4 py-3.5 align-middle">
-                  <BookingStatusBadge status={booking.status} />
+                  <div className="flex items-center gap-1.5 text-[#18282A] whitespace-nowrap">
+                    <Users className="h-3.5 w-3.5 text-[#74818A] shrink-0" />
+                    <span className="truncate max-w-[100px]" title={guestText}>
+                      {guestText}
+                    </span>
+                  </div>
                 </td>
 
-                {/* Fulfillment Status */}
+                {/* Booking Amount and Currency */}
                 <td className="px-4 py-3.5 align-middle">
-                  <FulfillmentStatusBadge status={booking.fulfillmentStatus} />
+                  <span className="font-semibold text-[#18282A] whitespace-nowrap">
+                    {formattedPrice}
+                  </span>
                 </td>
 
                 {/* Payment Status */}
@@ -268,7 +278,12 @@ export function BookingsTable({
                   <PaymentStatusBadge status={booking.paymentStatus} />
                 </td>
 
-                {/* Assigned Staff */}
+                {/* Booking Status */}
+                <td className="px-4 py-3.5 align-middle">
+                  <BookingStatusBadge status={booking.status} />
+                </td>
+
+                {/* Staff Assignment */}
                 <td className="px-4 py-3.5 align-middle">
                   {booking.assignedStaff?.name ? (
                     <div className="flex items-center gap-1.5 text-[#18282A]">
@@ -290,6 +305,8 @@ export function BookingsTable({
                     onAssignStaff={onAssignStaff}
                     onUpdateFulfillment={onUpdateFulfillment}
                     onReviewPriceApproval={onReviewPriceApproval}
+                    onConfirmPending={onConfirmPending}
+                    onRejectPending={onRejectPending}
                   />
                 </td>
               </tr>

@@ -6,10 +6,11 @@ import {
   type FulfillmentStatusValue,
   type BookingPaymentStatus,
 } from "../../types/admin-bookings";
+import type { AdminBookingStatus } from "../../types/admin";
 import { BOOKING_STATUS_CONFIG } from "../../utils/format";
 
-export function BookingStatusBadge({ status }: { status: OperationalBookingStatus }) {
-  const config = BOOKING_STATUS_CONFIG[status] || {
+export function BookingStatusBadge({ status }: { status: AdminBookingStatus | OperationalBookingStatus | string }) {
+  const config = BOOKING_STATUS_CONFIG[status as AdminBookingStatus] || {
     label: status,
     badgeClass: "bg-slate-50 text-slate-700 border-slate-200",
   };

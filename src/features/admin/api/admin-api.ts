@@ -27,6 +27,9 @@ import type {
   UpdateBookingFulfillmentInput,
   ReviewBookingPriceApprovalInput,
   AdminStaffListResponse,
+  PendingReservationRecord,
+  AdminPendingReservationsResponse,
+  ReviewPendingReservationInput,
   AdminUserRecord,
   AdminUserListResponse,
   GetAdminUsersParams,
@@ -366,6 +369,51 @@ export const adminApi = baseApi.injectEndpoints({
           ...(approvedPrice !== undefined ? { approvedPrice } : {}),
           ...(notes ? { notes } : {}),
         },
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    getAdminPendingReservations: builder.query<
+      AdminApiResponse<AdminPendingReservationsResponse>,
+      { page?: number; limit?: number; search?: string; paymentStatus?: string } | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.search) queryParams.search = params.search;
+        if (params?.paymentStatus) queryParams.paymentStatus = params.paymentStatus;
+
+        return {
+          url: "/admin/bookings/pending",
+          method: "GET",
+          params: queryParams,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((b) => ({
+                type: "Booking" as const,
+                id: b.id,
+              })),
+              { type: "Booking", id: "LIST" },
+            ]
+          : [{ type: "Booking", id: "LIST" }],
+    }),
+
+    reviewAdminPendingReservation: builder.mutation<
+      AdminApiResponse<PendingReservationRecord>,
+      ReviewPendingReservationInput
+    >({
+      query: ({ bookingId, action, notes }) => ({
+        url: `/admin/bookings/pending/${bookingId}/review`,
+        method: "POST",
+        body: { action, notes },
       }),
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
@@ -930,6 +978,9 @@ export const {
   useAssignBookingStaffMutation,
   useUpdateBookingFulfillmentStatusMutation,
   useReviewBookingPriceApprovalMutation,
+  useGetAdminPendingReservationsQuery,
+  useLazyGetAdminPendingReservationsQuery,
+  useReviewAdminPendingReservationMutation,
   // User Management Hooks
   useGetAdminUsersQuery,
   useLazyGetAdminUsersQuery,

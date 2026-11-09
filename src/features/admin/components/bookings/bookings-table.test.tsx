@@ -98,7 +98,6 @@ describe("BookingsTable component", () => {
     );
 
     expect(screen.getByTestId("booking-status-confirmed")).toBeInTheDocument();
-    expect(screen.getByTestId("fulfillment-status-not_started")).toBeInTheDocument();
     expect(screen.getByTestId("payment-status-paid")).toBeInTheDocument();
   });
 
@@ -129,7 +128,7 @@ describe("BookingsTable component", () => {
     );
 
     expect(screen.getByTestId("admin-bookings-empty")).toBeInTheDocument();
-    expect(screen.getByText("No operational bookings found")).toBeInTheDocument();
+    expect(screen.getByText("No bookings found")).toBeInTheDocument();
   });
 
   it("renders skeleton loader when isLoading is true", () => {
