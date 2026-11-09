@@ -22,6 +22,9 @@ import type {
   UpdateAdminAvailabilityInput,
   AdminBookingsListResponse,
   GetAdminBookingsParams,
+  GetStaffBookingsParams,
+  StaffBookingRecord,
+  StaffBookingsListResponse,
   OperationalBookingRecord,
   AssignBookingStaffInput,
   UpdateBookingFulfillmentInput,
@@ -334,9 +337,57 @@ export const adminApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: { staffId, notes },
       }),
+      async onQueryStarted({ bookingId, staffId }, { dispatch, queryFulfilled, getState }) {
+        // Optimistic update on all getAdminOperationsBookings queries in cache
+        const patchResult = dispatch(
+          adminApi.util.updateQueryData(
+            "getAdminOperationsBookings" as any,
+            undefined as any,
+            (draft: any) => {
+              if (draft?.data?.items) {
+                const booking = draft.data.items.find((b: any) => b.id === bookingId);
+                if (booking) {
+                  booking.assignedStaffId = staffId;
+                  // If staffId is null, clear assignedStaff relation
+                  if (!staffId) {
+                    booking.assignedStaff = null;
+                  }
+                }
+              }
+            }
+          )
+        );
+
+        try {
+          const { data: response } = await queryFulfilled;
+          // Apply verified server data directly to getAdminOperationsBookings cache
+          if (response?.data) {
+            dispatch(
+              adminApi.util.updateQueryData(
+                "getAdminOperationsBookings" as any,
+                undefined as any,
+                (draft: any) => {
+                  if (draft?.data?.items) {
+                    const idx = draft.data.items.findIndex((b: any) => b.id === bookingId);
+                    if (idx !== -1) {
+                      draft.data.items[idx] = {
+                        ...draft.data.items[idx],
+                        ...response.data,
+                      };
+                    }
+                  }
+                }
+              )
+            );
+          }
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
         "AdminReport",
       ],
     }),
@@ -353,6 +404,67 @@ export const adminApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    // Staff Portal Operations Endpoints
+    getStaffOperationsBookings: builder.query<
+      AdminApiResponse<StaffBookingsListResponse>,
+      GetStaffBookingsParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.fulfillmentStatus && params.fulfillmentStatus !== "ALL") {
+          queryParams.fulfillmentStatus = params.fulfillmentStatus;
+        }
+
+        return {
+          url: "/staff/operations/bookings",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((b) => ({
+                type: "Booking" as const,
+                id: b.id,
+              })),
+              { type: "Booking", id: "STAFF_LIST" },
+            ]
+          : [{ type: "Booking", id: "STAFF_LIST" }],
+    }),
+
+    getStaffOperationsBookingById: builder.query<
+      AdminApiResponse<StaffBookingRecord>,
+      string
+    >({
+      query: (bookingId) => ({
+        url: `/staff/operations/bookings/${bookingId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, bookingId) => [
+        { type: "Booking", id: bookingId },
+      ],
+    }),
+
+    updateStaffBookingFulfillmentStatus: builder.mutation<
+      AdminApiResponse<StaffBookingRecord>,
+      UpdateBookingFulfillmentInput
+    >({
+      query: ({ bookingId, fulfillmentStatus, notes }) => ({
+        url: `/staff/operations/bookings/${bookingId}/status`,
+        method: "PATCH",
+        body: { fulfillmentStatus, notes },
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
         "AdminReport",
       ],
     }),
@@ -981,6 +1093,12 @@ export const {
   useGetAdminPendingReservationsQuery,
   useLazyGetAdminPendingReservationsQuery,
   useReviewAdminPendingReservationMutation,
+  // Staff Portal Hooks
+  useGetStaffOperationsBookingsQuery,
+  useLazyGetStaffOperationsBookingsQuery,
+  useGetStaffOperationsBookingByIdQuery,
+  useLazyGetStaffOperationsBookingByIdQuery,
+  useUpdateStaffBookingFulfillmentStatusMutation,
   // User Management Hooks
   useGetAdminUsersQuery,
   useLazyGetAdminUsersQuery,

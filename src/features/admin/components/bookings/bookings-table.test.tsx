@@ -144,4 +144,60 @@ describe("BookingsTable component", () => {
 
     expect(screen.getByTestId("admin-bookings-table-loading")).toBeInTheDocument();
   });
+
+  it("renders staff assignment column with real staff name, avatar initials, and reassign action", () => {
+    render(
+      <BookingsTable
+        bookings={[MOCK_BOOKING_1]}
+        onViewDetails={mockViewDetails}
+        onAssignStaff={mockAssignStaff}
+        onUpdateFulfillment={mockUpdateFulfillment}
+      />
+    );
+
+    // Displays staff name and initials
+    expect(screen.getByTestId("assigned-staff-name-bkg-101-uuid")).toHaveTextContent("Somchai Prasert");
+    expect(screen.getByText("SP")).toBeInTheDocument();
+
+    // Assign button is hidden when assigned; Reassign button is visible
+    expect(screen.queryByTestId("quick-assign-staff-bkg-101-uuid")).not.toBeInTheDocument();
+    const reassignBtn = screen.getByTestId("reassign-staff-bkg-101-uuid");
+    expect(reassignBtn).toBeInTheDocument();
+
+    fireEvent.click(reassignBtn);
+    expect(mockAssignStaff).toHaveBeenCalledWith(MOCK_BOOKING_1);
+  });
+
+  it("resolves staff name from staffMembers list if assignedStaff relation is absent", () => {
+    const bookingWithOnlyId: OperationalBookingRecord = {
+      ...MOCK_BOOKING_2,
+      assignedStaffId: "staff-99",
+      assignedStaff: null,
+    };
+
+    render(
+      <BookingsTable
+        bookings={[bookingWithOnlyId]}
+        staffMembers={[
+          {
+            id: "staff-99",
+            name: "Anong Saelao",
+            email: "anong@phukettours.com",
+            phone: "+66 82 345 6789",
+            role: "staff",
+            status: "active",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ]}
+        onViewDetails={mockViewDetails}
+        onAssignStaff={mockAssignStaff}
+        onUpdateFulfillment={mockUpdateFulfillment}
+      />
+    );
+
+    expect(screen.getByTestId("assigned-staff-name-bkg-102-uuid")).toHaveTextContent("Anong Saelao");
+    expect(screen.getByText("AS")).toBeInTheDocument();
+    expect(screen.queryByText("Unassigned")).not.toBeInTheDocument();
+  });
 });

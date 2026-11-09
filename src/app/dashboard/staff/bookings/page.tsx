@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import AdminPageDefault from "@/app/dashboard/admin/bookings/page";
+import { StaffBookingsView } from "@/features/staff/components/bookings/staff-bookings-view";
 
 export const metadata: Metadata = {
-  title: "Bookings Management — Staff Portal",
+  title: "Assigned Tours & Bookings — Staff Portal",
   description:
-    "Operational tour bookings queue, staff assignments, and fulfillment progress.",
+    "Operational tour queue, guest pickup manifests, and tour fulfillment delivery.",
 };
 
-export default AdminPageDefault;
+export default function StaffBookingsPage() {
+  return <StaffBookingsView />;
+}

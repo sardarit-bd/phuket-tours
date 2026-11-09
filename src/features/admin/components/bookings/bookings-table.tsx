@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { formatDate, formatReportMoney } from "../../utils/format";
-import type { OperationalBookingRecord } from "../../types/admin-bookings";
+import type { OperationalBookingRecord, AdminStaffMember } from "../../types/admin-bookings";
 import {
   BookingStatusBadge,
   FulfillmentStatusBadge,
@@ -22,6 +22,7 @@ import { BookingActionsMenu } from "./booking-actions-menu";
 
 export interface BookingsTableProps {
   bookings: OperationalBookingRecord[];
+  staffMembers?: AdminStaffMember[];
   isLoading?: boolean;
   onViewDetails: (booking: OperationalBookingRecord) => void;
   onAssignStaff: (booking: OperationalBookingRecord) => void;
@@ -29,6 +30,13 @@ export interface BookingsTableProps {
   onReviewPriceApproval?: (booking: OperationalBookingRecord) => void;
   onConfirmPending?: (booking: OperationalBookingRecord) => void;
   onRejectPending?: (booking: OperationalBookingRecord) => void;
+}
+
+function getStaffInitials(name?: string | null): string {
+  if (!name) return "??";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function parseGuestsSummary(notes?: string | null): string {
@@ -42,6 +50,7 @@ function parseGuestsSummary(notes?: string | null): string {
 
 export function BookingsTable({
   bookings,
+  staffMembers = [],
   isLoading = false,
   onViewDetails,
   onAssignStaff,
@@ -51,6 +60,15 @@ export function BookingsTable({
   onRejectPending,
 }: BookingsTableProps) {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
+
+  // Map staffMembers by id for fallback resolution
+  const staffMemberMap = React.useMemo(() => {
+    const map = new Map<string, AdminStaffMember>();
+    for (const s of staffMembers) {
+      map.set(s.id, s);
+    }
+    return map;
+  }, [staffMembers]);
 
   const handleCopyId = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -167,6 +185,12 @@ export function BookingsTable({
             const guestText = parseGuestsSummary(booking.notes);
             const amountNum = Number(booking.finalPrice ?? booking.basePrice ?? 0);
             const formattedPrice = formatReportMoney(amountNum, booking.currency || "USD");
+
+            // Resolve assigned staff from relation or fallback to staffMemberMap by ID
+            const assignedStaffName =
+              booking.assignedStaff?.name ||
+              (booking.assignedStaffId ? staffMemberMap.get(booking.assignedStaffId)?.name : null);
+            const isAssigned = Boolean(booking.assignedStaffId || assignedStaffName);
 
             return (
               <tr
@@ -285,15 +309,55 @@ export function BookingsTable({
 
                 {/* Staff Assignment */}
                 <td className="px-4 py-3.5 align-middle">
-                  {booking.assignedStaff?.name ? (
-                    <div className="flex items-center gap-1.5 text-[#18282A]">
-                      <UserCheck className="h-3.5 w-3.5 text-[#176779] shrink-0" />
-                      <span className="truncate max-w-[120px]" title={booking.assignedStaff.name}>
-                        {booking.assignedStaff.name}
-                      </span>
+                  {isAssigned ? (
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#176779]/10 text-[11px] font-bold text-[#176779]"
+                        title={assignedStaffName || "Assigned Staff"}
+                      >
+                        {getStaffInitials(assignedStaffName)}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span
+                          className="truncate max-w-[110px] text-xs font-medium text-[#18282A]"
+                          title={assignedStaffName || "Assigned Staff"}
+                          data-testid={`assigned-staff-name-${booking.id}`}
+                        >
+                          {assignedStaffName || "Staff Member"}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAssignStaff(booking);
+                            }}
+                            className="text-[10px] font-medium text-[#176779] hover:underline cursor-pointer"
+                            title="Reassign staff member"
+                            data-testid={`reassign-staff-${booking.id}`}
+                          >
+                            Reassign
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <span className="text-[#B0BCC2] italic">Unassigned</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#B0BCC2] italic text-xs">Unassigned</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAssignStaff(booking);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md border border-dashed border-[#B0BCC2] bg-white px-2 py-0.5 text-[11px] font-medium text-[#74818A] hover:border-[#176779] hover:text-[#176779] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+                        title="Assign a staff member"
+                        data-testid={`quick-assign-staff-${booking.id}`}
+                      >
+                        <UserCheck className="h-3 w-3" />
+                        <span>Assign</span>
+                      </button>
+                    </div>
                   )}
                 </td>
 

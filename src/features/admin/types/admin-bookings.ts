@@ -75,6 +75,21 @@ export interface GetAdminBookingsParams {
   assignedStaffId?: string;
 }
 
+export interface GetStaffBookingsParams {
+  page?: number;
+  limit?: number;
+  fulfillmentStatus?: string;
+}
+
+export interface StaffBookingRecord extends OperationalBookingRecord {}
+
+export interface StaffBookingsListResponse {
+  items: StaffBookingRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
 export interface AdminBookingsListResponse {
   items: OperationalBookingRecord[];
   page: number;
@@ -131,6 +146,11 @@ export interface PendingReservationRecord {
   requiresApproval: boolean;
   notes: string | null;
   internalNotes: string | null;
+  assignedStaffId?: string | null;
+  assignedStaff?: {
+    id: string;
+    name: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
   customer: {

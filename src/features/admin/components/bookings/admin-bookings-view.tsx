@@ -126,7 +126,7 @@ export function AdminBookingsView() {
       status: p.status,
       fulfillmentStatus: p.fulfillmentStatus || "NOT_STARTED",
       paymentStatus: p.paymentStatus,
-      assignedStaffId: null,
+      assignedStaffId: p.assignedStaffId || null,
       currency: p.currency,
       finalPrice: p.finalPrice,
       basePrice: p.basePrice,
@@ -142,7 +142,7 @@ export function AdminBookingsView() {
         email: p.customer.email,
         phone: p.customer.phone,
       },
-      assignedStaff: null,
+      assignedStaff: p.assignedStaff || null,
       payments: p.payments,
     }));
   }, [pendingData?.data?.items]);
@@ -343,7 +343,8 @@ export function AdminBookingsView() {
       message: "Staff member assignment updated successfully.",
     });
     refetchOperations();
-  }, [refetchOperations]);
+    refetchPending();
+  }, [refetchOperations, refetchPending]);
 
   const handleFulfillmentSuccess = React.useCallback(() => {
     setBookingForFulfillment(null);
@@ -514,6 +515,7 @@ export function AdminBookingsView() {
         <div className="rounded-2xl border border-[#E5EAED] bg-white shadow-2xs">
           <BookingsTable
             bookings={paginatedBookings}
+            staffMembers={staffMembers}
             isLoading={isLoading}
             onViewDetails={(booking) => setActiveBookingForDetails(booking)}
             onAssignStaff={(booking) => setBookingForStaffAssign(booking)}
