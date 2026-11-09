@@ -122,6 +122,8 @@ vi.mock("@/features/admin/api/admin-api", () => {
     useGetAdminPendingReservationsQuery: vi.fn(),
     useReviewAdminPendingReservationMutation: vi.fn(),
     useGetAdminBookingsReportQuery: vi.fn(),
+    useGetAdminBookingHistoryQuery: vi.fn(),
+    useGetStaffBookingHistoryQuery: vi.fn(),
   };
 });
 
@@ -222,6 +224,47 @@ describe("AdminBookingsView component", () => {
       isError: false,
       error: null,
       refetch: mockRefetchOperations,
+    } as any);
+
+    vi.mocked(adminApiModule.useGetAdminBookingHistoryQuery).mockReturnValue({
+      data: {
+        success: true,
+        message: "OK",
+        data: {
+          items: [
+            {
+              id: "hist-101",
+              bookingId: "bkg-101-uuid",
+              actorId: "admin-1",
+              actorName: "Admin User",
+              actorRole: "admin",
+              action: "OPERATIONS_ASSIGNED",
+              changes: {
+                previousStaffId: null,
+                newStaffId: "staff-1",
+                newStaffName: "Somchai Staff",
+                notes: "Assigned to morning boat",
+              },
+              createdAt: "2026-10-16T09:00:00.000Z",
+            },
+          ],
+          page: 1,
+          limit: 50,
+          total: 1,
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as any);
+
+    vi.mocked(adminApiModule.useGetStaffBookingHistoryQuery).mockReturnValue({
+      data: { success: true, data: { items: [], page: 1, limit: 50, total: 0 } },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
     } as any);
   });
 
@@ -338,5 +381,34 @@ describe("AdminBookingsView component", () => {
         notes: undefined,
       });
     });
+  });
+
+  it("opens only BookingDetailsDialog when clicking View Details and only BookingHistoryDialog when clicking View History", () => {
+    render(<AdminBookingsView />);
+
+    // 1. Open menu and click View Details
+    const menuTrigger1 = screen.getByTestId("booking-actions-trigger-bkg-101-uuid");
+    fireEvent.click(menuTrigger1);
+
+    const viewDetailsBtn = screen.getByTestId("action-view-details-bkg-101-uuid");
+    fireEvent.click(viewDetailsBtn);
+
+    expect(screen.getByTestId("booking-details-dialog")).toBeInTheDocument();
+    expect(screen.queryByTestId("booking-history-dialog")).not.toBeInTheDocument();
+
+    // Close Details modal
+    fireEvent.click(screen.getByText("Close"));
+    expect(screen.queryByTestId("booking-details-dialog")).not.toBeInTheDocument();
+
+    // 2. Open menu and click View History
+    fireEvent.click(menuTrigger1);
+    const viewHistoryBtn = screen.getByTestId("action-view-history-bkg-101-uuid");
+    fireEvent.click(viewHistoryBtn);
+
+    expect(screen.getByTestId("booking-history-dialog")).toBeInTheDocument();
+    expect(screen.queryByTestId("booking-details-dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Booking Activity History")).toBeInTheDocument();
+    expect(screen.getByText("Staff Member Assigned")).toBeInTheDocument();
+    expect(screen.getByText("Assigned to morning boat")).toBeInTheDocument();
   });
 });

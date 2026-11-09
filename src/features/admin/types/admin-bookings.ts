@@ -207,3 +207,22 @@ export interface ReviewPendingReservationInput {
   notes?: string;
 }
 
+export interface BookingHistoryRecord {
+  id: string;
+  bookingId: string;
+  actorId: string;
+  actorName: string | null;
+  actorRole: string;
+  action: string;
+  changes: Record<string, any>;
+  createdAt: string;
+}
+
+export interface BookingHistoryListResponse {
+  items: BookingHistoryRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+

@@ -25,6 +25,7 @@ export interface BookingsTableProps {
   staffMembers?: AdminStaffMember[];
   isLoading?: boolean;
   onViewDetails: (booking: OperationalBookingRecord) => void;
+  onViewHistory?: (booking: OperationalBookingRecord) => void;
   onAssignStaff: (booking: OperationalBookingRecord) => void;
   onUpdateFulfillment: (booking: OperationalBookingRecord) => void;
   onReviewPriceApproval?: (booking: OperationalBookingRecord) => void;
@@ -53,6 +54,7 @@ export function BookingsTable({
   staffMembers = [],
   isLoading = false,
   onViewDetails,
+  onViewHistory,
   onAssignStaff,
   onUpdateFulfillment,
   onReviewPriceApproval,
@@ -366,6 +368,7 @@ export function BookingsTable({
                   <BookingActionsMenu
                     booking={booking}
                     onViewDetails={onViewDetails}
+                    onViewHistory={onViewHistory}
                     onAssignStaff={onAssignStaff}
                     onUpdateFulfillment={onUpdateFulfillment}
                     onReviewPriceApproval={onReviewPriceApproval}

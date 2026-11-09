@@ -33,6 +33,8 @@ import type {
   PendingReservationRecord,
   AdminPendingReservationsResponse,
   ReviewPendingReservationInput,
+  BookingHistoryRecord,
+  BookingHistoryListResponse,
   AdminUserRecord,
   AdminUserListResponse,
   GetAdminUsersParams,
@@ -531,6 +533,46 @@ export const adminApi = baseApi.injectEndpoints({
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
         "AdminReport",
+      ],
+    }),
+
+    getAdminBookingHistory: builder.query<
+      AdminApiResponse<BookingHistoryListResponse>,
+      { bookingId: string; page?: number; limit?: number }
+    >({
+      query: ({ bookingId, page, limit }) => {
+        const params: Record<string, number> = {};
+        if (page !== undefined) params.page = page;
+        if (limit !== undefined) params.limit = limit;
+        return {
+          url: `/admin/bookings/${bookingId}/history`,
+          method: "GET",
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+      ],
+    }),
+
+    getStaffBookingHistory: builder.query<
+      AdminApiResponse<BookingHistoryListResponse>,
+      { bookingId: string; page?: number; limit?: number }
+    >({
+      query: ({ bookingId, page, limit }) => {
+        const params: Record<string, number> = {};
+        if (page !== undefined) params.page = page;
+        if (limit !== undefined) params.limit = limit;
+        return {
+          url: `/staff/operations/bookings/${bookingId}/history`,
+          method: "GET",
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "STAFF_LIST" },
       ],
     }),
 
@@ -1093,12 +1135,16 @@ export const {
   useGetAdminPendingReservationsQuery,
   useLazyGetAdminPendingReservationsQuery,
   useReviewAdminPendingReservationMutation,
+  useGetAdminBookingHistoryQuery,
+  useLazyGetAdminBookingHistoryQuery,
   // Staff Portal Hooks
   useGetStaffOperationsBookingsQuery,
   useLazyGetStaffOperationsBookingsQuery,
   useGetStaffOperationsBookingByIdQuery,
   useLazyGetStaffOperationsBookingByIdQuery,
   useUpdateStaffBookingFulfillmentStatusMutation,
+  useGetStaffBookingHistoryQuery,
+  useLazyGetStaffBookingHistoryQuery,
   // User Management Hooks
   useGetAdminUsersQuery,
   useLazyGetAdminUsersQuery,

@@ -18,6 +18,7 @@ import type { OperationalBookingRecord } from "../../types/admin-bookings";
 export interface BookingActionsMenuProps {
   booking: OperationalBookingRecord;
   onViewDetails: (booking: OperationalBookingRecord) => void;
+  onViewHistory?: (booking: OperationalBookingRecord) => void;
   onAssignStaff?: (booking: OperationalBookingRecord) => void;
   onUpdateFulfillment?: (booking: OperationalBookingRecord) => void;
   onReviewPriceApproval?: (booking: OperationalBookingRecord) => void;
@@ -30,6 +31,7 @@ const emptySubscribe = () => () => {};
 export function BookingActionsMenu({
   booking,
   onViewDetails,
+  onViewHistory,
   onAssignStaff,
   onUpdateFulfillment,
   onReviewPriceApproval,
@@ -219,12 +221,12 @@ export function BookingActionsMenu({
         </button>
       )}
 
-      {/* COMPLETED: View History */}
-      {isCompleted && (
+      {/* View History (All statuses) */}
+      {onViewHistory && (
         <button
           type="button"
           role="menuitem"
-          onClick={() => handleAction(() => onViewDetails(booking))}
+          onClick={() => handleAction(() => onViewHistory(booking))}
           className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
           data-testid={`action-view-history-${booking.id}`}
         >

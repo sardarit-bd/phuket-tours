@@ -100,4 +100,25 @@ describe("BookingActionsMenu component", () => {
 
     expect(mockUpdateFulfillment).toHaveBeenCalledWith(MOCK_BOOKING);
   });
+
+  it("calls onViewHistory and not onViewDetails when clicking View History", () => {
+    const mockViewHistory = vi.fn();
+    mockViewDetails.mockClear();
+
+    render(
+      <BookingActionsMenu
+        booking={MOCK_BOOKING}
+        onViewDetails={mockViewDetails}
+        onViewHistory={mockViewHistory}
+        onAssignStaff={mockAssignStaff}
+        onUpdateFulfillment={mockUpdateFulfillment}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("booking-actions-trigger-bkg-101"));
+    fireEvent.click(screen.getByTestId("action-view-history-bkg-101"));
+
+    expect(mockViewHistory).toHaveBeenCalledWith(MOCK_BOOKING);
+    expect(mockViewDetails).not.toHaveBeenCalled();
+  });
 });

@@ -16,6 +16,7 @@ import { BookingsToolbar } from "./bookings-toolbar";
 import { BookingsTable } from "./bookings-table";
 import { BookingsPagination } from "./bookings-pagination";
 import { BookingDetailsDialog } from "./booking-details-dialog";
+import { BookingHistoryDialog } from "./booking-history-dialog";
 import { AssignStaffDialog } from "./assign-staff-dialog";
 import { UpdateFulfillmentDialog } from "./update-fulfillment-dialog";
 import { PriceApprovalDialog } from "./price-approval-dialog";
@@ -46,6 +47,8 @@ export function AdminBookingsView() {
 
   // 2. Active modal states
   const [activeBookingForDetails, setActiveBookingForDetails] =
+    React.useState<OperationalBookingRecord | null>(null);
+  const [activeBookingForHistory, setActiveBookingForHistory] =
     React.useState<OperationalBookingRecord | null>(null);
   const [bookingForStaffAssign, setBookingForStaffAssign] =
     React.useState<OperationalBookingRecord | null>(null);
@@ -518,6 +521,7 @@ export function AdminBookingsView() {
             staffMembers={staffMembers}
             isLoading={isLoading}
             onViewDetails={(booking) => setActiveBookingForDetails(booking)}
+            onViewHistory={(booking) => setActiveBookingForHistory(booking)}
             onAssignStaff={(booking) => setBookingForStaffAssign(booking)}
             onUpdateFulfillment={(booking) => setBookingForFulfillment(booking)}
             onReviewPriceApproval={(booking) => setBookingForPriceApproval(booking)}
@@ -558,6 +562,14 @@ export function AdminBookingsView() {
         isOpen={activeBookingForDetails !== null}
         onClose={() => setActiveBookingForDetails(null)}
         booking={activeBookingForDetails}
+      />
+
+      {/* Booking History Modal */}
+      <BookingHistoryDialog
+        isOpen={activeBookingForHistory !== null}
+        onClose={() => setActiveBookingForHistory(null)}
+        booking={activeBookingForHistory}
+        portalMode="admin"
       />
 
       {/* Staff Assignment Modal */}
