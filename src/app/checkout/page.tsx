@@ -18,7 +18,17 @@ import {
   AlertCircle,
   Loader2,
   Info,
+  Banknote,
+  Lock,
 } from "lucide-react";
+import {
+  StripeLogo,
+  VisaLogo,
+  MastercardLogo,
+  AmexLogo,
+  UnionPayLogo,
+  PayPalLogo,
+} from "@/components/ui/payment-provider-logos";
 import { useAppSelector } from "@/store/hooks";
 import {
   selectCurrentUser,
@@ -499,156 +509,212 @@ function CheckoutContent() {
 
             {/* Payment Method Selection Card */}
             <div className="rounded-2xl border border-[#E5EAED] bg-white p-6 shadow-2xs">
-              <h2 className="font-outfit text-base font-bold text-[#18282A] flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-[#176779]" />
-                <span>3. Payment Method Selection</span>
-              </h2>
+              <div className="flex items-center justify-between border-b border-[#EEF2F3] pb-3">
+                <h2 className="font-outfit text-base font-bold text-[#18282A] flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-[#176779]" />
+                  <span>3. Payment Method Selection</span>
+                </h2>
+                <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium text-[#74818A]">
+                  <Lock className="h-3 w-3 text-emerald-600" />
+                  <span>256-Bit SSL Encrypted</span>
+                </div>
+              </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 space-y-3.5">
                 {/* Stripe Card Option */}
                 <label
-                  className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
+                  className={`block rounded-xl border p-4.5 cursor-pointer transition-all ${
                     paymentMethod === "STRIPE"
-                      ? "border-[#176779] bg-[#F3F9FA]"
-                      : "border-[#E5EAED] bg-white hover:bg-[#FAFCFD]"
+                      ? "border-[#176779] bg-[#F3F9FA] shadow-xs ring-1 ring-[#176779]/20"
+                      : "border-[#E5EAED] bg-white hover:bg-[#FAFCFD] hover:border-[#D0DBDE]"
                   }`}
                   data-testid="payment-method-stripe"
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="STRIPE"
-                    checked={paymentMethod === "STRIPE"}
-                    onChange={() => setPaymentMethod("STRIPE")}
-                    className="mt-0.5 text-[#176779] focus:ring-[#176779]"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#18282A]">Credit / Debit Card (Stripe)</span>
-                      <span className="rounded bg-teal-100 px-2 py-0.5 text-[10px] font-semibold text-teal-800">
-                        Instant Confirmation
-                      </span>
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="STRIPE"
+                      checked={paymentMethod === "STRIPE"}
+                      onChange={() => setPaymentMethod("STRIPE")}
+                      className="mt-1 text-[#176779] focus:ring-[#176779]"
+                    />
+                    <div className="flex-1 min-w-0">
+                      {/* Top Header Row with Title, Badge, and Card Network Logos */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold text-[#18282A]">Credit / Debit Card</span>
+                          <span className="rounded bg-teal-100 px-2 py-0.5 text-[10px] font-semibold text-teal-800">
+                            Instant Confirmation
+                          </span>
+                        </div>
+
+                        {/* Supported Card Network Logos */}
+                        <div className="flex items-center gap-1.5 flex-wrap" aria-label="Accepted card networks">
+                          <div className="h-5.5 px-1.5 rounded border border-[#E5EAED] bg-white flex items-center shadow-3xs" title="Visa">
+                            <VisaLogo className="h-2.5 w-auto" />
+                          </div>
+                          <div className="h-5.5 px-1.5 rounded border border-[#E5EAED] bg-white flex items-center shadow-3xs" title="Mastercard">
+                            <MastercardLogo className="h-3 w-auto" />
+                          </div>
+                          <div className="h-5.5 px-1 rounded border border-[#E5EAED] bg-white flex items-center shadow-3xs" title="American Express">
+                            <AmexLogo className="h-3 w-auto" />
+                          </div>
+                          <div className="h-5.5 px-1 rounded border border-[#E5EAED] bg-white flex items-center shadow-3xs" title="UnionPay">
+                            <UnionPayLogo className="h-3 w-auto" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <p className="mt-1.5 text-[11px] text-[#74818A] leading-relaxed">
+                        Pay securely with Visa, Mastercard, American Express, or UnionPay. Direct transaction processed via Stripe Hosted Checkout.
+                      </p>
+
+                      {/* Official Stripe Subtitle & Trust Note */}
+                      <div className="mt-2.5 flex items-center gap-2 text-[11px] text-[#556972] border-t border-[#E5EAED]/60 pt-2">
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>Secure payment powered by</span>
+                        <StripeLogo className="h-5 w-auto shrink-0 object-contain ml-0.5" />
+                      </div>
                     </div>
-                    <p className="mt-1 text-[11px] text-[#74818A]">
-                      Pay securely with Visa, Mastercard, American Express, or UnionPay via Stripe Hosted Checkout.
-                    </p>
                   </div>
                 </label>
 
                 {/* Bank Transfer Manual Option */}
                 <label
-                  className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
+                  className={`block rounded-xl border p-4.5 cursor-pointer transition-all ${
                     paymentMethod === "BANK_TRANSFER"
-                      ? "border-[#176779] bg-[#F3F9FA]"
-                      : "border-[#E5EAED] bg-white hover:bg-[#FAFCFD]"
+                      ? "border-[#176779] bg-[#F3F9FA] shadow-xs ring-1 ring-[#176779]/20"
+                      : "border-[#E5EAED] bg-white hover:bg-[#FAFCFD] hover:border-[#D0DBDE]"
                   }`}
                   data-testid="payment-method-bank"
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="BANK_TRANSFER"
-                    checked={paymentMethod === "BANK_TRANSFER"}
-                    onChange={() => setPaymentMethod("BANK_TRANSFER")}
-                    className="mt-0.5 text-[#176779] focus:ring-[#176779]"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#18282A]">Direct Bank Transfer</span>
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                        Manual Verification
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-[#74818A]">
-                      Transfer to our company bank account and submit your transaction slip reference.
-                    </p>
-
-                    {paymentMethod === "BANK_TRANSFER" && (
-                      <div className="mt-3 space-y-2 border-t border-[#E5EAED] pt-3 text-xs">
-                        <div className="rounded-lg bg-amber-50/70 p-2.5 text-[11px] text-amber-900 border border-amber-200/50">
-                          <strong>Bank Details:</strong> Bangkok Bank (Phuket Branch)<br />
-                          <strong>Account:</strong> Phuket Tours Co., Ltd.<br />
-                          <strong>Acc Number:</strong> 123-4-56789-0
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="BANK_TRANSFER"
+                      checked={paymentMethod === "BANK_TRANSFER"}
+                      onChange={() => setPaymentMethod("BANK_TRANSFER")}
+                      className="mt-1 text-[#176779] focus:ring-[#176779]"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-[#176779]" />
+                          <span className="text-xs font-bold text-[#18282A]">Direct Bank Transfer</span>
                         </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-[#18282A] mb-1">
-                            Transfer Reference / Slip ID *
-                          </label>
-                          <Input
-                            value={transferReference}
-                            onChange={(e) => setTransferReference(e.target.value)}
-                            placeholder="e.g. TXN-987654321"
-                            className="h-8 text-xs border-[#E5EAED] bg-white"
-                            data-testid="checkout-bank-ref"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-[#18282A] mb-1">
-                            Receipt Notes (Optional)
-                          </label>
-                          <Input
-                            value={receiptNote}
-                            onChange={(e) => setReceiptNote(e.target.value)}
-                            placeholder="e.g. Transferred from SCB Mobile App"
-                            className="h-8 text-xs border-[#E5EAED] bg-white"
-                          />
-                        </div>
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                          Manual Verification
+                        </span>
                       </div>
-                    )}
+                      <p className="mt-1 text-[11px] text-[#74818A]">
+                        Transfer to our verified company bank account and submit your transaction slip reference.
+                      </p>
+
+                      {paymentMethod === "BANK_TRANSFER" && (
+                        <div className="mt-3.5 space-y-2.5 border-t border-[#E5EAED] pt-3 text-xs">
+                          {/* Configured Receiving Bank Details */}
+                          <div className="rounded-xl bg-amber-50/80 p-3 text-[11px] text-amber-950 border border-amber-200/60 leading-relaxed shadow-3xs">
+                            <div className="font-bold flex items-center gap-1.5 text-amber-900 mb-1">
+                              <Building className="h-3.5 w-3.5" />
+                              <span>Verified Receiving Bank: Bangkok Bank (Phuket Branch)</span>
+                            </div>
+                            <div><strong>Account Name:</strong> Phuket Tours Co., Ltd.</div>
+                            <div><strong>Account Number:</strong> 123-4-56789-0</div>
+                            <div><strong>Swift Code:</strong> BKKTHBK</div>
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-[#18282A] mb-1">
+                              Transfer Reference / Slip ID *
+                            </label>
+                            <Input
+                              value={transferReference}
+                              onChange={(e) => setTransferReference(e.target.value)}
+                              placeholder="e.g. TXN-987654321"
+                              className="h-8 text-xs border-[#E5EAED] bg-white rounded-lg focus-visible:ring-1 focus-visible:ring-[#176779]"
+                              data-testid="checkout-bank-ref"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-[#18282A] mb-1">
+                              Receipt Notes (Optional)
+                            </label>
+                            <Input
+                              value={receiptNote}
+                              onChange={(e) => setReceiptNote(e.target.value)}
+                              placeholder="e.g. Transferred from SCB Mobile App"
+                              className="h-8 text-xs border-[#E5EAED] bg-white rounded-lg focus-visible:ring-1 focus-visible:ring-[#176779]"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </label>
 
                 {/* Cash on Departure Option */}
                 <label
-                  className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
+                  className={`block rounded-xl border p-4.5 cursor-pointer transition-all ${
                     paymentMethod === "CASH"
-                      ? "border-[#176779] bg-[#F3F9FA]"
-                      : "border-[#E5EAED] bg-white hover:bg-[#FAFCFD]"
+                      ? "border-[#176779] bg-[#F3F9FA] shadow-xs ring-1 ring-[#176779]/20"
+                      : "border-[#E5EAED] bg-white hover:bg-[#FAFCFD] hover:border-[#D0DBDE]"
                   }`}
                   data-testid="payment-method-cash"
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="CASH"
-                    checked={paymentMethod === "CASH"}
-                    onChange={() => setPaymentMethod("CASH")}
-                    className="mt-0.5 text-[#176779] focus:ring-[#176779]"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#18282A]">Cash at Pier / Hotel Pickup</span>
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                        Pay on Arrival
-                      </span>
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="CASH"
+                      checked={paymentMethod === "CASH"}
+                      onChange={() => setPaymentMethod("CASH")}
+                      className="mt-1 text-[#176779] focus:ring-[#176779]"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Banknote className="h-4 w-4 text-[#0E7A67]" />
+                          <span className="text-xs font-bold text-[#18282A]">Cash at Pier / Hotel Pickup</span>
+                        </div>
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                          Pay on Arrival
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-[#74818A]">
+                        Pay in cash directly to your tour guide or coordinator on the morning of departure.
+                      </p>
                     </div>
-                    <p className="mt-1 text-[11px] text-[#74818A]">
-                      Pay in cash to your guide or coordinator on the morning of departure.
-                    </p>
                   </div>
                 </label>
 
                 {/* PayPal (Architecture ready, currently unavailable) */}
                 <div
-                  className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 opacity-75 cursor-not-allowed"
+                  className="rounded-xl border border-slate-200 bg-slate-50/70 p-4.5 opacity-65 cursor-not-allowed"
                   data-testid="payment-method-paypal-disabled"
                 >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    disabled
-                    className="mt-0.5 text-slate-400"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-500">PayPal</span>
-                      <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
-                        Coming Soon
-                      </span>
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      disabled
+                      className="mt-1 text-slate-400 cursor-not-allowed"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <PayPalLogo className="h-3.5 w-auto opacity-60" />
+                          <span className="text-xs font-semibold text-slate-500">PayPal</span>
+                        </div>
+                        <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+                          Coming Soon
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        PayPal wallet checkout will be supported in an upcoming release.
+                      </p>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
-                      PayPal wallet checkout will be supported in an upcoming release.
-                    </p>
                   </div>
                 </div>
               </div>

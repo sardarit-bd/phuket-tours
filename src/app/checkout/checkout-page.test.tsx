@@ -207,4 +207,28 @@ describe("CheckoutPage", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("renders authentic card brand logos and Stripe trust indicator", async () => {
+    const store = createMockStore({
+      id: "cust-1",
+      email: "traveler@example.com",
+      name: "John Traveler",
+      role: "customer",
+    });
+
+    render(
+      <Provider store={store}>
+        <CheckoutPage />
+      </Provider>
+    );
+
+    await screen.findByText("Phi Phi Island Luxury Day Tour");
+
+    expect(screen.getByRole("img", { name: "Visa" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Mastercard" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "American Express" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "UnionPay" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Stripe" })).toBeInTheDocument();
+    expect(screen.getByText(/Secure payment powered by/i)).toBeInTheDocument();
+  });
 });
