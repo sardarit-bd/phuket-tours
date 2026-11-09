@@ -5,6 +5,9 @@ import type {
   MessageResponse,
   LoginRequest,
   RegisterRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  ValidateTokenResponse,
 } from "../types/auth";
 
 export const authApi = baseApi.injectEndpoints({
@@ -52,7 +55,7 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ["User"],
     }),
     validateInvitation: builder.query<
-      { success: boolean; data: { valid: boolean; user: { name: string; email: string; role: string } } },
+      { success: boolean; data: ValidateTokenResponse },
       string
     >({
       query: (token) => ({
@@ -60,6 +63,31 @@ export const authApi = baseApi.injectEndpoints({
         method: "GET",
         params: { token },
       }),
+    }),
+    validateResetToken: builder.query<
+      { success: boolean; data: ValidateTokenResponse },
+      string
+    >({
+      query: (token) => ({
+        url: "/auth/reset-password/verify",
+        method: "GET",
+        params: { token },
+      }),
+    }),
+    forgotPassword: builder.mutation<MessageResponse, ForgotPasswordRequest>({
+      query: (data) => ({
+        url: "/auth/forgot-password",
+        method: "POST",
+        body: data,
+      }),
+    }),
+    resetPassword: builder.mutation<MessageResponse, ResetPasswordRequest>({
+      query: (data) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Auth", "User"],
     }),
     setupPassword: builder.mutation<
       MessageResponse,
@@ -84,6 +112,10 @@ export const {
   useLazyGetMeQuery,
   useValidateInvitationQuery,
   useLazyValidateInvitationQuery,
+  useValidateResetTokenQuery,
+  useLazyValidateResetTokenQuery,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
   useSetupPasswordMutation,
 } = authApi;
 

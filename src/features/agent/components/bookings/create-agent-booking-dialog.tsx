@@ -11,7 +11,10 @@ import {
   useGetAgentPricingLimitsQuery,
   useCreateAgentBookingMutation,
 } from "../../api/agent-api";
-import { formatAgentCurrency } from "../../utils/agent-formatters";
+import {
+  formatAgentCurrency,
+  formatAgentDate,
+} from "../../utils/agent-formatters";
 import {
   Calendar,
   Compass,
@@ -22,18 +25,41 @@ import {
   Loader2,
   UserPlus,
   ShieldCheck,
+  CreditCard,
+  ArrowRight,
+  Eye,
+  Clock,
 } from "lucide-react";
+
+export interface BookingSuccessSummary {
+  bookingId: string;
+  reference: string;
+  customerName: string;
+  customerEmail: string;
+  tourName: string;
+  travelDate: string;
+  guestSummary: string;
+  finalPrice: number;
+  currency: string;
+  status: string;
+  paymentStatus: string;
+  requiresApproval: boolean;
+}
 
 interface CreateAgentBookingDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (bookingId: string) => void;
+  onProceedToPayment?: (bookingId: string) => void;
+  onViewBookingDetails?: (bookingId: string) => void;
 }
 
 export function CreateAgentBookingDialog({
   isOpen,
   onClose,
   onSuccess,
+  onProceedToPayment,
+  onViewBookingDetails,
 }: CreateAgentBookingDialogProps) {
   const tomorrow = React.useMemo(() => {
     const d = new Date();
@@ -58,6 +84,7 @@ export function CreateAgentBookingDialog({
   const [notes, setNotes] = React.useState("");
 
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [createdSummary, setCreatedSummary] = React.useState<BookingSuccessSummary | null>(null);
 
   const { data: toursData, isLoading: isToursLoading } = useGetToursQuery(
     { page: 1, limit: 50 },
@@ -79,6 +106,15 @@ export function CreateAgentBookingDialog({
 
   const tours = toursData?.data || [];
   const customers = customersRes?.data?.items || [];
+
+  // Reset state when opening
+  React.useEffect(() => {
+    if (isOpen) {
+      setErrorMsg(null);
+      setCreatedSummary(null);
+    }
+  }, [isOpen]);
+
   // Auto-select first tour when loaded
   React.useEffect(() => {
     if (!selectedTourId && tours.length > 0) {
@@ -156,7 +192,8 @@ export function CreateAgentBookingDialog({
 
     try {
       let resolvedCustomerId = selectedCustomerId;
-      let resolvedCustomerLabel = "";
+      let resolvedCustomerName = "";
+      let resolvedCustomerEmail = "";
 
       if (customerMode === "EXISTING") {
         if (!selectedCustomerId) {
@@ -164,9 +201,10 @@ export function CreateAgentBookingDialog({
           return;
         }
         const existingCust = customers.find((c) => c.id === selectedCustomerId);
-        resolvedCustomerLabel = existingCust
-          ? `${existingCust.name} (${existingCust.email})`
-          : "";
+        if (existingCust) {
+          resolvedCustomerName = existingCust.name;
+          resolvedCustomerEmail = existingCust.email;
+        }
       } else {
         if (!customerName.trim() || !customerEmail.trim()) {
           setErrorMsg("Please provide the customer's full name and email address.");
@@ -178,7 +216,8 @@ export function CreateAgentBookingDialog({
           phone: customerPhone.trim() || null,
         }).unwrap();
         resolvedCustomerId = custRes.data.id;
-        resolvedCustomerLabel = `${custRes.data.name} (${custRes.data.email})`;
+        resolvedCustomerName = custRes.data.name;
+        resolvedCustomerEmail = custRes.data.email;
       }
 
       if (useCustomPrice) {
@@ -189,8 +228,13 @@ export function CreateAgentBookingDialog({
         }
       }
 
+      const guestSummaryText = `${adults} Adults${
+        children > 0 ? `, ${children} Children` : ""
+      }${infants > 0 ? `, ${infants} Infants` : ""}`;
+
       const combinedNotes = [
-        resolvedCustomerLabel ? `Customer: ${resolvedCustomerLabel}` : null,
+        `Customer: ${resolvedCustomerName} (${resolvedCustomerEmail})`,
+        `Guests: ${guestSummaryText}`,
         notes.trim() ? notes.trim() : null,
       ]
         .filter(Boolean)
@@ -207,10 +251,33 @@ export function CreateAgentBookingDialog({
         notes: combinedNotes || undefined,
       }).unwrap();
 
-      if (onSuccess && bookingRes.data?.id) {
-        onSuccess(bookingRes.data.id);
+      const createdId = bookingRes.data?.id;
+      if (!createdId) {
+        throw new Error("Missing booking confirmation from server.");
       }
-      onClose();
+
+      const summary: BookingSuccessSummary = {
+        bookingId: createdId,
+        reference: createdId,
+        customerName: resolvedCustomerName,
+        customerEmail: resolvedCustomerEmail,
+        tourName: selectedTour?.title || "Tour Experience",
+        travelDate,
+        guestSummary: guestSummaryText,
+        finalPrice: bookingRes.data?.finalPrice ?? effectiveProposedPrice,
+        currency: bookingRes.data?.currency || currency,
+        status: bookingRes.data?.status || "CONFIRMED",
+        paymentStatus: bookingRes.data?.paymentStatus || "UNPAID",
+        requiresApproval: Boolean(
+          bookingRes.data?.requiresApproval ||
+          bookingRes.data?.status === "AWAITING_APPROVAL"
+        ),
+      };
+
+      setCreatedSummary(summary);
+      if (onSuccess) {
+        onSuccess(createdId);
+      }
     } catch (err: unknown) {
       const errorObj = err as { data?: { message?: string }; message?: string };
       setErrorMsg(
@@ -223,6 +290,146 @@ export function CreateAgentBookingDialog({
 
   const isBusy = isCreatingCustomer || isCreatingBooking;
 
+  // ── SUCCESS CONFIRMATION STATE ─────────────────────────────────────────
+  if (createdSummary) {
+    const isPayable =
+      createdSummary.paymentStatus === "UNPAID" &&
+      !createdSummary.requiresApproval &&
+      createdSummary.status !== "CANCELLED";
+
+    return (
+      <Dialog
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Reservation Created Successfully"
+        description={`Reference: ${createdSummary.bookingId.slice(0, 8)}...`}
+        size="lg"
+      >
+        <div className="space-y-5 pt-1" data-testid="agent-booking-created-success">
+          {/* Header Badge & Title */}
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-outfit text-base font-bold text-[#18282A]">
+                Booking Reservation Saved
+              </h3>
+              <p className="text-xs text-[#5C6C6E] mt-0.5 leading-relaxed">
+                {createdSummary.requiresApproval
+                  ? "Your proposed rate requires management price approval. Once reviewed by an administrator, payment can be processed."
+                  : "The tour has been reserved. You can proceed directly to payment or inspect the reservation details."}
+              </p>
+            </div>
+          </div>
+
+          {/* Structured Booking Summary Grid */}
+          <div className="rounded-2xl border border-[#E5EAED] bg-[#F8FAFB] p-4 text-xs space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 border-b border-[#E5EAED]">
+              <div>
+                <span className="text-[11px] text-[#74818A] block">Tour Experience</span>
+                <span className="font-semibold text-[#18282A] text-sm line-clamp-1">
+                  {createdSummary.tourName}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[#74818A] block">Lead Client</span>
+                <span className="font-semibold text-[#18282A] text-sm">
+                  {createdSummary.customerName}
+                </span>
+                <span className="text-[11px] text-[#74818A] block">
+                  {createdSummary.customerEmail}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <span className="text-[11px] text-[#74818A] block">Travel Date</span>
+                <span className="font-semibold text-[#18282A]">
+                  {formatAgentDate(createdSummary.travelDate)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[#74818A] block">Guests</span>
+                <span className="font-semibold text-[#18282A]">
+                  {createdSummary.guestSummary}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[#74818A] block">Booking Status</span>
+                <span
+                  className={`inline-block font-semibold rounded-md px-2 py-0.5 text-[10px] ${
+                    createdSummary.requiresApproval
+                      ? "bg-purple-100 text-purple-800"
+                      : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {createdSummary.requiresApproval ? "Awaiting Price Approval" : "Confirmed"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-[#74818A] block">Payable Amount</span>
+                <span className="font-bold text-sm text-[#176779]">
+                  {formatAgentCurrency(createdSummary.finalPrice, createdSummary.currency)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-[#E5EAED]">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (onViewBookingDetails) {
+                  onViewBookingDetails(createdSummary.bookingId);
+                }
+                onClose();
+              }}
+              className="w-full sm:w-auto text-xs font-semibold text-[#18282A] border-[#E5EAED] cursor-pointer"
+              data-testid="agent-success-view-details-btn"
+            >
+              <Eye className="mr-1.5 h-3.5 w-3.5" />
+              <span>View Booking Details</span>
+            </Button>
+
+            {isPayable ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (onProceedToPayment) {
+                    onProceedToPayment(createdSummary.bookingId);
+                  }
+                  onClose();
+                }}
+                className="w-full sm:w-auto bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664] shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                data-testid="agent-success-proceed-payment-btn"
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                <span>Proceed to Payment</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                onClick={onClose}
+                className="w-full sm:w-auto bg-[#18282A] text-xs font-semibold text-white hover:bg-[#25393B] cursor-pointer"
+              >
+                Done
+              </Button>
+            )}
+          </div>
+        </div>
+      </Dialog>
+    );
+  }
+
+  // ── ACTIVE BOOKING FORM STATE ──────────────────────────────────────────
   return (
     <Dialog
       isOpen={isOpen}
@@ -665,4 +872,3 @@ export function CreateAgentBookingDialog({
     </Dialog>
   );
 }
-

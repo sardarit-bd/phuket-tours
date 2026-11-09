@@ -43,6 +43,9 @@ import {
   AlertCircle,
   Users,
   UserCheck,
+  Banknote,
+  ArrowRight,
+  ShieldAlert,
 } from "lucide-react";
 
 interface AgentBookingDetailsDialogProps {
@@ -50,6 +53,7 @@ interface AgentBookingDetailsDialogProps {
   onClose: () => void;
   booking: AgentBookingRecord | null;
   onBookingUpdated?: () => void;
+  initialTab?: "DETAILS" | "HISTORY" | "PAYMENT";
 }
 
 export function AgentBookingDetailsDialog({
@@ -57,14 +61,15 @@ export function AgentBookingDetailsDialog({
   onClose,
   booking,
   onBookingUpdated,
+  initialTab = "DETAILS",
 }: AgentBookingDetailsDialogProps) {
-  const [activeTab, setActiveTab] = React.useState<"DETAILS" | "HISTORY" | "PAYMENT">("DETAILS");
+  const [activeTab, setActiveTab] = React.useState<"DETAILS" | "HISTORY" | "PAYMENT">(initialTab);
   const [isRevisingPrice, setIsRevisingPrice] = React.useState(false);
   const [proposedPriceInput, setProposedPriceInput] = React.useState("");
   const [revisionNotesInput, setRevisionNotesInput] = React.useState("");
   const [feedbackMsg, setFeedbackMsg] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Manual payment form state
+  // Payment form state
   const [paymentMethod, setPaymentMethod] = React.useState<"STRIPE" | "BANK_TRANSFER" | "CASH">("STRIPE");
   const [paymentRef, setPaymentRef] = React.useState("");
   const [receiptNote, setReceiptNote] = React.useState("");
@@ -90,9 +95,9 @@ export function AgentBookingDetailsDialog({
       setRevisionNotesInput("");
       setFeedbackMsg(null);
       setIsRevisingPrice(false);
-      setActiveTab("DETAILS");
+      setActiveTab(initialTab);
     }
-  }, [booking]);
+  }, [booking, initialTab]);
 
   if (!booking) return null;
 
@@ -100,15 +105,35 @@ export function AgentBookingDetailsDialog({
   const effectiveTravelDate = extractTravelDateRaw(booking.availability?.date, booking.notes);
   const parsedGuests = extractGuestsFromNotes(booking.notes);
 
+  // Financial calculations
+  const totalAmount = booking.finalPrice ?? 0;
+  // Calculate verified paid amount from attached payments
+  const verifiedPaidAmount = (booking.payments || [])
+    .filter((p) => p.status === "VERIFIED")
+    .reduce((sum, p) => sum + (p.amount ?? 0), 0);
+
+  const outstandingBalance =
+    booking.paymentStatus === "PAID"
+      ? 0
+      : Math.max(0, totalAmount - verifiedPaidAmount);
+
+  const isAwaitingPriceApproval =
+    booking.requiresApproval || booking.status === "AWAITING_APPROVAL";
+
+  const isUnpaidOrPartial =
+    booking.paymentStatus === "UNPAID" || booking.paymentStatus === "PARTIALLY_PAID";
+
+  const isCancelledOrRejected =
+    booking.status === "CANCELLED" || booking.status === "FAILED";
+
+  const canInitiatePayment =
+    isUnpaidOrPartial &&
+    !isAwaitingPriceApproval &&
+    !isCancelledOrRejected;
+
   const canRevisePrice =
     (booking.status === "PENDING" || booking.status === "AWAITING_APPROVAL") &&
     booking.paymentStatus === "UNPAID";
-
-  const canInitiatePayment =
-    booking.paymentStatus === "UNPAID" &&
-    !booking.requiresApproval &&
-    booking.status !== "CANCELLED" &&
-    booking.status !== "AWAITING_APPROVAL";
 
   const handlePriceRevision = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,6 +227,76 @@ export function AgentBookingDetailsDialog({
       size="lg"
     >
       <div className="space-y-4 pt-1" data-testid="agent-booking-details-dialog">
+        {/* PROMINENT PAYMENT BANNER / SUMMARY CARD AT TOP */}
+        <div className="rounded-2xl border border-[#E5EAED] bg-white p-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="grid grid-cols-3 gap-4 text-xs flex-1">
+              <div>
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-[#74818A] block">
+                  Total Amount
+                </span>
+                <span className="font-outfit text-lg font-bold text-[#18282A]">
+                  {formatAgentCurrency(totalAmount, currency)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-[#74818A] block">
+                  Paid to Date
+                </span>
+                <span className="font-outfit text-lg font-bold text-emerald-700">
+                  {formatAgentCurrency(verifiedPaidAmount, currency)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-[#74818A] block">
+                  Balance Due
+                </span>
+                <span
+                  className={`font-outfit text-lg font-bold ${
+                    outstandingBalance > 0 ? "text-rose-600" : "text-emerald-700"
+                  }`}
+                  data-testid="agent-details-balance-due"
+                >
+                  {formatAgentCurrency(outstandingBalance, currency)}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Action in Header */}
+            <div>
+              {canInitiatePayment ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setActiveTab("PAYMENT")}
+                  className="w-full sm:w-auto bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664] shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  data-testid="agent-quick-pay-header-btn"
+                >
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>
+                    {booking.paymentStatus === "PARTIALLY_PAID"
+                      ? "Pay Remaining Balance"
+                      : "Complete Payment"}
+                  </span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              ) : isAwaitingPriceApproval ? (
+                <div className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-1.5 text-center text-xs font-semibold text-purple-900">
+                  <span>Price Approval Pending</span>
+                  <p className="text-[10px] font-normal text-purple-700">
+                    Payment unlocks after review
+                  </p>
+                </div>
+              ) : booking.paymentStatus === "PAID" ? (
+                <div className="flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>Fully Paid</span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 border-b border-[#E5EAED] pb-1">
           <button
@@ -241,7 +336,7 @@ export function AgentBookingDetailsDialog({
               data-testid="agent-payment-tab"
             >
               <CreditCard className="h-3.5 w-3.5" />
-              <span>Initiate Payment</span>
+              <span>Make Payment</span>
             </button>
           )}
         </div>
@@ -373,7 +468,7 @@ export function AgentBookingDetailsDialog({
               </div>
             </div>
 
-            {/* Pricing & Price Approval Breakdown */}
+            {/* Pricing Breakdown Card */}
             <div className="rounded-2xl border border-[#E5EAED] bg-white p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#18282A]">
@@ -501,7 +596,7 @@ export function AgentBookingDetailsDialog({
                 </form>
               )}
 
-              {/* Price Approval Detail Note if any */}
+              {/* Price Approval Detail Note */}
               {booking.priceApproval && (
                 <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-3 text-xs space-y-1">
                   <div className="flex items-center justify-between font-semibold text-purple-950">
@@ -581,7 +676,8 @@ export function AgentBookingDetailsDialog({
                       <div className="text-[11px] text-[#74818A]">
                         <span>Actor: </span>
                         <span className="font-medium text-[#18282A]">
-                          {item.actor?.name || item.actorId} ({item.actor?.role || "user"})
+                          {item.actor?.name || item.actorName || item.actorId} (
+                          {item.actor?.role || item.actorRole || "user"})
                         </span>
                       </div>
                       {item.note && (
@@ -603,12 +699,12 @@ export function AgentBookingDetailsDialog({
             <div className="border-b border-[#E5EAED] pb-3">
               <h3 className="font-outfit text-sm font-bold text-[#18282A] flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-[#176779]" />
-                <span>Pay for Confirmed Reservation</span>
+                <span>Pay for Reservation</span>
               </h3>
               <p className="text-xs text-[#74818A] mt-1">
-                Amount to settle:{" "}
+                Outstanding balance to settle:{" "}
                 <span className="font-bold text-[#176779]">
-                  {formatAgentCurrency(booking.finalPrice, currency)}
+                  {formatAgentCurrency(outstandingBalance, currency)}
                 </span>
               </p>
             </div>
@@ -621,6 +717,7 @@ export function AgentBookingDetailsDialog({
                     ? "border-[#176779] bg-[#F3F9FA] ring-1 ring-[#176779]/20"
                     : "border-[#E5EAED] hover:bg-[#FAFCFD]"
                 }`}
+                data-testid="agent-payment-method-stripe"
               >
                 <div className="flex items-start gap-3">
                   <input
@@ -632,9 +729,14 @@ export function AgentBookingDetailsDialog({
                     className="mt-0.5 text-[#176779]"
                   />
                   <div className="flex-1">
-                    <span className="font-bold text-[#18282A]">Instant Card Checkout (Stripe)</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#18282A]">Credit / Debit Card (Stripe)</span>
+                      <span className="rounded bg-teal-100 px-1.5 py-0.2 text-[10px] font-semibold text-teal-800">
+                        Instant Confirmation
+                      </span>
+                    </div>
                     <p className="text-[11px] text-[#74818A] mt-0.5">
-                      Pay directly via credit/debit card for instant automated confirmation.
+                      Pay instantly via Visa, Mastercard, AMEX, or UnionPay with automated verification.
                     </p>
                   </div>
                 </div>
@@ -647,6 +749,7 @@ export function AgentBookingDetailsDialog({
                     ? "border-[#176779] bg-[#F3F9FA] ring-1 ring-[#176779]/20"
                     : "border-[#E5EAED] hover:bg-[#FAFCFD]"
                 }`}
+                data-testid="agent-payment-method-bank"
               >
                 <div className="flex items-start gap-3">
                   <input
@@ -658,9 +761,14 @@ export function AgentBookingDetailsDialog({
                     className="mt-0.5 text-[#176779]"
                   />
                   <div className="flex-1">
-                    <span className="font-bold text-[#18282A]">Bank Transfer Receipt</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#18282A]">Bank Transfer Receipt</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-semibold text-slate-700">
+                        Manual Verification
+                      </span>
+                    </div>
                     <p className="text-[11px] text-[#74818A] mt-0.5">
-                      Submit your corporate bank transfer transaction slip.
+                      Transfer to Bangkok Bank (Phuket Branch) and submit your transaction slip. Verified by admin.
                     </p>
                   </div>
                 </div>
@@ -673,6 +781,7 @@ export function AgentBookingDetailsDialog({
                     ? "border-[#176779] bg-[#F3F9FA] ring-1 ring-[#176779]/20"
                     : "border-[#E5EAED] hover:bg-[#FAFCFD]"
                 }`}
+                data-testid="agent-payment-method-cash"
               >
                 <div className="flex items-start gap-3">
                   <input
@@ -684,9 +793,14 @@ export function AgentBookingDetailsDialog({
                     className="mt-0.5 text-[#176779]"
                   />
                   <div className="flex-1">
-                    <span className="font-bold text-[#18282A]">Cash at Pier / Hotel Pickup</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#18282A]">Cash at Pier / Hotel Pickup</span>
+                      <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-semibold text-slate-700">
+                        Pay on Departure
+                      </span>
+                    </div>
                     <p className="text-[11px] text-[#74818A] mt-0.5">
-                      Customer settles in cash directly with tour operator on the morning of tour.
+                      Client pays tour coordinator or guide on the morning of departure. Verified upon tour start.
                     </p>
                   </div>
                 </div>
@@ -699,7 +813,7 @@ export function AgentBookingDetailsDialog({
                   type="button"
                   onClick={handleStripePayment}
                   disabled={isCreatingStripe}
-                  className="w-full bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664]"
+                  className="w-full bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664] h-10 shadow-xs cursor-pointer"
                   data-testid="agent-stripe-pay-btn"
                 >
                   {isCreatingStripe ? (
@@ -736,17 +850,17 @@ export function AgentBookingDetailsDialog({
                   <Input
                     value={receiptNote}
                     onChange={(e) => setReceiptNote(e.target.value)}
-                    placeholder="e.g. Verified with client booking coordinator"
+                    placeholder="e.g. Confirmed with client coordinator"
                     className="h-8 text-xs border-[#E5EAED] rounded-lg"
                   />
                 </div>
                 <Button
                   type="submit"
                   disabled={isCreatingPayment}
-                  className="w-full bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664]"
+                  className="w-full bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664] h-10 cursor-pointer"
                   data-testid="agent-submit-payment-btn"
                 >
-                  {isCreatingPayment ? "Submitting Payment..." : "Record Payment"}
+                  {isCreatingPayment ? "Submitting Payment..." : "Record Payment Request"}
                 </Button>
               </form>
             )}
