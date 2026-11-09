@@ -2,6 +2,10 @@ import { baseApi } from "@/lib/api/base-api";
 import type {
   CustomerBookingsListResponse,
   CustomerBookingDetailResponse,
+  CreateCustomerBookingInput,
+  CreateCustomerBookingResponse,
+  CreateCustomerPaymentInput,
+  CreateCustomerPaymentResponse,
   CustomerPaymentsListResponse,
   CustomerPaymentDetailResponse,
   GetCustomerBookingsParams,
@@ -14,6 +18,18 @@ import type { UserProfileResponse } from "@/features/auth/types/auth";
 export const customerApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     /* ── Bookings ─────────────────────────────────────────────── */
+
+    createCustomerBooking: builder.mutation<
+      CreateCustomerBookingResponse,
+      CreateCustomerBookingInput
+    >({
+      query: (body) => ({
+        url: "/bookings",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["CustomerBookings"],
+    }),
 
     getCustomerBookings: builder.query<
       CustomerBookingsListResponse,
@@ -83,6 +99,18 @@ export const customerApi = baseApi.injectEndpoints({
       keepUnusedDataFor: 60,
     }),
 
+    createCustomerPayment: builder.mutation<
+      CreateCustomerPaymentResponse,
+      CreateCustomerPaymentInput
+    >({
+      query: ({ bookingId, method, reference, receiptNote }) => ({
+        url: `/bookings/${bookingId}/payments`,
+        method: "POST",
+        body: { method, reference, receiptNote },
+      }),
+      invalidatesTags: ["CustomerBookings", "CustomerPayments"],
+    }),
+
     createStripeSession: builder.mutation<
       StripeCheckoutSessionResponse,
       { bookingId: string; successUrl?: string; cancelUrl?: string }
@@ -123,10 +151,12 @@ export const customerApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useCreateCustomerBookingMutation,
   useGetCustomerBookingsQuery,
   useGetCustomerBookingByIdQuery,
   useGetCustomerPaymentsQuery,
   useGetCustomerPaymentByIdQuery,
+  useCreateCustomerPaymentMutation,
   useCreateStripeSessionMutation,
   useReconcileCustomerPaymentMutation,
   useUpdateProfileMutation,

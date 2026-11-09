@@ -25,6 +25,17 @@ export interface CustomerBookingAvailability {
   date: string;
 }
 
+export interface CustomerBookingPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  method: string;
+  status: string;
+  reference?: string | null;
+  stripeSessionId?: string | null;
+  createdAt: string;
+}
+
 export interface CustomerBookingRecord {
   id: string;
   status:
@@ -45,6 +56,7 @@ export interface CustomerBookingRecord {
   updatedAt: string;
   service: CustomerBookingTour;
   availability: CustomerBookingAvailability | null;
+  payments?: CustomerBookingPayment[];
   /** Agent-only fields intentionally omitted: commission, proposedPrice, priceApproval, customer, agentId */
 }
 
@@ -57,6 +69,43 @@ export interface GetCustomerBookingsParams {
 
 export type CustomerBookingsListResponse = ApiResponse<PaginatedResult<CustomerBookingRecord>>;
 export type CustomerBookingDetailResponse = ApiResponse<CustomerBookingRecord>;
+
+export interface CreateCustomerBookingInput {
+  customerId: string;
+  serviceId: string;
+  availabilityId?: string;
+  travelDate?: string;
+  adults?: number;
+  children?: number;
+  infants?: number;
+  notes?: string;
+}
+
+export interface CreateCustomerBookingData {
+  id: string;
+  customerId: string;
+  serviceId: string;
+  availabilityId: string | null;
+  currency: string;
+  basePrice: number;
+  finalPrice: number;
+  status: string;
+  paymentStatus?: string;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateCustomerBookingResponse = ApiResponse<CreateCustomerBookingData>;
+
+export interface CreateCustomerPaymentInput {
+  bookingId: string;
+  method: CustomerPaymentMethod;
+  reference?: string;
+  receiptNote?: string;
+}
+
+export type CreateCustomerPaymentResponse = ApiResponse<CustomerPaymentRecord>;
 
 /* ── Customer payment shape ────────────────────────────────────────── */
 

@@ -103,17 +103,16 @@ describe("BookingSummaryCard", () => {
     expect(screen.queryByText("Contact for pricing")).toBeNull();
   });
 
-  it("links the Book Now CTA to the sign-in booking flow when unauthenticated", () => {
+  it("links the Book Now CTA to sign-in with checkout redirect when unauthenticated", () => {
     renderWithStore(<BookingSummaryCard tour={makeTour()} />);
     const cta = screen.getByRole("link", { name: /book now/i });
-    expect(cta).toHaveAttribute("href", expect.stringContaining("/sign-in?next="));
     expect(cta).toHaveAttribute(
       "href",
-      `/sign-in?next=${encodeURIComponent("/tours/t1")}`
+      `/sign-in?redirect=${encodeURIComponent("/checkout?tourId=t1")}`
     );
   });
 
-  it("links the Book Now CTA to the customer booking dashboard when authenticated", () => {
+  it("links the Book Now CTA directly to checkout (not dashboard) when authenticated", () => {
     const store = makeStore();
     store.dispatch(
       setCredentials({
@@ -126,7 +125,8 @@ describe("BookingSummaryCard", () => {
 
     renderWithStore(<BookingSummaryCard tour={makeTour()} />, store);
     const cta = screen.getByRole("link", { name: /book now/i });
-    expect(cta).toHaveAttribute("href", "/dashboard/bookings?tourId=t1");
+    expect(cta).toHaveAttribute("href", "/checkout?tourId=t1");
+    expect(cta).not.toHaveAttribute("href", expect.stringContaining("/dashboard"));
     expect(cta).not.toHaveAttribute("href", expect.stringContaining("/sign-in"));
   });
 

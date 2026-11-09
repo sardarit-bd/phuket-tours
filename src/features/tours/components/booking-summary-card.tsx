@@ -97,8 +97,8 @@ export function BookingSummaryCard({ tour }: { tour: Tour }) {
       <Link
         href={
           isAuthenticated
-            ? `/dashboard/bookings?tourId=${encodeURIComponent(tour.id)}`
-            : `/sign-in?next=${encodeURIComponent(`/tours/${tour.id}`)}`
+            ? `/checkout?tourId=${encodeURIComponent(tour.id)}`
+            : `/sign-in?redirect=${encodeURIComponent(`/checkout?tourId=${encodeURIComponent(tour.id)}`)}`
         }
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-primary-dark"
       >

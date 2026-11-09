@@ -461,4 +461,30 @@ describe("SignInPage & SignInForm", () => {
       expect(mockPush).toHaveBeenCalledWith("/tours/phuket-sunset-cruise");
     });
   });
+
+  it("redirects customer to /checkout?tourId=... after sign in when redirected from Book Now", async () => {
+    const user = userEvent.setup();
+    mockRedirectParam = "/checkout?tourId=tour-phi-phi-01";
+
+    setupMockFetch(200, {
+      success: true,
+      message: "Login successful",
+      data: {
+        id: "cust-1",
+        name: "Traveler",
+        email: "traveler@example.com",
+        role: "customer",
+      },
+    });
+
+    renderWithStore(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/email address/i), "traveler@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "secret123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/checkout?tourId=tour-phi-phi-01");
+    });
+  });
 });
