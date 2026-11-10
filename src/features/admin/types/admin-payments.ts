@@ -9,7 +9,7 @@
  * - src/modules/payment/paymentService.ts
  */
 
-export const PAYMENT_METHODS = ["BANK_TRANSFER", "CASH", "OTHER", "STRIPE"] as const;
+export const PAYMENT_METHODS = ["BANK_TRANSFER", "CASH", "OTHER", "STRIPE", "PAYPAL"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_RECORD_STATUSES = [
@@ -27,13 +27,41 @@ export const PAYMENT_RECORD_STATUSES = [
 ] as const;
 export type PaymentRecordStatus = (typeof PAYMENT_RECORD_STATUSES)[number];
 
+export interface AdminPaymentAgentInfo {
+  id: string;
+  name: string;
+  email: string;
+  agentProfile?: {
+    agencyName: string | null;
+  } | null;
+}
+
 export interface AdminPaymentBookingInfo {
   id: string;
   serviceId: string;
   agentId: string | null;
+  source?: "AGENT" | "ADMIN" | "CUSTOMER" | "DIRECT" | null;
+  createdById?: string | null;
   status: string;
   paymentStatus: string;
   finalPrice: number | null;
+  agent?: AdminPaymentAgentInfo | null;
+  createdBy?: {
+    id: string;
+    name: string;
+    role: string;
+  } | null;
+  service?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface AdminPaymentCustomerInfo {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
 }
 
 export interface AdminPaymentRecord {
@@ -41,9 +69,11 @@ export interface AdminPaymentRecord {
   bookingId: string;
   customerId: string;
   amount: number;
+  currency?: string;
   method: PaymentMethod;
   status: PaymentRecordStatus;
   reference: string | null;
+  stripeSessionId?: string | null;
   receiptNote: string | null;
   submittedAt: string | null;
   receivedAt: string | null;
@@ -52,16 +82,19 @@ export interface AdminPaymentRecord {
   reviewNotes: string | null;
   createdAt: string;
   updatedAt: string;
+  customer?: AdminPaymentCustomerInfo;
   booking?: AdminPaymentBookingInfo;
 }
 
 export interface GetAdminPaymentsParams {
   page?: number;
   limit?: number;
-  status?: PaymentRecordStatus;
-  method?: PaymentMethod;
+  status?: PaymentRecordStatus | string;
+  method?: PaymentMethod | string;
   bookingId?: string;
   customerId?: string;
+  agentId?: string;
+  source?: string;
 }
 
 export interface AdminPaymentListResponse {

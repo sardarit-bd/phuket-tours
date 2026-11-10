@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle2, X, Loader2 } from "lucide-react";
 import {
   useGetAdminOperationsBookingsQuery,
   useGetAdminStaffQuery,
+  useGetAdminAgentsQuery,
   useGetAdminPendingReservationsQuery,
   useGetAdminBookingsReportQuery,
   useReviewAdminPendingReservationMutation,
@@ -42,6 +43,8 @@ export function AdminBookingsView() {
   const [paymentStatus, setPaymentStatus] = React.useState<string>("ALL");
   const [fulfillmentStatus, setFulfillmentStatus] = React.useState<string>("ALL");
   const [assignedStaffId, setAssignedStaffId] = React.useState<string>("ALL");
+  const [selectedAgentId, setSelectedAgentId] = React.useState<string>("ALL");
+  const [selectedSource, setSelectedSource] = React.useState<string>("ALL");
   const [travelDate, setTravelDate] = React.useState<string>("");
   const [search, setSearch] = React.useState<string>("");
 
@@ -84,8 +87,12 @@ export function AdminBookingsView() {
           : undefined,
       assignedStaffId:
         assignedStaffId !== "ALL" ? assignedStaffId : undefined,
+      agentId:
+        selectedAgentId !== "ALL" ? selectedAgentId : undefined,
+      source:
+        selectedSource !== "ALL" ? (selectedSource as any) : undefined,
     };
-  }, [fulfillmentStatus, assignedStaffId]);
+  }, [fulfillmentStatus, assignedStaffId, selectedAgentId, selectedSource]);
 
   const {
     data: operationsData,
@@ -116,6 +123,12 @@ export function AdminBookingsView() {
     data: staffData,
     isLoading: isStaffLoading,
   } = useGetAdminStaffQuery();
+
+  // Agents query for attribution filtering
+  const {
+    data: agentsData,
+    isLoading: isAgentsLoading,
+  } = useGetAdminAgentsQuery();
 
   // Review pending reservation mutation
   const [reviewReservation, { isLoading: isSubmittingReview }] =
@@ -222,6 +235,19 @@ export function AdminBookingsView() {
       list = list.filter((b) => b.assignedStaffId === assignedStaffId);
     }
 
+    // Agent filter
+    if (selectedAgentId !== "ALL") {
+      list = list.filter((b) => b.agentId === selectedAgentId || b.agent?.id === selectedAgentId);
+    }
+
+    // Booking Source filter
+    if (selectedSource !== "ALL") {
+      list = list.filter((b) => {
+        const src = (b.source || (b.agentId ? "AGENT" : "DIRECT")).toUpperCase();
+        return src === selectedSource.toUpperCase();
+      });
+    }
+
     // Travel Date filter
     if (travelDate) {
       list = list.filter((b) => {
@@ -246,6 +272,9 @@ export function AdminBookingsView() {
         const customerPhoneMatch = b.customer?.phone?.toLowerCase().includes(q) || false;
         const serviceMatch = b.service?.name?.toLowerCase().includes(q) || false;
         const staffMatch = b.assignedStaff?.name?.toLowerCase().includes(q) || false;
+        const agentNameMatch = b.agent?.name?.toLowerCase().includes(q) || false;
+        const agencyNameMatch = b.agent?.agentProfile?.agencyName?.toLowerCase().includes(q) || false;
+        const creatorNameMatch = b.createdBy?.name?.toLowerCase().includes(q) || false;
         const notesMatch = b.notes?.toLowerCase().includes(q) || false;
         return (
           idMatch ||
@@ -254,6 +283,9 @@ export function AdminBookingsView() {
           customerPhoneMatch ||
           serviceMatch ||
           staffMatch ||
+          agentNameMatch ||
+          agencyNameMatch ||
+          creatorNameMatch ||
           notesMatch
         );
       });
@@ -266,6 +298,8 @@ export function AdminBookingsView() {
     paymentStatus,
     fulfillmentStatus,
     assignedStaffId,
+    selectedAgentId,
+    selectedSource,
     travelDate,
     search,
   ]);
@@ -281,6 +315,11 @@ export function AdminBookingsView() {
   const staffMembers: AdminStaffMember[] = React.useMemo(
     () => staffData?.data?.items || [],
     [staffData?.data?.items]
+  );
+
+  const agentsList = React.useMemo(
+    () => agentsData?.data?.items || [],
+    [agentsData?.data?.items]
   );
 
   // Handlers for filter controls
@@ -304,6 +343,16 @@ export function AdminBookingsView() {
     setPage(1);
   }, []);
 
+  const handleAgentIdChange = React.useCallback((agentId: string) => {
+    setSelectedAgentId(agentId);
+    setPage(1);
+  }, []);
+
+  const handleSourceChange = React.useCallback((source: string) => {
+    setSelectedSource(source);
+    setPage(1);
+  }, []);
+
   const handleTravelDateChange = React.useCallback((date: string) => {
     setTravelDate(date);
     setPage(1);
@@ -314,6 +363,8 @@ export function AdminBookingsView() {
     setPaymentStatus("ALL");
     setFulfillmentStatus("ALL");
     setAssignedStaffId("ALL");
+    setSelectedAgentId("ALL");
+    setSelectedSource("ALL");
     setTravelDate("");
     setSearch("");
     setPage(1);
@@ -324,6 +375,8 @@ export function AdminBookingsView() {
     paymentStatus !== "ALL" ||
     fulfillmentStatus !== "ALL" ||
     assignedStaffId !== "ALL" ||
+    selectedAgentId !== "ALL" ||
+    selectedSource !== "ALL" ||
     Boolean(travelDate) ||
     search.trim().length > 0;
 
@@ -477,9 +530,14 @@ export function AdminBookingsView() {
         onFulfillmentStatusChange={handleFulfillmentStatusChange}
         assignedStaffId={assignedStaffId}
         onAssignedStaffIdChange={handleAssignedStaffIdChange}
+        agentId={selectedAgentId}
+        onAgentIdChange={handleAgentIdChange}
+        source={selectedSource}
+        onSourceChange={handleSourceChange}
         travelDate={travelDate}
         onTravelDateChange={handleTravelDateChange}
         staffMembers={staffMembers}
+        agents={agentsList}
         isStaffLoading={isStaffLoading}
         statusCounts={statusCounts}
         onResetFilters={handleResetFilters}

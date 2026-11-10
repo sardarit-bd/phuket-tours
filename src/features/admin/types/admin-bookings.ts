@@ -23,11 +23,31 @@ export type FulfillmentStatusValue = "NOT_STARTED" | "IN_PROGRESS" | "FULFILLED"
 
 export type BookingPaymentStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID";
 
+export type BookingSourceValue = "AGENT" | "ADMIN" | "CUSTOMER" | "DIRECT";
+
+export interface AgentAttributionInfo {
+  id: string;
+  name: string;
+  email: string;
+  agentProfile?: {
+    agencyName: string | null;
+  } | null;
+}
+
+export interface CreatorAttributionInfo {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export interface OperationalBookingRecord {
   id: string;
   status: OperationalBookingStatus | AdminUnifiedBookingStatus;
   fulfillmentStatus: FulfillmentStatusValue;
   paymentStatus: BookingPaymentStatus;
+  source?: BookingSourceValue | null;
+  agentId?: string | null;
+  createdById?: string | null;
   assignedStaffId: string | null;
   currency?: string;
   finalPrice?: number | string;
@@ -51,6 +71,8 @@ export interface OperationalBookingRecord {
     email?: string;
     phone: string | null;
   };
+  agent?: AgentAttributionInfo | null;
+  createdBy?: CreatorAttributionInfo | null;
   assignedStaff: {
     id: string;
     name: string;
@@ -73,6 +95,8 @@ export interface GetAdminBookingsParams {
   limit?: number;
   fulfillmentStatus?: string;
   assignedStaffId?: string;
+  agentId?: string;
+  source?: string;
 }
 
 export interface GetStaffBookingsParams {
