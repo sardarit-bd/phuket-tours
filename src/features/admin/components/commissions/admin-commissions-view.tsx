@@ -216,7 +216,7 @@ export function AdminCommissionsView() {
           }`}
         >
           <Percent className="h-4 w-4" />
-          <span>Commission Policy & Rules</span>
+          <span>Commission Management</span>
         </button>
       </div>
 

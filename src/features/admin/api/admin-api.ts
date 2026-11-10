@@ -59,6 +59,8 @@ import type {
   GetAdminCommissionRulesParams,
   AdminCommissionRulesResponse,
   ConfigureCommissionRuleInput,
+  CreateCommissionPolicyInput,
+  UpdateCommissionPolicyInput,
   AdminCommissionsReportData,
 } from "../types/admin";
 import type {
@@ -940,9 +942,10 @@ export const adminApi = baseApi.injectEndpoints({
       GetAdminCommissionRulesParams | void
     >({
       query: (params) => {
-        const queryParams: Record<string, number> = {};
+        const queryParams: Record<string, string | number> = {};
         if (params?.page) queryParams.page = params.page;
         if (params?.limit) queryParams.limit = params.limit;
+        if (params?.status) queryParams.status = params.status;
 
         return {
           url: "/admin/commission-rules",
@@ -951,6 +954,124 @@ export const adminApi = baseApi.injectEndpoints({
         };
       },
       providesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    getAdminCommissionRuleById: builder.query<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, id) => [{ type: "AdminCommissionRule", id }],
+    }),
+
+    createDraftCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      CreateCommissionPolicyInput
+    >({
+      query: (input) => ({
+        url: "/admin/commission-rules",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    updateCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      { policyId: string; input: UpdateCommissionPolicyInput }
+    >({
+      query: ({ policyId, input }) => ({
+        url: `/admin/commission-rules/${policyId}`,
+        method: "PATCH",
+        body: input,
+      }),
+      invalidatesTags: (_result, _error, { policyId }) => [
+        { type: "AdminCommissionRule", id: policyId },
+        "AdminCommissionRule",
+        "AdminCommissions",
+      ],
+    }),
+
+    publishCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}/publish`,
+        method: "POST",
+      }),
+      invalidatesTags: [
+        "AdminCommissionRule",
+        "AdminCommissions",
+        "AdminReport",
+      ],
+    }),
+
+    deactivateCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}/deactivate`,
+        method: "POST",
+      }),
+      invalidatesTags: [
+        "AdminCommissionRule",
+        "AdminCommissions",
+        "AdminReport",
+      ],
+    }),
+
+    archiveCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}/archive`,
+        method: "POST",
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    deleteCommissionPolicy: builder.mutation<
+      AdminApiResponse<{ id: string; deleted: boolean }>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    createCommissionPolicyRevision: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      { policyId: string; input?: { rateType?: string; rateValue?: number } }
+    >({
+      query: ({ policyId, input }) => ({
+        url: `/admin/commission-rules/${policyId}/revision`,
+        method: "POST",
+        body: input || {},
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    disablePlatformCommission: builder.mutation<
+      AdminApiResponse<{ disabled: boolean; deactivatedCount: number }>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/commission-rules/disable",
+        method: "POST",
+      }),
+      invalidatesTags: [
+        "AdminCommissionRule",
+        "AdminCommissions",
+        "AdminReport",
+      ],
     }),
 
     configureAdminCommissionRule: builder.mutation<
@@ -1182,6 +1303,16 @@ export const {
   useAdjustAdminCommissionMutation,
   useGetAdminCommissionRulesQuery,
   useLazyGetAdminCommissionRulesQuery,
+  useGetAdminCommissionRuleByIdQuery,
+  useLazyGetAdminCommissionRuleByIdQuery,
+  useCreateDraftCommissionPolicyMutation,
+  useUpdateCommissionPolicyMutation,
+  usePublishCommissionPolicyMutation,
+  useDeactivateCommissionPolicyMutation,
+  useArchiveCommissionPolicyMutation,
+  useDeleteCommissionPolicyMutation,
+  useCreateCommissionPolicyRevisionMutation,
+  useDisablePlatformCommissionMutation,
   useConfigureAdminCommissionRuleMutation,
   useGetAdminCommissionsReportQuery,
   useLazyGetAdminCommissionsReportQuery,
