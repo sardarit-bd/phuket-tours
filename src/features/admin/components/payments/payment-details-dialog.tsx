@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { useGetAdminPaymentByIdQuery } from "../../api/admin-api";
 import type { AdminPaymentRecord } from "../../types/admin-payments";
 import { PaymentStatusBadge, PaymentMethodBadge } from "./payment-status-badge";
+import { BookingSourceBadge } from "../bookings/booking-status-badges";
 import { Button } from "@/components/ui/button";
 
 export interface PaymentDetailsDialogProps {
@@ -153,7 +154,7 @@ export function PaymentDetailsDialog({
             {/* Customer ID */}
             <div className="rounded-xl border border-[#E5EAED] bg-white p-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#74818A]">Customer ID</span>
+                <span className="text-[11px] font-semibold text-[#74818A]">Customer</span>
                 <button
                   type="button"
                   onClick={() => handleCopy("customerId", payment.customerId)}
@@ -167,8 +168,17 @@ export function PaymentDetailsDialog({
                   )}
                 </button>
               </div>
-              <p className="mt-1.5 font-mono text-[11px] break-all font-medium text-[#18282A]">
-                {payment.customerId}
+              <p className="mt-1 font-medium text-[#18282A]">
+                {payment.customer?.name || "Customer Record"}
+              </p>
+              {payment.customer?.email && (
+                <p className="text-[11px] text-[#74818A] truncate">{payment.customer.email}</p>
+              )}
+              {payment.customer?.phone && (
+                <p className="text-[11px] text-[#74818A] truncate">{payment.customer.phone}</p>
+              )}
+              <p className="mt-1 font-mono text-[10px] text-[#96A4AB] break-all">
+                ID: {payment.customerId}
               </p>
             </div>
 
@@ -181,13 +191,52 @@ export function PaymentDetailsDialog({
             </div>
           </div>
 
-          {/* 3. Booking Relationship Information (if included) */}
+          {/* 3. Booking Relationship & Originating Agent Attribution */}
           {payment.booking && (
-            <div className="rounded-xl border border-[#E5EAED] bg-white p-4">
-              <h5 className="font-outfit text-xs font-bold text-[#18282A] mb-3">
-                Associated Booking Information
-              </h5>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="rounded-xl border border-[#E5EAED] bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h5 className="font-outfit text-xs font-bold text-[#18282A]">
+                  Associated Booking & Agent Attribution
+                </h5>
+                <BookingSourceBadge
+                  source={payment.booking.source || (payment.booking.agentId ? "AGENT" : "DIRECT")}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg bg-[#FAFCFC] p-3 border border-[#E5EAED]">
+                <div>
+                  <span className="text-[11px] font-semibold text-[#74818A] block">Originating Agent</span>
+                  {payment.booking.agent ? (
+                    <div className="mt-0.5">
+                      <p className="font-semibold text-[#18282A]">{payment.booking.agent.name}</p>
+                      {payment.booking.agent.agentProfile?.agencyName && (
+                        <p className="text-[11px] font-semibold text-purple-700">
+                          {payment.booking.agent.agentProfile.agencyName}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-[#74818A]">{payment.booking.agent.email}</p>
+                    </div>
+                  ) : (
+                    <p className="font-medium text-[#96A4AB] italic mt-0.5">No Agent (Direct / Customer)</p>
+                  )}
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-semibold text-[#74818A] block">Booking Creator</span>
+                  <div className="mt-0.5">
+                    <p className="font-semibold text-[#18282A]">
+                      {payment.booking.createdBy?.name || (payment.booking.source === "CUSTOMER" ? "Customer" : "System / Direct")}
+                    </p>
+                    {payment.booking.createdBy?.role && (
+                      <span className="inline-block text-[10px] uppercase font-semibold text-[#176779] bg-[#E8F8F5] px-1.5 py-0.2 rounded mt-0.5">
+                        {payment.booking.createdBy.role}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
                 <div>
                   <span className="text-[11px] text-[#74818A]">Booking Status</span>
                   <p className="font-semibold text-[#18282A] mt-0.5">{payment.booking.status}</p>

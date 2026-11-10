@@ -6,6 +6,7 @@ import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
 import {
   useGetAdminPaymentsQuery,
   useGetAdminPaymentsReportQuery,
+  useGetAdminAgentsQuery,
 } from "../../api/admin-api";
 import { usePermissions } from "../../hooks/use-permissions";
 import { PaymentsHeader } from "./payments-header";
@@ -40,6 +41,8 @@ export function AdminPaymentsView() {
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
   const [methodFilter, setMethodFilter] = React.useState<string>("ALL");
   const [bookingIdFilter, setBookingIdFilter] = React.useState<string>("");
+  const [agentIdFilter, setAgentIdFilter] = React.useState<string>("ALL");
+  const [sourceFilter, setSourceFilter] = React.useState<string>("ALL");
 
   // 3. Modal Dialog States
   const [paymentForDetails, setPaymentForDetails] = React.useState<AdminPaymentRecord | null>(null);
@@ -73,8 +76,16 @@ export function AdminPaymentsView() {
         bookingIdFilter.trim().length > 0
           ? bookingIdFilter.trim()
           : undefined,
+      agentId:
+        agentIdFilter !== "ALL"
+          ? agentIdFilter
+          : undefined,
+      source:
+        sourceFilter !== "ALL"
+          ? (sourceFilter as any)
+          : undefined,
     };
-  }, [page, limit, statusFilter, methodFilter, bookingIdFilter]);
+  }, [page, limit, statusFilter, methodFilter, bookingIdFilter, agentIdFilter, sourceFilter]);
 
   // 6. RTK Query Hooks
   const {
@@ -94,6 +105,15 @@ export function AdminPaymentsView() {
     skip: !canViewReports,
   });
 
+  const {
+    data: agentsResponse,
+  } = useGetAdminAgentsQuery();
+
+  const agentsList = React.useMemo(
+    () => agentsResponse?.data?.items || [],
+    [agentsResponse?.data?.items]
+  );
+
   const paymentsList: AdminPaymentRecord[] = React.useMemo(
     () => paymentsResponse?.data?.items || [],
     [paymentsResponse?.data?.items]
@@ -109,12 +129,18 @@ export function AdminPaymentsView() {
   );
 
   const hasActiveFilters =
-    statusFilter !== "ALL" || methodFilter !== "ALL" || bookingIdFilter.trim().length > 0;
+    statusFilter !== "ALL" ||
+    methodFilter !== "ALL" ||
+    bookingIdFilter.trim().length > 0 ||
+    agentIdFilter !== "ALL" ||
+    sourceFilter !== "ALL";
 
   const handleResetFilters = () => {
     setStatusFilter("ALL");
     setMethodFilter("ALL");
     setBookingIdFilter("");
+    setAgentIdFilter("ALL");
+    setSourceFilter("ALL");
     setPage(1);
   };
 
@@ -130,6 +156,16 @@ export function AdminPaymentsView() {
 
   const handleBookingIdFilterChange = (newBookingId: string) => {
     setBookingIdFilter(newBookingId);
+    setPage(1);
+  };
+
+  const handleAgentIdFilterChange = (newAgentId: string) => {
+    setAgentIdFilter(newAgentId);
+    setPage(1);
+  };
+
+  const handleSourceFilterChange = (newSource: string) => {
+    setSourceFilter(newSource);
     setPage(1);
   };
 
@@ -205,6 +241,11 @@ export function AdminPaymentsView() {
         onMethodFilterChange={handleMethodFilterChange}
         bookingIdFilter={bookingIdFilter}
         onBookingIdFilterChange={handleBookingIdFilterChange}
+        agentIdFilter={agentIdFilter}
+        onAgentIdFilterChange={handleAgentIdFilterChange}
+        sourceFilter={sourceFilter}
+        onSourceFilterChange={handleSourceFilterChange}
+        agents={agentsList}
         onResetFilters={handleResetFilters}
         hasActiveFilters={hasActiveFilters}
       />

@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Search, RotateCcw, Filter, UserCheck, CreditCard, Calendar } from "lucide-react";
+import { Search, RotateCcw, Filter, UserCheck, CreditCard, Calendar, Briefcase, Globe } from "lucide-react";
 import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
 import { Button } from "@/components/ui/button";
-import type { AdminStaffMember } from "../../types/admin-bookings";
+import type { AdminStaffMember, AgentAttributionInfo } from "../../types/admin-bookings";
 
 export interface BookingsToolbarProps {
   search: string;
@@ -17,9 +17,14 @@ export interface BookingsToolbarProps {
   onFulfillmentStatusChange: (status: string) => void;
   assignedStaffId: string;
   onAssignedStaffIdChange: (staffId: string) => void;
+  agentId?: string;
+  onAgentIdChange?: (agentId: string) => void;
+  source?: string;
+  onSourceChange?: (source: string) => void;
   travelDate: string;
   onTravelDateChange: (date: string) => void;
   staffMembers?: AdminStaffMember[];
+  agents?: AgentAttributionInfo[];
   isStaffLoading?: boolean;
   statusCounts?: Record<string, number>;
   onResetFilters: () => void;
@@ -40,6 +45,14 @@ const FULFILLMENT_OPTIONS: SelectOption<string>[] = [
   { value: "FULFILLED", label: "Fulfilled" },
 ];
 
+const SOURCE_OPTIONS: SelectOption<string>[] = [
+  { value: "ALL", label: "All Sources", icon: <Globe className="h-3.5 w-3.5" /> },
+  { value: "AGENT", label: "Agent Bookings" },
+  { value: "ADMIN", label: "Admin Bookings" },
+  { value: "CUSTOMER", label: "Customer Bookings" },
+  { value: "DIRECT", label: "Direct Bookings" },
+];
+
 export function BookingsToolbar({
   search,
   onSearchChange,
@@ -51,9 +64,14 @@ export function BookingsToolbar({
   onFulfillmentStatusChange,
   assignedStaffId,
   onAssignedStaffIdChange,
+  agentId = "ALL",
+  onAgentIdChange,
+  source = "ALL",
+  onSourceChange,
   travelDate,
   onTravelDateChange,
   staffMembers = [],
+  agents = [],
   statusCounts = {},
   onResetFilters,
   isFiltered,
@@ -69,6 +87,19 @@ export function BookingsToolbar({
     }
     return list;
   }, [staffMembers]);
+
+  const agentOptions: SelectOption<string>[] = React.useMemo(() => {
+    const list: SelectOption<string>[] = [
+      { value: "ALL", label: "All Agents", icon: <Briefcase className="h-3.5 w-3.5" /> },
+    ];
+    for (const a of agents) {
+      const label = a.agentProfile?.agencyName
+        ? `${a.name} (${a.agentProfile.agencyName})`
+        : a.name;
+      list.push({ value: a.id, label });
+    }
+    return list;
+  }, [agents]);
 
   const bookingStatusTabs = [
     { key: "ALL", label: "All Bookings", count: statusCounts["ALL"] },
@@ -183,6 +214,36 @@ export function BookingsToolbar({
             data-testid="bookings-staff-filter"
           />
         </div>
+
+        {/* Source Filter */}
+        {onSourceChange && (
+          <div className="sm:col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-2">
+            <CustomSelect
+              options={SOURCE_OPTIONS}
+              value={source}
+              onChange={(val) => onSourceChange(val)}
+              aria-label="Filter by booking source"
+              triggerClassName="h-10"
+              usePortal={true}
+              data-testid="bookings-source-filter"
+            />
+          </div>
+        )}
+
+        {/* Agent Filter */}
+        {onAgentIdChange && (
+          <div className="sm:col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-2">
+            <CustomSelect
+              options={agentOptions}
+              value={agentId}
+              onChange={(val) => onAgentIdChange(val)}
+              aria-label="Filter by agent"
+              triggerClassName="h-10"
+              usePortal={true}
+              data-testid="bookings-agent-filter"
+            />
+          </div>
+        )}
 
         {/* Reset Filters Button */}
         <div className="sm:col-span-2 md:col-span-1 lg:col-span-1 xl:col-span-1 flex justify-start sm:justify-end">

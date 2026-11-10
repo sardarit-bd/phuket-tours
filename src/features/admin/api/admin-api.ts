@@ -301,6 +301,8 @@ export const adminApi = baseApi.injectEndpoints({
         if (params?.limit !== undefined) queryParams.limit = params.limit;
         if (params?.fulfillmentStatus) queryParams.fulfillmentStatus = params.fulfillmentStatus;
         if (params?.assignedStaffId) queryParams.assignedStaffId = params.assignedStaffId;
+        if (params?.agentId) queryParams.agentId = params.agentId;
+        if (params?.source) queryParams.source = params.source;
 
         return {
           url: "/admin/operations/bookings",
@@ -622,6 +624,24 @@ export const adminApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getAdminAgents: builder.query<
+      AdminApiResponse<{ items: AdminUserRecord[]; total: number }>,
+      { page?: number; limit?: number; search?: string } | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page) queryParams.page = params.page;
+        if (params?.limit) queryParams.limit = params.limit;
+        if (params?.search) queryParams.search = params.search;
+        return {
+          url: "/admin/agents",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: [{ type: "User", id: "AGENTS_LIST" }],
+    }),
+
     getAdminAgentById: builder.query<
       AdminApiResponse<AdminUserRecord>,
       string
@@ -806,6 +826,8 @@ export const adminApi = baseApi.injectEndpoints({
         if (params?.method) queryParams.method = params.method;
         if (params?.bookingId) queryParams.bookingId = params.bookingId;
         if (params?.customerId) queryParams.customerId = params.customerId;
+        if (params?.agentId) queryParams.agentId = params.agentId;
+        if (params?.source) queryParams.source = params.source;
         return {
           url: "/admin/payments",
           method: "GET",
@@ -1271,6 +1293,8 @@ export const {
   useLazyGetAdminUsersQuery,
   useGetAdminUserByIdQuery,
   useLazyGetAdminUserByIdQuery,
+  useGetAdminAgentsQuery,
+  useLazyGetAdminAgentsQuery,
   useGetAdminAgentByIdQuery,
   useLazyGetAdminAgentByIdQuery,
   useCreateAdminAgentMutation,

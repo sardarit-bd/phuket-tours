@@ -7,6 +7,7 @@ import {
   BookingStatusBadge,
   FulfillmentStatusBadge,
   PaymentStatusBadge,
+  BookingSourceBadge,
 } from "./booking-status-badges";
 import type { OperationalBookingRecord } from "../../types/admin-bookings";
 import { formatReportMoney } from "../../utils/format";
@@ -23,6 +24,7 @@ import {
   CreditCard,
   DollarSign,
   AlertCircle,
+  Briefcase,
 } from "lucide-react";
 
 export interface BookingDetailsDialogProps {
@@ -166,7 +168,7 @@ export function BookingDetailsDialog({
     >
       <div className="space-y-5" data-testid="booking-details-dialog">
         {/* Status Highlights */}
-        <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-[#FAFCFC] p-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-[#FAFCFC] p-4 sm:grid-cols-4">
           <div className="space-y-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#74818A]">
               Booking Status
@@ -189,6 +191,60 @@ export function BookingDetailsDialog({
             </span>
             <div>
               <FulfillmentStatusBadge status={booking.fulfillmentStatus} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#74818A]">
+              Booking Source
+            </span>
+            <div>
+              <BookingSourceBadge source={booking.source || (booking.agentId ? "AGENT" : "DIRECT")} />
+            </div>
+          </div>
+        </div>
+
+        {/* Commercial & Operational Attribution (Agent vs Staff vs Creator) */}
+        <div className="space-y-2.5">
+          <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
+            <Briefcase className="h-4 w-4 text-[#176779]" />
+            Commercial & Operational Attribution
+          </h4>
+          <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-white p-3.5 sm:grid-cols-3 text-xs">
+            <div>
+              <span className="text-[#74818A] block">Originating Agent:</span>
+              {booking.agent ? (
+                <div className="mt-0.5">
+                  <p className="font-semibold text-[#18282A]">{booking.agent.name}</p>
+                  <p className="text-[11px] text-purple-700 font-medium">
+                    {booking.agent.agentProfile?.agencyName || "Independent Agent"}
+                  </p>
+                  <p className="text-[11px] text-[#74818A] truncate">{booking.agent.email}</p>
+                </div>
+              ) : (
+                <p className="font-medium text-[#96A4AB] italic mt-0.5">No Agent (Direct / Admin)</p>
+              )}
+            </div>
+            <div>
+              <span className="text-[#74818A] block">Booking Creator:</span>
+              <div className="mt-0.5">
+                <p className="font-semibold text-[#18282A]">
+                  {booking.createdBy?.name || (booking.source === "CUSTOMER" ? (booking.customer?.name || "Customer") : "System / Direct")}
+                </p>
+                {booking.createdBy?.role && (
+                  <span className="inline-block text-[10px] uppercase font-semibold text-[#176779] bg-[#E8F8F5] px-1.5 py-0.2 rounded mt-0.5">
+                    {booking.createdBy.role}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <span className="text-[#74818A] block">Assigned Operational Staff:</span>
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <UserCheck className="h-3.5 w-3.5 text-[#176779]" />
+                <span className="font-medium text-[#18282A]">
+                  {booking.assignedStaff?.name || "Unassigned"}
+                </span>
+              </div>
             </div>
           </div>
         </div>

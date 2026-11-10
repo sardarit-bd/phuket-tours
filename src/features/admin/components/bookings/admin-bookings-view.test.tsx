@@ -116,6 +116,7 @@ vi.mock("@/features/admin/api/admin-api", () => {
   return {
     useGetAdminOperationsBookingsQuery: vi.fn(),
     useGetAdminStaffQuery: vi.fn(),
+    useGetAdminAgentsQuery: vi.fn(),
     useAssignBookingStaffMutation: vi.fn(),
     useUpdateBookingFulfillmentStatusMutation: vi.fn(),
     useReviewBookingPriceApprovalMutation: vi.fn(),
@@ -205,6 +206,11 @@ describe("AdminBookingsView component", () => {
 
     vi.mocked(adminApiModule.useGetAdminStaffQuery).mockReturnValue({
       data: { success: true, message: "OK", data: { items: MOCK_STAFF, page: 1, limit: 10, total: 1 } },
+      isLoading: false,
+    } as any);
+
+    vi.mocked(adminApiModule.useGetAdminAgentsQuery).mockReturnValue({
+      data: { success: true, message: "OK", data: { items: [], page: 1, limit: 100, total: 0 } },
       isLoading: false,
     } as any);
 
