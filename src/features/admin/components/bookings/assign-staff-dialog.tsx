@@ -72,11 +72,12 @@ function AssignStaffForm({
         notes: notes.trim() ? notes.trim() : undefined,
       }).unwrap();
 
+      // Immediately notify parent so background refetch and state sync trigger without delay
+      onSuccess?.();
       setIsSuccess(true);
       setTimeout(() => {
-        onSuccess?.();
         onClose();
-      }, 1000);
+      }, 800);
     } catch (err: unknown) {
       setErrorMessage(
         formatErrorMessage(err, {
@@ -86,6 +87,11 @@ function AssignStaffForm({
       );
     }
   };
+
+  const selectedStaffMember = React.useMemo(() => {
+    if (!selectedStaffId || selectedStaffId === "unassigned") return null;
+    return staffMembers.find((s) => s.id === selectedStaffId) || null;
+  }, [selectedStaffId, staffMembers]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -121,6 +127,31 @@ function AssignStaffForm({
           Staff member responsible for guest greeting and tour delivery.
         </p>
       </div>
+
+      {/* Selected Staff Card Preview */}
+      {selectedStaffMember && (
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-3 text-xs">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#176779] text-xs font-bold text-white">
+            {selectedStaffMember.name
+              .split(/\s+/)
+              .map((n) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-[#18282A] truncate">
+                {selectedStaffMember.name}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200">
+                Active Staff
+              </span>
+            </div>
+            <p className="text-[11px] text-[#74818A] truncate">{selectedStaffMember.email}</p>
+          </div>
+        </div>
+      )}
 
       {/* Optional Notes Input */}
       <div className="space-y-1.5">

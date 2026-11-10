@@ -11,39 +11,60 @@ import {
   useGetCustomerPaymentsQuery,
   useReconcileCustomerPaymentMutation,
 } from "@/features/customer/api/customer-api";
+import {
+  useGetAgentBookingByIdQuery,
+  useGetAgentPaymentsQuery,
+  useReconcileAgentPaymentMutation,
+} from "@/features/agent/api/agent-api";
+import { useAppSelector } from "@/store/hooks";
+import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
 
 function CheckoutCancelContent() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bookingId") || "";
 
+  const currentUser = useAppSelector(selectCurrentUser);
+  const isAgent = currentUser?.role === "agent";
+
   // Query booking to see if it was actually already verified
-  const { data: bookingRes } = useGetCustomerBookingByIdQuery(bookingId, {
-    skip: !bookingId,
+  const { data: custBookingRes } = useGetCustomerBookingByIdQuery(bookingId, {
+    skip: !bookingId || isAgent,
   });
-
-  const { data: paymentsRes } = useGetCustomerPaymentsQuery(
+  const { data: custPaymentsRes } = useGetCustomerPaymentsQuery(
     { bookingId },
-    { skip: !bookingId },
+    { skip: !bookingId || isAgent },
   );
+  const [reconcileCustomerPayment] = useReconcileCustomerPaymentMutation();
 
-  const [reconcilePayment] = useReconcileCustomerPaymentMutation();
+  const { data: agentBookingRes } = useGetAgentBookingByIdQuery(bookingId, {
+    skip: !bookingId || !isAgent,
+  });
+  const { data: agentPaymentsRes } = useGetAgentPaymentsQuery(
+    { bookingId },
+    { skip: !bookingId || !isAgent },
+  );
+  const [reconcileAgentPayment] = useReconcileAgentPaymentMutation();
+
   const reconciledRef = useRef(false);
 
-  const isPaid = bookingRes?.data?.paymentStatus === "PAID";
+  const booking = isAgent ? agentBookingRes?.data : custBookingRes?.data;
+  const isPaid = booking?.paymentStatus === "PAID";
+  const payments = isAgent ? agentPaymentsRes?.data?.items : custPaymentsRes?.data?.items;
+  const triggerReconcile = isAgent ? reconcileAgentPayment : reconcileCustomerPayment;
 
   // Reconcile once upon arriving on cancel if there is an active Stripe payment
   // (guards against the rare edge-case where customer paid, but hit back/cancel or was redirected to cancel)
   useEffect(() => {
-    if (!isPaid && !reconciledRef.current && paymentsRes?.data?.items?.length) {
-      const stripePayment = paymentsRes.data.items.find(
+    if (!isPaid && !reconciledRef.current && payments?.length) {
+      const stripePayment = payments.find(
         (p) => p.method === "STRIPE" && p.status !== "VERIFIED",
       );
       if (stripePayment) {
         reconciledRef.current = true;
-        reconcilePayment(stripePayment.id).catch(() => {});
+        triggerReconcile(stripePayment.id).catch(() => {});
       }
     }
-  }, [isPaid, paymentsRes, reconcilePayment]);
+  }, [isPaid, payments, triggerReconcile]);
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-[#E5EAED] bg-white p-6 sm:p-8 shadow-xs text-center">
@@ -83,20 +104,26 @@ function CheckoutCancelContent() {
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
             {bookingId ? (
-              <Link href={`/dashboard/bookings/${bookingId}`} className="flex-1">
+              <Link
+                href={isAgent ? "/dashboard/agent/bookings" : `/dashboard/bookings/${bookingId}`}
+                className="flex-1"
+              >
                 <Button className="w-full h-9 bg-[#176779] text-white hover:bg-[#135664] text-xs font-semibold gap-1.5">
                   <RefreshCw className="h-3.5 w-3.5" />
-                  <span>Return to Booking</span>
+                  <span>{isAgent ? "Agency Bookings" : "Return to Booking"}</span>
                 </Button>
               </Link>
             ) : null}
-            <Link href="/dashboard/bookings" className="flex-1">
+            <Link
+              href={isAgent ? "/dashboard/agent/bookings" : "/dashboard/bookings"}
+              className="flex-1"
+            >
               <Button
                 variant="outline"
                 className="w-full h-9 border-[#E5EAED] text-xs font-semibold text-[#18282A] gap-1.5"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                <span>My Bookings</span>
+                <span>{isAgent ? "My Bookings" : "My Bookings"}</span>
               </Button>
             </Link>
           </div>

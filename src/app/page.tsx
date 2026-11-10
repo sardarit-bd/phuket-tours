@@ -9,12 +9,25 @@ import { CtaSection } from "@/components/sections/cta-section";
 export default function HomePage() {
   return (
     <div className="flex flex-col">
+      {/* PhuketTours Hero Section */}
       <HeroSection />
+
+      {/* Explore by Experience Section */}
       <ExploreExperienceSection />
+
+      {/* Featured Tours Section */}
       <FeaturedToursSection />
+
+      {/* Book Your Phuket Experience Section */}
       <BookingProcessSection />
+
+      {/* Know Before You Go (Tour Details) Section */}
       <KnowBeforeYouGoSection />
+
+      {/* Frequently Asked Questions (FAQ) Section */}
       <FaqSection />
+
+      {/* Ready to Explore Phuket CTA Section */}
       <CtaSection />
     </div>
   );

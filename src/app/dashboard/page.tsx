@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { useGetMeQuery } from "@/features/auth/api/auth-api";
 import { useGetCustomerBookingsQuery } from "@/features/customer/api/customer-api";
 import type { CustomerBookingRecord } from "@/features/customer/types/customer";
@@ -45,12 +46,42 @@ function isRecent(booking: CustomerBookingRecord): boolean {
   return daysAgo <= 30;
 }
 
+function isUnauthorizedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ("status" in error) {
+    const status = (error as { status?: unknown }).status;
+    return status === 401 || status === "401";
+  }
+  if ("originalStatus" in error) {
+    const originalStatus = (error as { originalStatus?: unknown }).originalStatus;
+    return originalStatus === 401 || originalStatus === "401";
+  }
+  return false;
+}
+
 export default function UserOverviewPage() {
+  const router = useRouter();
+  const rawPathname = usePathname();
+  const pathname = rawPathname ?? "/dashboard";
+
   const {
     data: meResponse,
     error: meError,
     refetch: refetchMe,
   } = useGetMeQuery();
+
+  const isMeUnauthorized = isUnauthorizedError(meError);
+
+  // If unauthenticated (401), redirect to sign-in with safe destination parameter.
+  // Network failures, timeouts, and 500 errors remain on-page to display recovery controls.
+  React.useEffect(() => {
+    if (isMeUnauthorized) {
+      const safeRedirect = pathname.startsWith("/") && !pathname.startsWith("//")
+        ? pathname
+        : "/dashboard";
+      router.replace(`/sign-in?redirect=${encodeURIComponent(safeRedirect)}`);
+    }
+  }, [isMeUnauthorized, pathname, router]);
 
   const {
     data: bookingsResponse,
@@ -58,7 +89,10 @@ export default function UserOverviewPage() {
     isFetching: isBookingsFetching,
     error: bookingsError,
     refetch: refetchBookings,
-  } = useGetCustomerBookingsQuery({ page: 1, limit: 20 });
+  } = useGetCustomerBookingsQuery(
+    { page: 1, limit: 20 },
+    { skip: isMeUnauthorized }
+  );
 
   const profile = meResponse?.data;
   const bookings: CustomerBookingRecord[] = bookingsResponse?.data?.items || [];
@@ -107,7 +141,7 @@ export default function UserOverviewPage() {
       </div>
 
       {/* Error banners */}
-      {(meError || bookingsError) && (
+      {!isMeUnauthorized && (meError || bookingsError) && (
         <div
           role="alert"
           className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800"

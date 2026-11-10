@@ -67,6 +67,7 @@ vi.mock("@/features/admin/api/admin-api", () => {
     useGetAdminPaymentsQuery: vi.fn(),
     useGetAdminPaymentsReportQuery: vi.fn(),
     useGetAdminPaymentByIdQuery: vi.fn(),
+    useGetAdminAgentsQuery: vi.fn(),
     useVerifyAdminPaymentMutation: vi.fn(),
     useRecordAdminPaymentMutation: vi.fn(),
   };
@@ -122,6 +123,15 @@ describe("AdminPaymentsView root view", () => {
       isLoading: false,
       isError: false,
       refetch: mockRefetchReport,
+    } as any);
+
+    vi.mocked(adminApiModule.useGetAdminAgentsQuery).mockReturnValue({
+      data: {
+        success: true,
+        message: "OK",
+        data: { items: [], page: 1, limit: 100, total: 0 },
+      },
+      isLoading: false,
     } as any);
 
     vi.mocked(adminApiModule.useGetAdminPaymentByIdQuery).mockReturnValue({

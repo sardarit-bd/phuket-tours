@@ -22,11 +22,19 @@ import type {
   UpdateAdminAvailabilityInput,
   AdminBookingsListResponse,
   GetAdminBookingsParams,
+  GetStaffBookingsParams,
+  StaffBookingRecord,
+  StaffBookingsListResponse,
   OperationalBookingRecord,
   AssignBookingStaffInput,
   UpdateBookingFulfillmentInput,
   ReviewBookingPriceApprovalInput,
   AdminStaffListResponse,
+  PendingReservationRecord,
+  AdminPendingReservationsResponse,
+  ReviewPendingReservationInput,
+  BookingHistoryRecord,
+  BookingHistoryListResponse,
   AdminUserRecord,
   AdminUserListResponse,
   GetAdminUsersParams,
@@ -51,6 +59,8 @@ import type {
   GetAdminCommissionRulesParams,
   AdminCommissionRulesResponse,
   ConfigureCommissionRuleInput,
+  CreateCommissionPolicyInput,
+  UpdateCommissionPolicyInput,
   AdminCommissionsReportData,
 } from "../types/admin";
 import type {
@@ -291,6 +301,8 @@ export const adminApi = baseApi.injectEndpoints({
         if (params?.limit !== undefined) queryParams.limit = params.limit;
         if (params?.fulfillmentStatus) queryParams.fulfillmentStatus = params.fulfillmentStatus;
         if (params?.assignedStaffId) queryParams.assignedStaffId = params.assignedStaffId;
+        if (params?.agentId) queryParams.agentId = params.agentId;
+        if (params?.source) queryParams.source = params.source;
 
         return {
           url: "/admin/operations/bookings",
@@ -331,9 +343,57 @@ export const adminApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: { staffId, notes },
       }),
+      async onQueryStarted({ bookingId, staffId }, { dispatch, queryFulfilled, getState }) {
+        // Optimistic update on all getAdminOperationsBookings queries in cache
+        const patchResult = dispatch(
+          adminApi.util.updateQueryData(
+            "getAdminOperationsBookings" as any,
+            undefined as any,
+            (draft: any) => {
+              if (draft?.data?.items) {
+                const booking = draft.data.items.find((b: any) => b.id === bookingId);
+                if (booking) {
+                  booking.assignedStaffId = staffId;
+                  // If staffId is null, clear assignedStaff relation
+                  if (!staffId) {
+                    booking.assignedStaff = null;
+                  }
+                }
+              }
+            }
+          )
+        );
+
+        try {
+          const { data: response } = await queryFulfilled;
+          // Apply verified server data directly to getAdminOperationsBookings cache
+          if (response?.data) {
+            dispatch(
+              adminApi.util.updateQueryData(
+                "getAdminOperationsBookings" as any,
+                undefined as any,
+                (draft: any) => {
+                  if (draft?.data?.items) {
+                    const idx = draft.data.items.findIndex((b: any) => b.id === bookingId);
+                    if (idx !== -1) {
+                      draft.data.items[idx] = {
+                        ...draft.data.items[idx],
+                        ...response.data,
+                      };
+                    }
+                  }
+                }
+              )
+            );
+          }
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
         "AdminReport",
       ],
     }),
@@ -350,6 +410,67 @@ export const adminApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    // Staff Portal Operations Endpoints
+    getStaffOperationsBookings: builder.query<
+      AdminApiResponse<StaffBookingsListResponse>,
+      GetStaffBookingsParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.fulfillmentStatus && params.fulfillmentStatus !== "ALL") {
+          queryParams.fulfillmentStatus = params.fulfillmentStatus;
+        }
+
+        return {
+          url: "/staff/operations/bookings",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((b) => ({
+                type: "Booking" as const,
+                id: b.id,
+              })),
+              { type: "Booking", id: "STAFF_LIST" },
+            ]
+          : [{ type: "Booking", id: "STAFF_LIST" }],
+    }),
+
+    getStaffOperationsBookingById: builder.query<
+      AdminApiResponse<StaffBookingRecord>,
+      string
+    >({
+      query: (bookingId) => ({
+        url: `/staff/operations/bookings/${bookingId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, bookingId) => [
+        { type: "Booking", id: bookingId },
+      ],
+    }),
+
+    updateStaffBookingFulfillmentStatus: builder.mutation<
+      AdminApiResponse<StaffBookingRecord>,
+      UpdateBookingFulfillmentInput
+    >({
+      query: ({ bookingId, fulfillmentStatus, notes }) => ({
+        url: `/staff/operations/bookings/${bookingId}/status`,
+        method: "PATCH",
+        body: { fulfillmentStatus, notes },
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
         "AdminReport",
       ],
     }),
@@ -371,6 +492,91 @@ export const adminApi = baseApi.injectEndpoints({
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
         "AdminReport",
+      ],
+    }),
+
+    getAdminPendingReservations: builder.query<
+      AdminApiResponse<AdminPendingReservationsResponse>,
+      { page?: number; limit?: number; search?: string; paymentStatus?: string } | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.search) queryParams.search = params.search;
+        if (params?.paymentStatus) queryParams.paymentStatus = params.paymentStatus;
+
+        return {
+          url: "/admin/bookings/pending",
+          method: "GET",
+          params: queryParams,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((b) => ({
+                type: "Booking" as const,
+                id: b.id,
+              })),
+              { type: "Booking", id: "LIST" },
+            ]
+          : [{ type: "Booking", id: "LIST" }],
+    }),
+
+    reviewAdminPendingReservation: builder.mutation<
+      AdminApiResponse<PendingReservationRecord>,
+      ReviewPendingReservationInput
+    >({
+      query: ({ bookingId, action, notes }) => ({
+        url: `/admin/bookings/pending/${bookingId}/review`,
+        method: "POST",
+        body: { action, notes },
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    getAdminBookingHistory: builder.query<
+      AdminApiResponse<BookingHistoryListResponse>,
+      { bookingId: string; page?: number; limit?: number }
+    >({
+      query: ({ bookingId, page, limit }) => {
+        const params: Record<string, number> = {};
+        if (page !== undefined) params.page = page;
+        if (limit !== undefined) params.limit = limit;
+        return {
+          url: `/admin/bookings/${bookingId}/history`,
+          method: "GET",
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "LIST" },
+      ],
+    }),
+
+    getStaffBookingHistory: builder.query<
+      AdminApiResponse<BookingHistoryListResponse>,
+      { bookingId: string; page?: number; limit?: number }
+    >({
+      query: ({ bookingId, page, limit }) => {
+        const params: Record<string, number> = {};
+        if (page !== undefined) params.page = page;
+        if (limit !== undefined) params.limit = limit;
+        return {
+          url: `/staff/operations/bookings/${bookingId}/history`,
+          method: "GET",
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "STAFF_LIST" },
       ],
     }),
 
@@ -416,6 +622,24 @@ export const adminApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, userId) => [
         { type: "User", id: userId },
       ],
+    }),
+
+    getAdminAgents: builder.query<
+      AdminApiResponse<{ items: AdminUserRecord[]; total: number }>,
+      { page?: number; limit?: number; search?: string } | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page) queryParams.page = params.page;
+        if (params?.limit) queryParams.limit = params.limit;
+        if (params?.search) queryParams.search = params.search;
+        return {
+          url: "/admin/agents",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: [{ type: "User", id: "AGENTS_LIST" }],
     }),
 
     getAdminAgentById: builder.query<
@@ -602,6 +826,8 @@ export const adminApi = baseApi.injectEndpoints({
         if (params?.method) queryParams.method = params.method;
         if (params?.bookingId) queryParams.bookingId = params.bookingId;
         if (params?.customerId) queryParams.customerId = params.customerId;
+        if (params?.agentId) queryParams.agentId = params.agentId;
+        if (params?.source) queryParams.source = params.source;
         return {
           url: "/admin/payments",
           method: "GET",
@@ -738,9 +964,10 @@ export const adminApi = baseApi.injectEndpoints({
       GetAdminCommissionRulesParams | void
     >({
       query: (params) => {
-        const queryParams: Record<string, number> = {};
+        const queryParams: Record<string, string | number> = {};
         if (params?.page) queryParams.page = params.page;
         if (params?.limit) queryParams.limit = params.limit;
+        if (params?.status) queryParams.status = params.status;
 
         return {
           url: "/admin/commission-rules",
@@ -749,6 +976,124 @@ export const adminApi = baseApi.injectEndpoints({
         };
       },
       providesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    getAdminCommissionRuleById: builder.query<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, id) => [{ type: "AdminCommissionRule", id }],
+    }),
+
+    createDraftCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      CreateCommissionPolicyInput
+    >({
+      query: (input) => ({
+        url: "/admin/commission-rules",
+        method: "POST",
+        body: input,
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    updateCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      { policyId: string; input: UpdateCommissionPolicyInput }
+    >({
+      query: ({ policyId, input }) => ({
+        url: `/admin/commission-rules/${policyId}`,
+        method: "PATCH",
+        body: input,
+      }),
+      invalidatesTags: (_result, _error, { policyId }) => [
+        { type: "AdminCommissionRule", id: policyId },
+        "AdminCommissionRule",
+        "AdminCommissions",
+      ],
+    }),
+
+    publishCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}/publish`,
+        method: "POST",
+      }),
+      invalidatesTags: [
+        "AdminCommissionRule",
+        "AdminCommissions",
+        "AdminReport",
+      ],
+    }),
+
+    deactivateCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}/deactivate`,
+        method: "POST",
+      }),
+      invalidatesTags: [
+        "AdminCommissionRule",
+        "AdminCommissions",
+        "AdminReport",
+      ],
+    }),
+
+    archiveCommissionPolicy: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}/archive`,
+        method: "POST",
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    deleteCommissionPolicy: builder.mutation<
+      AdminApiResponse<{ id: string; deleted: boolean }>,
+      string
+    >({
+      query: (policyId) => ({
+        url: `/admin/commission-rules/${policyId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    createCommissionPolicyRevision: builder.mutation<
+      AdminApiResponse<AdminCommissionRule>,
+      { policyId: string; input?: { rateType?: string; rateValue?: number } }
+    >({
+      query: ({ policyId, input }) => ({
+        url: `/admin/commission-rules/${policyId}/revision`,
+        method: "POST",
+        body: input || {},
+      }),
+      invalidatesTags: ["AdminCommissionRule", "AdminCommissions"],
+    }),
+
+    disablePlatformCommission: builder.mutation<
+      AdminApiResponse<{ disabled: boolean; deactivatedCount: number }>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/commission-rules/disable",
+        method: "POST",
+      }),
+      invalidatesTags: [
+        "AdminCommissionRule",
+        "AdminCommissions",
+        "AdminReport",
+      ],
     }),
 
     configureAdminCommissionRule: builder.mutation<
@@ -930,11 +1275,26 @@ export const {
   useAssignBookingStaffMutation,
   useUpdateBookingFulfillmentStatusMutation,
   useReviewBookingPriceApprovalMutation,
+  useGetAdminPendingReservationsQuery,
+  useLazyGetAdminPendingReservationsQuery,
+  useReviewAdminPendingReservationMutation,
+  useGetAdminBookingHistoryQuery,
+  useLazyGetAdminBookingHistoryQuery,
+  // Staff Portal Hooks
+  useGetStaffOperationsBookingsQuery,
+  useLazyGetStaffOperationsBookingsQuery,
+  useGetStaffOperationsBookingByIdQuery,
+  useLazyGetStaffOperationsBookingByIdQuery,
+  useUpdateStaffBookingFulfillmentStatusMutation,
+  useGetStaffBookingHistoryQuery,
+  useLazyGetStaffBookingHistoryQuery,
   // User Management Hooks
   useGetAdminUsersQuery,
   useLazyGetAdminUsersQuery,
   useGetAdminUserByIdQuery,
   useLazyGetAdminUserByIdQuery,
+  useGetAdminAgentsQuery,
+  useLazyGetAdminAgentsQuery,
   useGetAdminAgentByIdQuery,
   useLazyGetAdminAgentByIdQuery,
   useCreateAdminAgentMutation,
@@ -967,6 +1327,16 @@ export const {
   useAdjustAdminCommissionMutation,
   useGetAdminCommissionRulesQuery,
   useLazyGetAdminCommissionRulesQuery,
+  useGetAdminCommissionRuleByIdQuery,
+  useLazyGetAdminCommissionRuleByIdQuery,
+  useCreateDraftCommissionPolicyMutation,
+  useUpdateCommissionPolicyMutation,
+  usePublishCommissionPolicyMutation,
+  useDeactivateCommissionPolicyMutation,
+  useArchiveCommissionPolicyMutation,
+  useDeleteCommissionPolicyMutation,
+  useCreateCommissionPolicyRevisionMutation,
+  useDisablePlatformCommissionMutation,
   useConfigureAdminCommissionRuleMutation,
   useGetAdminCommissionsReportQuery,
   useLazyGetAdminCommissionsReportQuery,

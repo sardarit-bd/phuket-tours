@@ -1,8 +1,10 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { Provider } from "react-redux";
 import TourDetailsPage from "./page";
 import type { Tour } from "@/features/tours/types/tour";
+import { makeStore, type AppStore } from "@/store";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────
 const mockTour: Tour = {
@@ -84,13 +86,20 @@ describe("TourDetailsPage", () => {
     }));
   };
 
+  let store: AppStore;
+
+  const renderWithStore = (ui: React.ReactElement) => {
+    store = makeStore();
+    return render(<Provider store={store}>{ui}</Provider>);
+  };
+
   beforeEach(() => {
     setMock({});
   });
 
   it("renders the tour header, gallery, booking card, and tabs", () => {
     setMock({});
-    render(<TourDetailsPage />);
+    renderWithStore(<TourDetailsPage />);
 
     // Header
     expect(screen.getByRole("heading", { name: /Phi Phi Islands Tour/i })).toBeInTheDocument();
@@ -113,19 +122,19 @@ describe("TourDetailsPage", () => {
         price: { amount: 0, currency: "USD", hasPrice: false },
       },
     });
-    render(<TourDetailsPage />);
+    renderWithStore(<TourDetailsPage />);
     expect(screen.getByText("Contact for pricing")).toBeInTheDocument();
   });
 
   it("renders the not-found state when the query errors", () => {
     setMock({ data: undefined, isError: true });
-    render(<TourDetailsPage />);
+    renderWithStore(<TourDetailsPage />);
     expect(screen.getByText("Tour not found")).toBeInTheDocument();
   });
 
   it("shows the loading skeleton while the query is in flight", () => {
     setMock({ data: undefined, isLoading: true });
-    const { container } = render(<TourDetailsPage />);
+    const { container } = renderWithStore(<TourDetailsPage />);
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 });

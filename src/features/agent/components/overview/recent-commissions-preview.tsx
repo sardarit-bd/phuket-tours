@@ -6,38 +6,23 @@ import { ArrowRight, Coins } from "lucide-react";
 import type { AgentCommissionRecord } from "../../types/agent";
 import { AgentCommissionStatusBadge } from "../common/agent-status-badges";
 import { Button } from "@/components/ui/button";
+import {
+  formatAgentCurrency,
+  formatAgentDate,
+} from "../../utils/agent-formatters";
 
 interface RecentCommissionsPreviewProps {
   commissions?: AgentCommissionRecord[];
   isLoading?: boolean;
-}
-
-function formatDate(dateStr?: string | null): string {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "N/A";
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatCurrency(amount?: number): string {
-  if (typeof amount !== "number") return "฿0.00";
-  return `฿${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  isError?: boolean;
+  onRetry?: () => void;
 }
 
 export function RecentCommissionsPreview({
   commissions,
   isLoading,
+  isError,
+  onRetry,
 }: RecentCommissionsPreviewProps) {
   return (
     <div className="rounded-2xl border border-[#E5EAED] bg-white p-5 shadow-xs">
@@ -72,6 +57,28 @@ export function RecentCommissionsPreview({
                 className="h-12 w-full animate-pulse rounded-xl bg-slate-100"
               />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="py-8 text-center" data-testid="recent-commissions-error">
+            <p className="text-xs font-semibold text-rose-700">
+              Unable to load recent commissions
+            </p>
+            <p className="mt-1 text-[11px] text-[#74818A]">
+              Please check your connection and try again.
+            </p>
+            {onRetry && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  onClick={onRetry}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
           </div>
         ) : !commissions || commissions.length === 0 ? (
           <div className="py-8 text-center" data-testid="recent-commissions-empty">
@@ -112,16 +119,18 @@ export function RecentCommissionsPreview({
                       </div>
                     </td>
                     <td className="py-3 text-[#74818A]">
-                      {c.rateType === "PERCENTAGE" ? `${c.rateValue}%` : `฿${c.rateValue}`}
+                      {c.rateType === "PERCENTAGE"
+                        ? `${c.rateValue}%`
+                        : formatAgentCurrency(c.rateValue, c.booking?.currency, 0)}
                     </td>
                     <td className="py-3">
                       <AgentCommissionStatusBadge status={c.status} />
                     </td>
                     <td className="py-3 text-right font-semibold text-emerald-700">
-                      {formatCurrency(c.amount)}
+                      {formatAgentCurrency(c.amount, c.booking?.currency, 2)}
                     </td>
                     <td className="py-3 text-right text-[#74818A]">
-                      {formatDate(c.createdAt)}
+                      {formatAgentDate(c.createdAt)}
                     </td>
                   </tr>
                 ))}

@@ -198,3 +198,46 @@ export function AgentPriceApprovalBadge({
     </span>
   );
 }
+
+export function AgentFulfillmentStatusBadge({
+  status,
+  className,
+}: {
+  status?: "NOT_STARTED" | "IN_PROGRESS" | "FULFILLED" | string | null;
+} & StatusBadgeProps) {
+  if (!status) return null;
+  const normalized = status.toUpperCase();
+
+  const config: Record<string, { label: string; badgeClass: string }> = {
+    NOT_STARTED: {
+      label: "Not Started",
+      badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
+    },
+    IN_PROGRESS: {
+      label: "In Progress",
+      badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    },
+    FULFILLED: {
+      label: "Fulfilled",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
+  };
+
+  const current = config[normalized] || {
+    label: status,
+    badgeClass: "bg-slate-50 text-slate-700 border-slate-200",
+  };
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold tracking-wide",
+        current.badgeClass,
+        className
+      )}
+      data-testid={`fulfillment-status-${normalized.toLowerCase()}`}
+    >
+      {current.label}
+    </span>
+  );
+}

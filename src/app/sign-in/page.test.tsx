@@ -14,13 +14,18 @@ import {
 // Mock next/navigation router and searchParams
 const mockPush = vi.fn();
 let mockRedirectParam: string | null = null;
+let mockNextParam: string | null = null;
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
   }),
   useSearchParams: () => ({
-    get: (key: string) => (key === "redirect" ? mockRedirectParam : null),
+    get: (key: string) => {
+      if (key === "redirect") return mockRedirectParam;
+      if (key === "next") return mockNextParam;
+      return null;
+    },
   }),
 }));
 
@@ -63,11 +68,13 @@ describe("SignInPage & SignInForm", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockRedirectParam = null;
+    mockNextParam = null;
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
     mockRedirectParam = null;
+    mockNextParam = null;
     vi.restoreAllMocks();
   });
 
@@ -426,6 +433,58 @@ describe("SignInPage & SignInForm", () => {
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/dashboard/admin");
+    });
+  });
+
+  it("redirects customer back to tour details via next query parameter after sign in", async () => {
+    const user = userEvent.setup();
+    mockNextParam = "/tours/phuket-sunset-cruise";
+
+    setupMockFetch(200, {
+      success: true,
+      message: "Login successful",
+      data: {
+        id: "cust-1",
+        name: "Traveler",
+        email: "traveler@example.com",
+        role: "customer",
+      },
+    });
+
+    renderWithStore(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/email address/i), "traveler@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "secret123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/tours/phuket-sunset-cruise");
+    });
+  });
+
+  it("redirects customer to /checkout?tourId=... after sign in when redirected from Book Now", async () => {
+    const user = userEvent.setup();
+    mockRedirectParam = "/checkout?tourId=tour-phi-phi-01";
+
+    setupMockFetch(200, {
+      success: true,
+      message: "Login successful",
+      data: {
+        id: "cust-1",
+        name: "Traveler",
+        email: "traveler@example.com",
+        role: "customer",
+      },
+    });
+
+    renderWithStore(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/email address/i), "traveler@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "secret123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/checkout?tourId=tour-phi-phi-01");
     });
   });
 });

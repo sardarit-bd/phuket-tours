@@ -180,14 +180,6 @@ export function CommissionsSummaryCards({
           </div>
         </div>
       </div>
-
-      {/* Transparent Ledger Notice */}
-      <div className="flex items-start gap-2.5 rounded-lg border border-blue-100 bg-blue-50/60 px-3.5 py-2.5 text-xs text-blue-900">
-        <Info className="h-4 w-4 shrink-0 text-blue-600 mt-0.5" aria-hidden="true" />
-        <p className="leading-relaxed">
-          <strong>Database Ledger Scope:</strong> Metrics reflect active and cancelled commission records generated upon payment verification. Payout disbursement and settlement tracking are omitted as they are not supported in the current backend schema.
-        </p>
-      </div>
     </div>
   );
 }

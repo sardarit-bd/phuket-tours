@@ -87,7 +87,8 @@ export function SignInForm() {
         targetRoute = "/dashboard";
       }
 
-      const redirectParam = searchParams.get("redirect");
+      const redirectParam =
+        searchParams.get("redirect") || searchParams.get("next");
       if (
         redirectParam &&
         redirectParam.startsWith("/") &&
@@ -190,7 +191,7 @@ export function SignInForm() {
               Password
             </label>
             <Link
-              href="/forgot-password"
+              href="/reset-password"
               className="text-xs font-medium text-primary hover:text-primary-dark transition-colors focus-visible:outline-none focus-visible:underline"
             >
               Forgot password?

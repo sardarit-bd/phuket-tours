@@ -1,16 +1,22 @@
 "use client";
 
 import * as React from "react";
-import {
-  useGetAgentBookingsQuery,
-} from "../../api/agent-api";
+import { useGetAgentBookingsQuery } from "../../api/agent-api";
 import type { AgentBookingRecord } from "../../types/agent";
 import {
   AgentBookingStatusBadge,
   AgentPaymentStatusBadge,
   AgentPriceApprovalBadge,
+  AgentFulfillmentStatusBadge,
 } from "../common/agent-status-badges";
 import { AgentBookingDetailsDialog } from "./agent-booking-details-dialog";
+import { CreateAgentBookingDialog } from "./create-agent-booking-dialog";
+import {
+  formatAgentCurrency,
+  extractTravelDateRaw,
+  extractGuestsFromNotes,
+  formatAgentDate,
+} from "../../utils/agent-formatters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +28,12 @@ import {
   RefreshCw,
   Compass,
   AlertCircle,
+  PlusCircle,
+  Users,
+  CreditCard,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 
 const STATUS_TABS = [
@@ -33,32 +45,14 @@ const STATUS_TABS = [
   { label: "Cancelled", value: "CANCELLED" },
 ];
 
-function formatDate(dateStr?: string | null): string {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "N/A";
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatPrice(amount?: number): string {
-  if (typeof amount !== "number") return "฿0";
-  return `฿${amount.toLocaleString("en-US")}`;
-}
-
 export function AgentBookingsTable() {
   const [page, setPage] = React.useState(1);
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [searchInput, setSearchInput] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [selectedBooking, setSelectedBooking] = React.useState<AgentBookingRecord | null>(null);
+  const [detailsInitialTab, setDetailsInitialTab] = React.useState<"DETAILS" | "HISTORY" | "PAYMENT">("DETAILS");
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
 
   // Debounce search input
   React.useEffect(() => {
@@ -95,6 +89,11 @@ export function AgentBookingsTable() {
     setPage(1);
   };
 
+  const handleOpenDetails = (booking: AgentBookingRecord, tab: "DETAILS" | "HISTORY" | "PAYMENT" = "DETAILS") => {
+    setSelectedBooking(booking);
+    setDetailsInitialTab(tab);
+  };
+
   return (
     <div className="space-y-4" data-testid="agent-bookings-module">
       {/* Search and Filters Toolbar */}
@@ -111,6 +110,16 @@ export function AgentBookingsTable() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            size="sm"
+            className="h-9 bg-[#176779] text-xs font-semibold text-white hover:bg-[#135664]"
+            data-testid="agent-create-booking-btn"
+          >
+            <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+            <span>Create Booking</span>
+          </Button>
+
           <Button
             onClick={() => refetch()}
             disabled={isFetching}
@@ -192,7 +201,7 @@ export function AgentBookingsTable() {
             <p className="mt-1 text-xs text-[#74818A] max-w-sm mx-auto">
               {debouncedSearch || statusFilter !== "ALL"
                 ? "No bookings match the specified filter criteria. Try resetting filters."
-                : "You haven't booked any tours yet. Explore available tours and start making bookings."}
+                : "You haven't booked any tours yet. Explore available tours or create a partner reservation."}
             </p>
           </div>
         ) : (
@@ -202,80 +211,174 @@ export function AgentBookingsTable() {
                 <tr className="border-b border-[#E5EAED] bg-[#F8FAFB] text-[11px] font-semibold uppercase text-[#74818A]">
                   <th className="px-4 py-3">Booking Ref</th>
                   <th className="px-4 py-3">Tour Details</th>
-                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Customer &amp; Guests</th>
                   <th className="px-4 py-3">Travel Date</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Payment</th>
+                  <th className="px-4 py-3">Payment Status</th>
                   <th className="px-4 py-3 text-right">Price</th>
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5EAED]">
-                {bookings.map((booking) => (
-                  <tr
-                    key={booking.id}
-                    className="hover:bg-[#F8FAFB] transition-colors"
-                    data-testid={`booking-row-${booking.id}`}
-                  >
-                    <td className="px-4 py-3.5">
-                      <div className="font-mono font-medium text-[#18282A] select-all">
-                        {booking.id.slice(0, 8)}...
-                      </div>
-                      <span className="text-[10px] text-[#74818A]">
-                        {formatDate(booking.createdAt)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="font-semibold text-[#18282A] max-w-[220px] truncate" title={booking.service?.name}>
-                        {booking.service?.name || "Tour Service"}
-                      </div>
-                      <div className="text-[10px] text-[#74818A]">
-                        {booking.service?.type || "Tour"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="font-medium text-[#18282A] max-w-[160px] truncate">
-                        {booking.customer?.name || "Customer"}
-                      </div>
-                      <div className="text-[10px] text-[#74818A] max-w-[160px] truncate">
-                        {booking.customer?.email}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-[#18282A]">
-                      <div className="flex items-center gap-1 font-medium">
-                        <Calendar className="h-3 w-3 text-[#176779]" />
-                        <span>{formatDate(booking.availability?.date)}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex flex-col gap-1 items-start">
-                        <AgentBookingStatusBadge status={booking.status} />
-                        {booking.priceApproval && (
-                          <AgentPriceApprovalBadge status={booking.priceApproval.status} />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <AgentPaymentStatusBadge status={booking.paymentStatus} />
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-semibold text-[#18282A]">
-                      {formatPrice(booking.finalPrice)}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedBooking(booking)}
-                        className="h-8 px-2.5 text-xs text-[#176779] hover:bg-teal-50 hover:text-[#135664] cursor-pointer"
-                        data-testid={`view-booking-${booking.id}`}
-                      >
-                        <Eye className="mr-1 h-3.5 w-3.5" />
-                        <span>Details</span>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {bookings.map((booking) => {
+                  const effectiveTravelDate = extractTravelDateRaw(
+                    booking.availability?.date,
+                    booking.notes,
+                  );
+                  const guests = extractGuestsFromNotes(booking.notes);
+
+                  // Payment eligibility logic
+                  const isAwaitingPriceApproval =
+                    booking.requiresApproval || booking.status === "AWAITING_APPROVAL";
+                  const isUnpaid = booking.paymentStatus === "UNPAID";
+                  const isPartial = booking.paymentStatus === "PARTIALLY_PAID";
+                  const isPaid = booking.paymentStatus === "PAID";
+                  const isCancelled =
+                    booking.status === "CANCELLED" || booking.status === "FAILED";
+
+                  const canCompletePayment =
+                    (isUnpaid || isPartial) &&
+                    !isAwaitingPriceApproval &&
+                    !isCancelled;
+
+                  return (
+                    <tr
+                      key={booking.id}
+                      className="hover:bg-[#F8FAFB] transition-colors"
+                      data-testid={`booking-row-${booking.id}`}
+                    >
+                      <td className="px-4 py-3.5">
+                        <div className="font-mono font-medium text-[#18282A] select-all">
+                          {booking.id.slice(0, 8)}...
+                        </div>
+                        <span className="text-[10px] text-[#74818A]">
+                          {formatAgentDate(booking.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div
+                          className="font-semibold text-[#18282A] max-w-[190px] truncate"
+                          title={booking.service?.name}
+                        >
+                          {booking.service?.name || "Tour Service"}
+                        </div>
+                        <div className="text-[10px] text-[#74818A]">
+                          {booking.service?.type || "Tour"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="font-medium text-[#18282A] max-w-[140px] truncate">
+                          {booking.customer?.name || "Customer"}
+                        </div>
+                        <div className="text-[10px] text-[#74818A] flex items-center gap-1">
+                          {guests ? (
+                            <>
+                              <Users className="h-3 w-3 text-[#176779]" />
+                              <span>
+                                {guests.adults}A
+                                {guests.children > 0 ? `/${guests.children}C` : ""}
+                                {guests.infants > 0 ? `/${guests.infants}I` : ""}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="truncate max-w-[130px]">{booking.customer?.email}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-[#18282A]">
+                        <div className="flex items-center gap-1 font-medium">
+                          <Calendar className="h-3 w-3 text-[#176779]" />
+                          <span>{formatAgentDate(effectiveTravelDate)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1 items-start">
+                          <AgentBookingStatusBadge status={booking.status} />
+                          {booking.fulfillmentStatus && (
+                            <AgentFulfillmentStatusBadge status={booking.fulfillmentStatus} />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col gap-1 items-start">
+                          {/* Payment status badge */}
+                          {isAwaitingPriceApproval ? (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-800 border border-purple-200"
+                              data-testid={`badge-awaiting-approval-${booking.id}`}
+                            >
+                              <Clock className="h-3 w-3 text-purple-600" />
+                              <span>Awaiting Price Review</span>
+                            </span>
+                          ) : isPaid ? (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 border border-emerald-200"
+                              data-testid={`badge-paid-${booking.id}`}
+                            >
+                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                              <span>Paid</span>
+                            </span>
+                          ) : isUnpaid ? (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-800 border border-rose-200"
+                              data-testid={`badge-payment-required-${booking.id}`}
+                            >
+                              <CreditCard className="h-3 w-3 text-rose-600" />
+                              <span>Payment Required</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 border border-amber-200"
+                              data-testid={`badge-partial-paid-${booking.id}`}
+                            >
+                              <CreditCard className="h-3 w-3 text-amber-600" />
+                              <span>Partially Paid</span>
+                            </span>
+                          )}
+
+                          {/* Outstanding Balance Note if unpaid */}
+                          {!isPaid && !isCancelled && !isAwaitingPriceApproval && (
+                            <span className="text-[10px] text-rose-600 font-medium">
+                              Due: {formatAgentCurrency(booking.finalPrice, booking.currency)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-semibold text-[#18282A]">
+                        {formatAgentCurrency(booking.finalPrice, booking.currency)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* PRIMARY PAYMENT ACTION IF UNPAID & CONFIRMED */}
+                          {canCompletePayment ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleOpenDetails(booking, "PAYMENT")}
+                              className="h-8 px-2.5 text-xs bg-[#176779] hover:bg-[#135664] text-white font-semibold shadow-3xs cursor-pointer flex items-center gap-1"
+                              data-testid={`pay-booking-${booking.id}`}
+                            >
+                              <CreditCard className="h-3.5 w-3.5" />
+                              <span>{isPartial ? "Pay Balance" : "Pay"}</span>
+                            </Button>
+                          ) : null}
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenDetails(booking, "DETAILS")}
+                            className="h-8 px-2 text-xs text-[#74818A] hover:text-[#18282A] hover:bg-slate-100 cursor-pointer"
+                            data-testid={`view-booking-${booking.id}`}
+                          >
+                            <Eye className="mr-1 h-3.5 w-3.5" />
+                            <span>Details</span>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -322,11 +425,36 @@ export function AgentBookingsTable() {
         )}
       </div>
 
-      {/* Booking Details Modal */}
+      {/* Booking Details & Payment Modal */}
       <AgentBookingDetailsDialog
         isOpen={Boolean(selectedBooking)}
         onClose={() => setSelectedBooking(null)}
         booking={selectedBooking}
+        initialTab={detailsInitialTab}
+        onBookingUpdated={() => refetch()}
+      />
+
+      {/* Create Agent Booking Modal */}
+      <CreateAgentBookingDialog
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => refetch()}
+        onProceedToPayment={(bookingId) => {
+          refetch().then((res) => {
+            const target = res.data?.data?.items?.find((b) => b.id === bookingId);
+            if (target) {
+              handleOpenDetails(target, "PAYMENT");
+            }
+          });
+        }}
+        onViewBookingDetails={(bookingId) => {
+          refetch().then((res) => {
+            const target = res.data?.data?.items?.find((b) => b.id === bookingId);
+            if (target) {
+              handleOpenDetails(target, "DETAILS");
+            }
+          });
+        }}
       />
     </div>
   );

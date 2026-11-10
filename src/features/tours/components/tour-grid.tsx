@@ -1,4 +1,6 @@
 "use client";
+
+import * as React from "react";
 import { Tour } from "../types/tour";
 import { TourCard } from "./tour-card";
 import { TourCardSkeleton } from "@/components/shared/loading-skeleton";

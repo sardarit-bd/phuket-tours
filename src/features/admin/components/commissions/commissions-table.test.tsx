@@ -73,7 +73,7 @@ describe("CommissionsTable component", () => {
     expect(screen.getByTestId("commissions-table-loading")).toBeInTheDocument();
   });
 
-  it("renders empty state when commissions array is empty", () => {
+  it("renders empty state with updated non-technical message when commissions array is empty", () => {
     const handleReset = vi.fn();
     render(
       <CommissionsTable
@@ -87,7 +87,12 @@ describe("CommissionsTable component", () => {
       />
     );
     expect(screen.getByTestId("commissions-table-empty")).toBeInTheDocument();
-    expect(screen.getByText(/no commission records found/i)).toBeInTheDocument();
+    expect(screen.getByText("No Commission Records Found")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Commission records will appear here when eligible partner bookings generate commissions."
+      )
+    ).toBeInTheDocument();
 
     const clearBtn = screen.getByRole("button", { name: /clear active filters/i });
     fireEvent.click(clearBtn);

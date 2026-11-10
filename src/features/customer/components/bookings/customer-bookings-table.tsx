@@ -46,10 +46,7 @@ function formatDate(dateStr?: string | null): string {
   }
 }
 
-function formatPrice(amount?: number): string {
-  if (typeof amount !== "number") return "฿0";
-  return `฿${amount.toLocaleString("en-US")}`;
-}
+import { formatPrice } from "@/lib/utils";
 
 export function CustomerBookingsTable() {
   const [page, setPage] = React.useState(1);
@@ -250,7 +247,7 @@ export function CustomerBookingsTable() {
                       <AgentPaymentStatusBadge status={booking.paymentStatus} />
                     </td>
                     <td className="px-4 py-3.5 text-right font-semibold text-[#18282A]">
-                      {formatPrice(booking.finalPrice)}
+                      {formatPrice(booking.finalPrice, booking.currency || "USD")}
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <Link href={`/dashboard/bookings/${booking.id}`}>

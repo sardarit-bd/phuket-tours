@@ -48,7 +48,6 @@ export const footerNav = {
     { title: "Help & FAQ", href: "/faq" },
     { title: "Booking Terms", href: "/booking-terms" },
     { title: "Cancellation Policy", href: "/cancellation-policy" },
-    { title: "Privacy Policy", href: "/privacy-policy" },
     { title: "Contact Us", href: "/contact" },
   ],
 };

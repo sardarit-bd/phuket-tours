@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/layout/container";
-import { SetupAccountForm } from "../setup-account/setup-account-form";
+import { ResetPasswordForm } from "./reset-password-form";
 
 export const metadata: Metadata = {
   title: "Reset Password — PhuketTours",
@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
               Reset Your Password
             </h1>
             <p className="mt-1.5 font-outfit text-xs sm:text-sm text-[#74818A] leading-relaxed">
-              Enter and confirm your new password below.
+              Enter your account details or choose a new confidential password.
             </p>
           </div>
 
@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
               />
             }
           >
-            <SetupAccountForm />
+            <ResetPasswordForm />
           </Suspense>
         </div>
       </Container>

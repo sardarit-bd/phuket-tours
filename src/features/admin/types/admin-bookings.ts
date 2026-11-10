@@ -10,16 +10,48 @@
 
 export type OperationalBookingStatus = "CONFIRMED" | "IN_PROGRESS" | "COMPLETED";
 
+export type AdminUnifiedBookingStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "AWAITING_APPROVAL"
+  | "FAILED";
+
 export type FulfillmentStatusValue = "NOT_STARTED" | "IN_PROGRESS" | "FULFILLED";
 
 export type BookingPaymentStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID";
 
+export type BookingSourceValue = "AGENT" | "ADMIN" | "CUSTOMER" | "DIRECT";
+
+export interface AgentAttributionInfo {
+  id: string;
+  name: string;
+  email: string;
+  agentProfile?: {
+    agencyName: string | null;
+  } | null;
+}
+
+export interface CreatorAttributionInfo {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export interface OperationalBookingRecord {
   id: string;
-  status: OperationalBookingStatus;
+  status: OperationalBookingStatus | AdminUnifiedBookingStatus;
   fulfillmentStatus: FulfillmentStatusValue;
   paymentStatus: BookingPaymentStatus;
+  source?: BookingSourceValue | null;
+  agentId?: string | null;
+  createdById?: string | null;
   assignedStaffId: string | null;
+  currency?: string;
+  finalPrice?: number | string;
+  basePrice?: number | string;
   notes: string | null;
   internalNotes: string | null;
   createdAt: string;
@@ -36,12 +68,26 @@ export interface OperationalBookingRecord {
   customer: {
     id: string;
     name: string;
+    email?: string;
     phone: string | null;
   };
+  agent?: AgentAttributionInfo | null;
+  createdBy?: CreatorAttributionInfo | null;
   assignedStaff: {
     id: string;
     name: string;
   } | null;
+  payments?: Array<{
+    id: string;
+    amount: number | string;
+    currency: string;
+    method: string;
+    status: string;
+    reference: string | null;
+    stripeSessionId: string | null;
+    receivedAt: string | null;
+    createdAt: string;
+  }>;
 }
 
 export interface GetAdminBookingsParams {
@@ -49,6 +95,23 @@ export interface GetAdminBookingsParams {
   limit?: number;
   fulfillmentStatus?: string;
   assignedStaffId?: string;
+  agentId?: string;
+  source?: string;
+}
+
+export interface GetStaffBookingsParams {
+  page?: number;
+  limit?: number;
+  fulfillmentStatus?: string;
+}
+
+export interface StaffBookingRecord extends OperationalBookingRecord {}
+
+export interface StaffBookingsListResponse {
+  items: StaffBookingRecord[];
+  page: number;
+  limit: number;
+  total: number;
 }
 
 export interface AdminBookingsListResponse {
@@ -94,3 +157,96 @@ export interface AdminStaffListResponse {
   limit: number;
   total: number;
 }
+
+export interface PendingReservationRecord {
+  id: string;
+  status: "PENDING" | "AWAITING_APPROVAL" | "CONFIRMED" | "CANCELLED";
+  paymentStatus: BookingPaymentStatus;
+  fulfillmentStatus: FulfillmentStatusValue;
+  currency: string;
+  basePrice: number | string;
+  proposedPrice?: number | string | null;
+  finalPrice: number | string;
+  requiresApproval: boolean;
+  notes: string | null;
+  internalNotes: string | null;
+  assignedStaffId?: string | null;
+  assignedStaff?: {
+    id: string;
+    name: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+  customer: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+  };
+  agent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  service: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  availability?: {
+    id: string;
+    date: string;
+  } | null;
+  payments?: Array<{
+    id: string;
+    amount: number | string;
+    currency: string;
+    method: string;
+    status: string;
+    reference: string | null;
+    stripeSessionId: string | null;
+    receivedAt: string | null;
+    createdAt: string;
+  }>;
+  priceApproval?: {
+    id: string;
+    requestedPrice: number | string;
+    approvedPrice: number | string | null;
+    status: string;
+    notes: string | null;
+    reviewedAt: string | null;
+  } | null;
+}
+
+export interface AdminPendingReservationsResponse {
+  items: PendingReservationRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+export interface ReviewPendingReservationInput {
+  bookingId: string;
+  action: "CONFIRM" | "REJECT";
+  notes?: string;
+}
+
+export interface BookingHistoryRecord {
+  id: string;
+  bookingId: string;
+  actorId: string;
+  actorName: string | null;
+  actorRole: string;
+  action: string;
+  changes: Record<string, any>;
+  createdAt: string;
+}
+
+export interface BookingHistoryListResponse {
+  items: BookingHistoryRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+

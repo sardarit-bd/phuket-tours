@@ -8,6 +8,9 @@ import {
   UserCheck,
   Activity,
   CheckCircle,
+  CheckCircle2,
+  XCircle,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OperationalBookingRecord } from "../../types/admin-bookings";
@@ -15,9 +18,12 @@ import type { OperationalBookingRecord } from "../../types/admin-bookings";
 export interface BookingActionsMenuProps {
   booking: OperationalBookingRecord;
   onViewDetails: (booking: OperationalBookingRecord) => void;
-  onAssignStaff: (booking: OperationalBookingRecord) => void;
-  onUpdateFulfillment: (booking: OperationalBookingRecord) => void;
+  onViewHistory?: (booking: OperationalBookingRecord) => void;
+  onAssignStaff?: (booking: OperationalBookingRecord) => void;
+  onUpdateFulfillment?: (booking: OperationalBookingRecord) => void;
   onReviewPriceApproval?: (booking: OperationalBookingRecord) => void;
+  onConfirmPending?: (booking: OperationalBookingRecord) => void;
+  onRejectPending?: (booking: OperationalBookingRecord) => void;
 }
 
 const emptySubscribe = () => () => {};
@@ -25,9 +31,12 @@ const emptySubscribe = () => () => {};
 export function BookingActionsMenu({
   booking,
   onViewDetails,
+  onViewHistory,
   onAssignStaff,
   onUpdateFulfillment,
   onReviewPriceApproval,
+  onConfirmPending,
+  onRejectPending,
 }: BookingActionsMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const isClient = React.useSyncExternalStore(emptySubscribe, () => true, () => false);
@@ -39,10 +48,16 @@ export function BookingActionsMenu({
   const menuRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
 
+  const status = booking.status as string;
+  const isPending = status === "PENDING" || status === "AWAITING_APPROVAL";
+  const isConfirmed = status === "CONFIRMED";
+  const isInProgress = status === "IN_PROGRESS";
+  const isCompleted = status === "COMPLETED";
+
   const updatePosition = React.useCallback(() => {
     if (!buttonRef.current || typeof window === "undefined") return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const menuHeight = (booking.status as string) === "AWAITING_APPROVAL" ? 180 : 140;
+    const menuHeight = isPending ? 180 : 140;
     const menuWidth = 192; // 12rem = 192px
 
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -59,7 +74,7 @@ export function BookingActionsMenu({
     );
 
     setMenuPosition({ top, left });
-  }, [booking.status]);
+  }, [isPending]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -138,7 +153,7 @@ export function BookingActionsMenu({
       )}
       data-testid={`booking-actions-menu-${booking.id}`}
     >
-      {/* 1. View Details */}
+      {/* 1. View Details (All statuses) */}
       <button
         type="button"
         role="menuitem"
@@ -150,32 +165,78 @@ export function BookingActionsMenu({
         <span>View Details</span>
       </button>
 
-      {/* 2. Assign Staff */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => handleAction(() => onAssignStaff(booking))}
-        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
-        data-testid={`action-assign-staff-${booking.id}`}
-      >
-        <UserCheck className="h-4 w-4 text-[#74818A]" />
-        <span>Assign Staff</span>
-      </button>
+      {/* PENDING: Confirm Booking */}
+      {isPending && onConfirmPending && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onConfirmPending(booking))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+          data-testid={`action-confirm-booking-${booking.id}`}
+        >
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <span>Confirm Booking</span>
+        </button>
+      )}
 
-      {/* 3. Update Fulfillment */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => handleAction(() => onUpdateFulfillment(booking))}
-        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
-        data-testid={`action-update-fulfillment-${booking.id}`}
-      >
-        <Activity className="h-4 w-4 text-[#74818A]" />
-        <span>Update Fulfillment</span>
-      </button>
+      {/* PENDING: Reject Booking */}
+      {isPending && onRejectPending && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onRejectPending(booking))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+          data-testid={`action-reject-booking-${booking.id}`}
+        >
+          <XCircle className="h-4 w-4 text-rose-600" />
+          <span>Reject / Cancel</span>
+        </button>
+      )}
 
-      {/* 4. Price Approval (only if AWAITING_APPROVAL) */}
-      {(booking.status as string) === "AWAITING_APPROVAL" && onReviewPriceApproval && (
+      {/* CONFIRMED: Assign Staff */}
+      {isConfirmed && onAssignStaff && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onAssignStaff(booking))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+          data-testid={`action-assign-staff-${booking.id}`}
+        >
+          <UserCheck className="h-4 w-4 text-[#74818A]" />
+          <span>Assign Staff</span>
+        </button>
+      )}
+
+      {/* CONFIRMED & IN_PROGRESS: Update Fulfillment */}
+      {(isConfirmed || isInProgress) && onUpdateFulfillment && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onUpdateFulfillment(booking))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+          data-testid={`action-update-fulfillment-${booking.id}`}
+        >
+          <Activity className="h-4 w-4 text-[#74818A]" />
+          <span>Update Fulfillment</span>
+        </button>
+      )}
+
+      {/* View History (All statuses) */}
+      {onViewHistory && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => handleAction(() => onViewHistory(booking))}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+          data-testid={`action-view-history-${booking.id}`}
+        >
+          <History className="h-4 w-4 text-[#74818A]" />
+          <span>View History</span>
+        </button>
+      )}
+
+      {/* Price Approval (only if AWAITING_APPROVAL) */}
+      {status === "AWAITING_APPROVAL" && onReviewPriceApproval && (
         <button
           type="button"
           role="menuitem"

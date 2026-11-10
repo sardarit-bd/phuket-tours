@@ -17,8 +17,12 @@ import { useTourFilters } from "../hooks/use-tour-filters";
 import { useGetToursQuery } from "../api/tours-api";
 import { FilterGroup } from "../types/tour";
 
+/**
+ * Derives destination filter options from the loaded tour data.
+ * Returns a FilterGroup with destination options and their counts.
+ */
 function useDestinationFilterGroup(
-  tours: import("../types/tour").Tour[],
+  tours: import("../types/tour").Tour[]
 ): FilterGroup | null {
   return React.useMemo(() => {
     if (tours.length === 0) return null;
@@ -51,10 +55,19 @@ function useDestinationFilterGroup(
   }, [tours]);
 }
 
-function useMaxPriceFromData(tours: import("../types/tour").Tour[]): number {
+/**
+ * Derives the maximum price from the loaded tour data
+ * so the price slider can adapt to real prices.
+ */
+function useMaxPriceFromData(
+  tours: import("../types/tour").Tour[]
+): number {
   return React.useMemo(() => {
-    if (tours.length === 0) return 500;
-    const maxPrice = Math.max(...tours.map((t) => t.price.amount));
+    if (tours.length === 0) return 500; // fallback
+    const maxPrice = Math.max(
+      ...tours.map((t) => t.price.amount)
+    );
+    // Round up to nearest 50 for a clean slider
     return Math.ceil(maxPrice / 50) * 50;
   }, [tours]);
 }
@@ -76,6 +89,8 @@ export function ToursPageContent() {
     toggleFavorite,
     favorites,
   } = useTourFilters();
+
+  // Query tours via RTK Query with the backend /services endpoint
   const { data, isLoading, isError, refetch } = useGetToursQuery({
     search: filters.search,
     category: filters.category,
@@ -94,14 +109,19 @@ export function ToursPageContent() {
   const currentPage = data?.page ?? filters.page;
   const totalPages = data?.totalPages ?? 1;
   const limit = data?.limit ?? filters.limit;
+
+  // Dynamic destination filter group from real data
   const destinationGroup = useDestinationFilterGroup(tours);
+
+  // Dynamic max price from real data
   const dynamicMaxPrice = useMaxPriceFromData(tours);
 
   return (
     <div className="py-8 sm:py-10 lg:py-12 bg-white">
-      <Container className="max-w-330 lg:px-0">
+      <Container className="max-w-[1320px] lg:px-0">
         <div className="flex flex-col lg:flex-row lg:items-start gap-8 xl:gap-10">
-          <div className="hidden lg:block w-65 xl:w-70 shrink-0 sticky top-24">
+          {/* Desktop Left Sidebar: Filter Groups */}
+          <div className="hidden lg:block w-[260px] xl:w-[280px] shrink-0 sticky top-24">
             <TourFiltersSidebar
               filters={filters}
               toggleDestination={toggleDestination}
@@ -113,15 +133,25 @@ export function ToursPageContent() {
               dynamicMaxPrice={dynamicMaxPrice}
             />
           </div>
+
+          {/* Right Main Content Area */}
           <main
             id="tours-results-section"
             className="flex-1 min-w-0 space-y-5 sm:space-y-6"
           >
-            <TourSearchBar value={filters.search} onChange={setSearch} />
+            {/* Search Bar with Debounce & Clear */}
+            <TourSearchBar
+              value={filters.search}
+              onChange={setSearch}
+            />
+
+            {/* Tour Category Navigation */}
             <TourCategoryTabs
               selectedCategory={filters.category}
               onSelectCategory={setCategory}
             />
+
+            {/* Results Count, Range & Sort Dropdown */}
             <TourResultsHeader
               count={total}
               page={currentPage}
@@ -143,6 +173,8 @@ export function ToursPageContent() {
                 />
               }
             />
+
+            {/* Error State */}
             {isError && (
               <ErrorAlert
                 className="p-6"
@@ -160,6 +192,8 @@ export function ToursPageContent() {
                 }
               />
             )}
+
+            {/* Tour Cards Grid (Renders only active paginated page: 12 cards) */}
             {!isError && (
               <TourGrid
                 tours={tours}
@@ -169,6 +203,8 @@ export function ToursPageContent() {
                 onToggleFavorite={toggleFavorite}
               />
             )}
+
+            {/* Accessible Pagination Navigation */}
             {!isError && (
               <TourPagination
                 currentPage={currentPage}

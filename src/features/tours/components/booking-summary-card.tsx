@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Clock, Users, Check, ArrowRight, CalendarCheck } from "lucide-react";
 import { formatPrice, cn } from "@/lib/utils";
 import type { Tour, TourPricingTier } from "@/features/tours/types/tour";
+import { useAppSelector } from "@/store/hooks";
+import { selectIsAuthenticated } from "@/features/auth/slices/auth-slice";
 
 /**
  * Sticky booking summary card shown beside the gallery on desktop and
@@ -19,6 +21,7 @@ import type { Tour, TourPricingTier } from "@/features/tours/types/tour";
  *    "Price unavailable" heading).
  */
 export function BookingSummaryCard({ tour }: { tour: Tour }) {
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const { price } = tour;
   const currency = price.currency || "USD";
 
@@ -92,7 +95,11 @@ export function BookingSummaryCard({ tour }: { tour: Tour }) {
 
       {/* CTA */}
       <Link
-        href={`/sign-in?next=${encodeURIComponent(`/tours/${tour.id}`)}`}
+        href={
+          isAuthenticated
+            ? `/checkout?tourId=${encodeURIComponent(tour.id)}`
+            : `/sign-in?redirect=${encodeURIComponent(`/checkout?tourId=${encodeURIComponent(tour.id)}`)}`
+        }
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-primary-dark"
       >
         Book Now

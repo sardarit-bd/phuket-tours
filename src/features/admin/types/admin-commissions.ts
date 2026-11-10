@@ -16,6 +16,14 @@ export type CommissionRateType = (typeof COMMISSION_RATE_TYPES)[number];
 export const COMMISSION_STATUSES = ["ACTIVE", "CANCELLED"] as const;
 export type CommissionStatus = (typeof COMMISSION_STATUSES)[number];
 
+export const COMMISSION_POLICY_STATUSES = [
+  "DRAFT",
+  "ACTIVE",
+  "INACTIVE",
+  "ARCHIVED",
+] as const;
+export type CommissionPolicyStatus = (typeof COMMISSION_POLICY_STATUSES)[number];
+
 export interface AdminCommissionAgent {
   id: string;
   name: string | null;
@@ -97,18 +105,44 @@ export interface AdjustCommissionInput {
   reason: string;
 }
 
+export interface AdminCommissionRuleAuditLog {
+  id: string;
+  ruleId: string;
+  adminId: string;
+  action: string;
+  previousValues: Record<string, unknown> | null;
+  newValues: Record<string, unknown> | null;
+  createdAt: string;
+  admin?: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
+
 export interface AdminCommissionRule {
   id: string;
+  name?: string | null;
+  description?: string | null;
   rateType: CommissionRateType;
   rateValue: number;
+  status: CommissionPolicyStatus;
   isActive: boolean;
   createdById: string;
   createdAt: string;
+  updatedAt?: string;
+  createdBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+  auditLogs?: AdminCommissionRuleAuditLog[];
 }
 
 export interface GetAdminCommissionRulesParams {
   page?: number;
   limit?: number;
+  status?: CommissionPolicyStatus;
 }
 
 export interface AdminCommissionRulesResponse {
@@ -117,6 +151,24 @@ export interface AdminCommissionRulesResponse {
   page: number;
   limit: number;
   total: number;
+}
+
+export interface CreateCommissionPolicyInput {
+  name: string;
+  description?: string;
+  rateType: CommissionRateType;
+  rateValue: number;
+  status?: CommissionPolicyStatus;
+  isActive?: boolean;
+}
+
+export interface UpdateCommissionPolicyInput {
+  name?: string;
+  description?: string;
+  rateType?: CommissionRateType;
+  rateValue?: number;
+  status?: CommissionPolicyStatus;
+  isActive?: boolean;
 }
 
 export interface ConfigureCommissionRuleInput {

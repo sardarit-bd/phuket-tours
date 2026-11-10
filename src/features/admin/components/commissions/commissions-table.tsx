@@ -155,7 +155,7 @@ export function CommissionsTable({
           No Commission Records Found
         </h3>
         <p className="mt-1 text-xs text-slate-500 max-w-sm">
-          No commissions match your active filter criteria. Partner commissions are generated automatically when customer payments are verified.
+          Commission records will appear here when eligible partner bookings generate commissions.
         </p>
         {onResetFilters && (
           <button

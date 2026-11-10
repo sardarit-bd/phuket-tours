@@ -6,38 +6,26 @@ import { ArrowRight, Calendar, User, Compass } from "lucide-react";
 import type { AgentBookingRecord } from "../../types/agent";
 import {
   AgentBookingStatusBadge,
-  AgentPaymentStatusBadge,
 } from "../common/agent-status-badges";
 import { Button } from "@/components/ui/button";
+import {
+  formatAgentCurrency,
+  extractTravelDateRaw,
+  formatAgentDate,
+} from "../../utils/agent-formatters";
 
 interface RecentBookingsPreviewProps {
   bookings?: AgentBookingRecord[];
   isLoading?: boolean;
-}
-
-function formatDate(dateStr?: string | null): string {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "N/A";
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(d);
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatPrice(amount?: number): string {
-  if (typeof amount !== "number") return "฿0";
-  return `฿${amount.toLocaleString("en-US")}`;
+  isError?: boolean;
+  onRetry?: () => void;
 }
 
 export function RecentBookingsPreview({
   bookings,
   isLoading,
+  isError,
+  onRetry,
 }: RecentBookingsPreviewProps) {
   return (
     <div className="rounded-2xl border border-[#E5EAED] bg-white p-5 shadow-xs">
@@ -72,6 +60,28 @@ export function RecentBookingsPreview({
                 className="h-12 w-full animate-pulse rounded-xl bg-slate-100"
               />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="py-8 text-center" data-testid="recent-bookings-error">
+            <p className="text-xs font-semibold text-rose-700">
+              Unable to load recent bookings
+            </p>
+            <p className="mt-1 text-[11px] text-[#74818A]">
+              Please check your connection and try again.
+            </p>
+            {onRetry && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  onClick={onRetry}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
           </div>
         ) : !bookings || bookings.length === 0 ? (
           <div className="py-8 text-center" data-testid="recent-bookings-empty">
@@ -122,13 +132,13 @@ export function RecentBookingsPreview({
                       </div>
                     </td>
                     <td className="py-3 text-[#74818A]">
-                      {formatDate(booking.availability?.date)}
+                      {formatAgentDate(extractTravelDateRaw(booking))}
                     </td>
                     <td className="py-3">
                       <AgentBookingStatusBadge status={booking.status} />
                     </td>
                     <td className="py-3 text-right font-semibold text-[#18282A]">
-                      {formatPrice(booking.finalPrice)}
+                      {formatAgentCurrency(booking.finalPrice, booking.currency, 0)}
                     </td>
                   </tr>
                 ))}

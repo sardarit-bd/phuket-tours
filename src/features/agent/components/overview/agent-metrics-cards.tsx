@@ -12,25 +12,25 @@ import {
   BadgeCheck,
   XCircle,
 } from "lucide-react";
+import { formatAgentCurrency } from "../../utils/agent-formatters";
 
 interface AgentMetricsCardsProps {
   metrics?: AgentOverviewMetrics;
   isLoading?: boolean;
+  isError?: boolean;
+  currency?: string;
 }
 
-function formatCurrency(amount?: number): string {
-  if (typeof amount !== "number") return "฿0.00";
-  return `฿${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-export function AgentMetricsCards({ metrics, isLoading }: AgentMetricsCardsProps) {
+export function AgentMetricsCards({
+  metrics,
+  isLoading,
+  isError,
+  currency,
+}: AgentMetricsCardsProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="agent-metrics-skeleton">
-        {Array.from({ length: 7 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
             className="animate-pulse rounded-2xl border border-[#E5EAED] bg-white p-5 shadow-xs"
@@ -47,6 +47,10 @@ export function AgentMetricsCards({ metrics, isLoading }: AgentMetricsCardsProps
     );
   }
 
+  if (isError && !metrics) {
+    return null;
+  }
+
   const items = [
     {
       id: "total-bookings",
@@ -61,7 +65,7 @@ export function AgentMetricsCards({ metrics, isLoading }: AgentMetricsCardsProps
       id: "pending-bookings",
       title: "Pending Bookings",
       value: metrics?.pendingBookings ?? 0,
-      description: "Awaiting approval or deposit",
+      description: "Awaiting approval or payment",
       icon: Clock,
       iconColor: "text-amber-600 bg-amber-50",
       testId: "metric-pending-bookings",
@@ -87,7 +91,7 @@ export function AgentMetricsCards({ metrics, isLoading }: AgentMetricsCardsProps
     {
       id: "total-commission",
       title: "Total Commission",
-      value: formatCurrency(metrics?.totalCommission),
+      value: formatAgentCurrency(metrics?.totalCommission ?? 0, currency, 2),
       description: "Cumulative partner earnings",
       icon: Coins,
       iconColor: "text-emerald-700 bg-emerald-50",
@@ -97,7 +101,7 @@ export function AgentMetricsCards({ metrics, isLoading }: AgentMetricsCardsProps
     {
       id: "pending-commission",
       title: "Pending Commission",
-      value: formatCurrency(metrics?.pendingCommission),
+      value: formatAgentCurrency(metrics?.pendingCommission ?? 0, currency, 2),
       description: "In verification or awaiting payout",
       icon: Hourglass,
       iconColor: "text-amber-700 bg-amber-50",
@@ -106,8 +110,8 @@ export function AgentMetricsCards({ metrics, isLoading }: AgentMetricsCardsProps
     {
       id: "paid-commission",
       title: "Paid Commission",
-      value: formatCurrency(metrics?.paidCommission),
-      description: "Settled partner payouts",
+      value: formatAgentCurrency(metrics?.paidCommission ?? 0, currency, 2),
+      description: "Verified paid booking commissions",
       icon: BadgeCheck,
       iconColor: "text-blue-700 bg-blue-50",
       testId: "metric-paid-commission",
