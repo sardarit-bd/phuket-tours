@@ -11,6 +11,7 @@ import {
 import { formatDate } from "../../utils/format";
 import type { AdminPaymentRecord } from "../../types/admin-payments";
 import { PaymentStatusBadge, PaymentMethodBadge } from "./payment-status-badge";
+import { BookingSourceBadge } from "../bookings/booking-status-badges";
 import { PaymentActionsMenu } from "./payment-actions-menu";
 import { Button } from "@/components/ui/button";
 
@@ -60,7 +61,8 @@ export function PaymentsTable({
             <tr className="border-b border-[#E5EAED] bg-[#F8FAFB] text-[#74818A]">
               <th scope="col" className="min-w-[130px] px-4 py-3.5 font-semibold">Payment ID</th>
               <th scope="col" className="min-w-[140px] px-4 py-3.5 font-semibold">Booking ID</th>
-              <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">Customer ID</th>
+              <th scope="col" className="min-w-[150px] px-4 py-3.5 font-semibold">Source / Agent</th>
+              <th scope="col" className="min-w-[140px] px-4 py-3.5 font-semibold">Customer</th>
               <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Amount</th>
               <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">Method</th>
               <th scope="col" className="min-w-[130px] px-4 py-3.5 font-semibold">Status</th>
@@ -78,6 +80,9 @@ export function PaymentsTable({
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="h-4 w-24 rounded bg-slate-200" />
+                </td>
+                <td className="px-4 py-3.5">
+                  <div className="h-4 w-24 rounded bg-slate-100" />
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="h-4 w-20 rounded bg-slate-100" />
@@ -167,7 +172,8 @@ export function PaymentsTable({
           <tr className="border-b border-[#E5EAED] bg-[#F8FAFB] text-[#74818A]">
             <th scope="col" className="min-w-[130px] px-4 py-3.5 font-semibold">Payment ID</th>
             <th scope="col" className="min-w-[140px] px-4 py-3.5 font-semibold">Booking ID</th>
-            <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">Customer ID</th>
+            <th scope="col" className="min-w-[150px] px-4 py-3.5 font-semibold">Source / Agent</th>
+            <th scope="col" className="min-w-[140px] px-4 py-3.5 font-semibold">Customer</th>
             <th scope="col" className="min-w-[110px] px-4 py-3.5 font-semibold">Amount</th>
             <th scope="col" className="min-w-[120px] px-4 py-3.5 font-semibold">Method</th>
             <th scope="col" className="min-w-[140px] px-4 py-3.5 font-semibold">Status</th>
@@ -234,9 +240,54 @@ export function PaymentsTable({
                   </div>
                 </td>
 
-                {/* 3. Customer ID */}
-                <td className="px-4 py-3.5 font-mono text-[#74818A]">
-                  #{shortCustomerId}
+                {/* 3. Source / Originating Agent Attribution */}
+                <td className="px-4 py-3.5 align-middle">
+                  <div className="flex flex-col gap-1 max-w-[150px]">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <BookingSourceBadge
+                        source={payment.booking?.source || (payment.booking?.agentId ? "AGENT" : "DIRECT")}
+                      />
+                    </div>
+                    {payment.booking?.agent ? (
+                      <div className="text-[11px] leading-tight">
+                        <span className="font-medium text-[#18282A] truncate block" title={payment.booking.agent.name}>
+                          {payment.booking.agent.name}
+                        </span>
+                        {payment.booking.agent.agentProfile?.agencyName && (
+                          <span
+                            className="inline-block text-[10px] text-purple-700 bg-purple-50 px-1 py-0.2 rounded font-semibold truncate max-w-full mt-0.5"
+                            title={payment.booking.agent.agentProfile.agencyName}
+                          >
+                            {payment.booking.agent.agentProfile.agencyName}
+                          </span>
+                        )}
+                      </div>
+                    ) : payment.booking?.createdBy && payment.booking.source !== "CUSTOMER" ? (
+                      <span className="text-[11px] text-[#74818A] truncate" title={`Created by ${payment.booking.createdBy.name} (${payment.booking.createdBy.role})`}>
+                        By: {payment.booking.createdBy.name}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-[#96A4AB] italic">Direct Booking</span>
+                    )}
+                  </div>
+                </td>
+
+                {/* 4. Customer Details */}
+                <td className="px-4 py-3.5 align-middle">
+                  <div className="max-w-[140px]">
+                    <p className="font-medium text-[#18282A] truncate" title={payment.customer?.name || `Customer #${shortCustomerId}`}>
+                      {payment.customer?.name || `Customer #${shortCustomerId}`}
+                    </p>
+                    {payment.customer?.email ? (
+                      <p className="text-[11px] text-[#74818A] truncate" title={payment.customer.email}>
+                        {payment.customer.email}
+                      </p>
+                    ) : (
+                      <p className="font-mono text-[10px] text-[#96A4AB]">
+                        #{shortCustomerId}
+                      </p>
+                    )}
+                  </div>
                 </td>
 
                 {/* 4. Amount */}

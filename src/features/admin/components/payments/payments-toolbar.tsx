@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Search, RotateCcw } from "lucide-react";
+import { Search, RotateCcw, Briefcase, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CustomSelect } from "@/components/ui/custom-select";
+import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
 import { cn } from "@/lib/utils";
+import type { AgentAttributionInfo } from "../../types/admin-bookings";
 
 export interface PaymentsToolbarProps {
   statusFilter: string;
@@ -14,6 +15,11 @@ export interface PaymentsToolbarProps {
   onMethodFilterChange: (method: string) => void;
   bookingIdFilter: string;
   onBookingIdFilterChange: (bookingId: string) => void;
+  agentIdFilter?: string;
+  onAgentIdFilterChange?: (agentId: string) => void;
+  sourceFilter?: string;
+  onSourceFilterChange?: (source: string) => void;
+  agents?: AgentAttributionInfo[];
   onResetFilters: () => void;
   hasActiveFilters: boolean;
 }
@@ -31,6 +37,16 @@ const METHOD_OPTIONS: Array<{ label: string; value: string }> = [
   { label: "Bank Transfer", value: "BANK_TRANSFER" },
   { label: "Cash", value: "CASH" },
   { label: "Other", value: "OTHER" },
+  { label: "Stripe", value: "STRIPE" },
+  { label: "PayPal", value: "PAYPAL" },
+];
+
+const SOURCE_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "All Sources", value: "ALL" },
+  { label: "Agent Bookings", value: "AGENT" },
+  { label: "Admin Bookings", value: "ADMIN" },
+  { label: "Customer Bookings", value: "CUSTOMER" },
+  { label: "Direct Bookings", value: "DIRECT" },
 ];
 
 export function PaymentsToolbar({
@@ -40,11 +56,29 @@ export function PaymentsToolbar({
   onMethodFilterChange,
   bookingIdFilter,
   onBookingIdFilterChange,
+  agentIdFilter = "ALL",
+  onAgentIdFilterChange,
+  sourceFilter = "ALL",
+  onSourceFilterChange,
+  agents = [],
   onResetFilters,
   hasActiveFilters,
 }: PaymentsToolbarProps) {
   const [localSearch, setLocalSearch] = React.useState(bookingIdFilter);
   const [prevFilter, setPrevFilter] = React.useState(bookingIdFilter);
+
+  const agentOptions: SelectOption<string>[] = React.useMemo(() => {
+    const list: SelectOption<string>[] = [
+      { value: "ALL", label: "All Agents", icon: <Briefcase className="h-3.5 w-3.5" /> },
+    ];
+    for (const a of agents) {
+      const label = a.agentProfile?.agencyName
+        ? `${a.name} (${a.agentProfile.agencyName})`
+        : a.name;
+      list.push({ value: a.id, label });
+    }
+    return list;
+  }, [agents]);
 
   if (prevFilter !== bookingIdFilter) {
     setPrevFilter(bookingIdFilter);
@@ -98,6 +132,36 @@ export function PaymentsToolbar({
               usePortal={true}
             />
           </div>
+
+          {/* Source Select */}
+          {onSourceFilterChange && (
+            <div className="w-[180px]">
+              <CustomSelect<string>
+                options={SOURCE_OPTIONS}
+                value={sourceFilter}
+                onChange={(val) => onSourceFilterChange(val)}
+                aria-label="Filter by booking source"
+                data-testid="filter-source-select"
+                size="sm"
+                usePortal={true}
+              />
+            </div>
+          )}
+
+          {/* Agent Select */}
+          {onAgentIdFilterChange && (
+            <div className="w-[200px]">
+              <CustomSelect<string>
+                options={agentOptions}
+                value={agentIdFilter}
+                onChange={(val) => onAgentIdFilterChange(val)}
+                aria-label="Filter by agent"
+                data-testid="filter-agent-select"
+                size="sm"
+                usePortal={true}
+              />
+            </div>
+          )}
 
           {/* Reset Filters Button */}
           {hasActiveFilters && (
