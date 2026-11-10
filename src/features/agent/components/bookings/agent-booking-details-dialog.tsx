@@ -23,6 +23,7 @@ import {
   useUpdateAgentBookingPriceMutation,
   useCreateAgentPaymentMutation,
   useCreateAgentStripeSessionMutation,
+  useGenerateAgentPaymentLinkMutation,
 } from "../../api/agent-api";
 import {
   Calendar,
@@ -46,6 +47,10 @@ import {
   Banknote,
   ArrowRight,
   ShieldAlert,
+  Link as LinkIcon,
+  Copy,
+  Share2,
+  Check,
 } from "lucide-react";
 
 interface AgentBookingDetailsDialogProps {
@@ -77,6 +82,10 @@ export function AgentBookingDetailsDialog({
   const [updatePrice, { isLoading: isUpdatingPrice }] = useUpdateAgentBookingPriceMutation();
   const [createStripeSession, { isLoading: isCreatingStripe }] = useCreateAgentStripeSessionMutation();
   const [createManualPayment, { isLoading: isCreatingPayment }] = useCreateAgentPaymentMutation();
+  const [generatePaymentLink, { isLoading: isGeneratingLink }] = useGenerateAgentPaymentLinkMutation();
+
+  const [customerPaymentUrl, setCustomerPaymentUrl] = React.useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = React.useState(false);
 
   const bookingId = booking?.id || "";
   const {
@@ -96,8 +105,31 @@ export function AgentBookingDetailsDialog({
       setFeedbackMsg(null);
       setIsRevisingPrice(false);
       setActiveTab(initialTab);
+      setCustomerPaymentUrl(null);
+      setLinkCopied(false);
     }
   }, [booking, initialTab]);
+
+  const handleGenerateCustomerLink = async () => {
+    if (!booking) return;
+    try {
+      setFeedbackMsg(null);
+      const res = await generatePaymentLink({ bookingId: booking.id }).unwrap();
+      if (res?.data?.paymentUrl) {
+        setCustomerPaymentUrl(res.data.paymentUrl);
+        setFeedbackMsg({
+          type: "success",
+          text: "Customer payment link generated! You can now copy and share it with your guest.",
+        });
+        refetchHistory();
+      }
+    } catch (err: any) {
+      setFeedbackMsg({
+        type: "error",
+        text: err?.data?.message || "Failed to generate payment link.",
+      });
+    }
+  };
 
   if (!booking) return null;
 
@@ -707,6 +739,88 @@ export function AgentBookingDetailsDialog({
                   {formatAgentCurrency(outstandingBalance, currency)}
                 </span>
               </p>
+            </div>
+
+            {/* Customer Secure Payment Link Card */}
+            <div className="rounded-2xl border border-[#176779]/30 bg-[#F0F7F8] p-4 text-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-[#176779]">
+                  <LinkIcon className="h-4 w-4" />
+                  <span>Send Payment Link to Client</span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleGenerateCustomerLink}
+                  disabled={isGeneratingLink}
+                  className="h-7 text-xs bg-[#176779] text-white hover:bg-[#135664]"
+                >
+                  {isGeneratingLink ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      <span>Generating...</span>
+                    </>
+                  ) : customerPaymentUrl ? (
+                    "Regenerate Link"
+                  ) : (
+                    "Generate Payment Link"
+                  )}
+                </Button>
+              </div>
+
+              <p className="text-[11px] text-[#465D61]">
+                Recommended: Have your guest pay directly with their own Credit/Debit card (via Stripe) or PayPal without having to share card details with you.
+              </p>
+
+              {customerPaymentUrl && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    readOnly
+                    value={customerPaymentUrl}
+                    className="text-xs bg-white border-[#E5EAED] text-[#18282A] font-mono h-8"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(customerPaymentUrl);
+                      setLinkCopied(true);
+                      setTimeout(() => setLinkCopied(false), 2000);
+                    }}
+                    className="h-8 px-2.5 bg-white text-xs font-medium text-[#18282A] border-[#E5EAED] hover:bg-[#F8FAFB] shrink-0"
+                  >
+                    {linkCopied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-600 mr-1" />
+                        <span className="text-emerald-600">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </Button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `Hello ${booking.customer?.name || "Client"}, here is your secure payment link for ${booking.service?.name || "your tour"}: ${customerPaymentUrl}`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-medium shrink-0"
+                  >
+                    <Share2 className="h-3.5 w-3.5 mr-1" />
+                    <span>WhatsApp</span>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#74818A] block mb-2">
+                Or Pay Directly on Behalf of Agency:
+              </span>
             </div>
 
             <div className="space-y-3 text-xs">

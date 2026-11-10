@@ -10,6 +10,8 @@ import type {
   AgentCustomerResponse,
   AgentPricingLimitsResponse,
   AgentBookingHistoryResponse,
+  AgentPaymentLinkResponse,
+  PublicPaymentLinkData,
   AgentBookingRecord,
   AgentBookingPayment,
   AgentCommissionRecord,
@@ -306,6 +308,83 @@ export const agentApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["AgentProfile", "User"],
     }),
+
+    generateAgentPaymentLink: builder.mutation<
+      ApiResponse<AgentPaymentLinkResponse>,
+      { bookingId: string; expiresInDays?: number }
+    >({
+      query: ({ bookingId, expiresInDays }) => ({
+        url: `/agent/bookings/${bookingId}/payment-link`,
+        method: "POST",
+        body: expiresInDays ? { expiresInDays } : {},
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "AgentBookings", id: bookingId },
+        { type: "AgentBookings", id: `HISTORY-${bookingId}` },
+      ],
+    }),
+
+    getPublicPaymentLinkDetails: builder.query<
+      ApiResponse<PublicPaymentLinkData>,
+      string
+    >({
+      query: (token) => ({
+        url: `/public/payment-links/${token}`,
+        method: "GET",
+      }),
+    }),
+
+    createPublicStripeSession: builder.mutation<
+      ApiResponse<{
+        sessionId: string;
+        sessionUrl: string;
+        paymentId: string;
+        amount: number;
+        currency: string;
+        status: string;
+      }>,
+      { token: string; successUrl?: string; cancelUrl?: string }
+    >({
+      query: ({ token, ...body }) => ({
+        url: `/public/payment-links/${token}/stripe-session`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    createPublicPayPalOrder: builder.mutation<
+      ApiResponse<{
+        orderId: string;
+        status: string;
+        approveUrl: string | null;
+        amount: number;
+        currency: string;
+      }>,
+      { token: string; returnUrl?: string; cancelUrl?: string }
+    >({
+      query: ({ token, ...body }) => ({
+        url: `/public/payment-links/${token}/paypal-order`,
+        method: "POST",
+        body,
+      }),
+    }),
+
+    capturePublicPayPalOrder: builder.mutation<
+      ApiResponse<{
+        success: boolean;
+        paymentId: string;
+        amount: number;
+        currency: string;
+        status: string;
+      }>,
+      { token: string; orderId: string }
+    >({
+      query: ({ token, orderId }) => ({
+        url: `/public/payment-links/${token}/paypal-capture`,
+        method: "POST",
+        body: { orderId },
+      }),
+    }),
   }),
 });
 
@@ -327,4 +406,9 @@ export const {
   useGetAdminCommissionsQuery,
   useGetAgentProfileQuery,
   useUpdateAgentProfileMutation,
+  useGenerateAgentPaymentLinkMutation,
+  useGetPublicPaymentLinkDetailsQuery,
+  useCreatePublicStripeSessionMutation,
+  useCreatePublicPayPalOrderMutation,
+  useCapturePublicPayPalOrderMutation,
 } = agentApi;

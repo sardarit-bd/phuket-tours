@@ -10,6 +10,7 @@ import {
   useCreateAgentCustomerMutation,
   useGetAgentPricingLimitsQuery,
   useCreateAgentBookingMutation,
+  useGenerateAgentPaymentLinkMutation,
 } from "../../api/agent-api";
 import {
   formatAgentCurrency,
@@ -29,6 +30,10 @@ import {
   ArrowRight,
   Eye,
   Clock,
+  Link as LinkIcon,
+  Copy,
+  Share2,
+  Check,
 } from "lucide-react";
 
 export interface BookingSuccessSummary {
@@ -85,6 +90,8 @@ export function CreateAgentBookingDialog({
 
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [createdSummary, setCreatedSummary] = React.useState<BookingSuccessSummary | null>(null);
+  const [generatedPaymentUrl, setGeneratedPaymentUrl] = React.useState<string | null>(null);
+  const [isCopied, setIsCopied] = React.useState(false);
 
   const { data: toursData, isLoading: isToursLoading } = useGetToursQuery(
     { page: 1, limit: 50 },
@@ -103,6 +110,8 @@ export function CreateAgentBookingDialog({
     useCreateAgentCustomerMutation();
   const [createAgentBooking, { isLoading: isCreatingBooking }] =
     useCreateAgentBookingMutation();
+  const [generatePaymentLink, { isLoading: isGeneratingPaymentLink }] =
+    useGenerateAgentPaymentLinkMutation();
 
   const tours = toursData?.data || [];
   const customers = customersRes?.data?.items || [];
@@ -112,6 +121,8 @@ export function CreateAgentBookingDialog({
     if (isOpen) {
       setErrorMsg(null);
       setCreatedSummary(null);
+      setGeneratedPaymentUrl(null);
+      setIsCopied(false);
     }
   }, [isOpen]);
 
@@ -275,6 +286,24 @@ export function CreateAgentBookingDialog({
       };
 
       setCreatedSummary(summary);
+
+      // Auto-generate secure customer payment link if booking is immediately payable
+      if (
+        !summary.requiresApproval &&
+        summary.status !== "CANCELLED" &&
+        summary.paymentStatus !== "PAID"
+      ) {
+        try {
+          const linkRes = await generatePaymentLink({ bookingId: createdId }).unwrap();
+          if (linkRes?.data?.paymentUrl) {
+            setGeneratedPaymentUrl(linkRes.data.paymentUrl);
+          }
+        } catch (linkErr) {
+          // Non-blocking; agent can always generate or view in details
+          console.warn("Could not pre-generate payment link:", linkErr);
+        }
+      }
+
       if (onSuccess) {
         onSuccess(createdId);
       }
@@ -376,6 +405,65 @@ export function CreateAgentBookingDialog({
               </div>
             </div>
           </div>
+
+          {/* Secure Customer Payment Link Box */}
+          {generatedPaymentUrl && (
+            <div className="rounded-2xl border border-[#176779]/30 bg-[#F0F7F8] p-4 text-xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-bold text-[#176779]">
+                  <LinkIcon className="h-4 w-4" />
+                  <span>Secure Customer Payment Link</span>
+                </div>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">
+                  Ready to Share
+                </span>
+              </div>
+              <p className="text-[11px] text-[#465D61]">
+                Share this link with your client to let them securely pay using Stripe (Credit/Debit Cards) or PayPal.
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={generatedPaymentUrl}
+                  className="text-xs bg-white border-[#E5EAED] text-[#18282A] font-mono h-8"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedPaymentUrl);
+                    setIsCopied(true);
+                    setTimeout(() => setIsCopied(false), 2000);
+                  }}
+                  className="h-8 px-2.5 bg-white text-xs font-medium text-[#18282A] border-[#E5EAED] hover:bg-[#F8FAFB] shrink-0"
+                >
+                  {isCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-600 mr-1" />
+                      <span className="text-emerald-600">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </Button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `Hello ${createdSummary.customerName}, here is your secure payment link for ${createdSummary.tourName}: ${generatedPaymentUrl}`,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-medium shrink-0"
+                >
+                  <Share2 className="h-3.5 w-3.5 mr-1" />
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-[#E5EAED]">

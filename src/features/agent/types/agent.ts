@@ -262,3 +262,33 @@ export type AgentCustomersListResponse = ApiResponse<PaginatedResult<AgentCustom
 export type AgentCustomerResponse = ApiResponse<AgentCustomerRecord>;
 export type AgentPricingLimitsResponse = ApiResponse<AgentPricingLimit>;
 export type AgentBookingHistoryResponse = ApiResponse<AgentBookingHistoryList>;
+
+export interface AgentPaymentLinkResponse {
+  paymentLinkId: string;
+  bookingId: string;
+  paymentUrl: string;
+  rawToken: string;
+  expiresAt: string;
+  status: "ACTIVE" | "EXPIRED" | "COMPLETED" | "REVOKED";
+}
+
+export interface PublicPaymentLinkData {
+  bookingId: string;
+  tourTitle: string;
+  tourDescription?: string | null;
+  travelDate?: string | null;
+  customerName: string;
+  customerEmailMasked: string;
+  currency: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingBalance: number;
+  paymentStatus: string;
+  bookingStatus: string;
+  linkStatus: "ACTIVE" | "EXPIRED" | "COMPLETED" | "REVOKED";
+  expiresAt: string;
+  isPayable: boolean;
+  supportedPaymentMethods: ("STRIPE" | "PAYPAL")[];
+  stripeAvailable: boolean;
+  paypalAvailable: boolean;
+}
