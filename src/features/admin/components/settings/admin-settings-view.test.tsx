@@ -17,6 +17,7 @@ const MOCK_SETTINGS_OVERVIEW: SystemSettingsOverview = {
     isCustomized: true,
   },
   payment: {
+    activeProvider: "stripe",
     providerName: "Stripe",
     enabled: true,
     environment: "sandbox",
@@ -24,6 +25,23 @@ const MOCK_SETTINGS_OVERVIEW: SystemSettingsOverview = {
     hasSecretKey: true,
     maskedSecretKey: "••••••••••••3210",
     merchantId: "acct_test123",
+    stripe: {
+      enabled: true,
+      environment: "sandbox",
+      publishableKey: "pk_test_1234567890",
+      hasSecretKey: true,
+      maskedSecretKey: "••••••••••••3210",
+      hasWebhookSecret: true,
+      maskedWebhookSecret: "••••••••••••whsec",
+    },
+    paypal: {
+      enabled: false,
+      environment: "sandbox",
+      clientId: "",
+      hasClientSecret: false,
+      maskedClientSecret: "",
+      webhookId: "",
+    },
     isCustomized: true,
   },
   webhook: {
@@ -66,31 +84,6 @@ const MOCK_SETTINGS_OVERVIEW: SystemSettingsOverview = {
   serverTime: "2026-11-02T17:00:00.000Z",
 };
 
-const MOCK_AUDIT_RESPONSE = {
-  logs: [
-    {
-      id: "log-1",
-      category: "PAYMENT" as const,
-      action: "UPDATE_PAYMENT_SETTINGS",
-      actorId: "usr-admin-1",
-      actorName: "Super Admin",
-      actorEmail: "admin@phukettours.com",
-      ipAddress: "127.0.0.1",
-      userAgent: "Mozilla/5.0",
-      status: "SUCCESS" as const,
-      errorMessage: null,
-      metadata: { environment: "sandbox" },
-      createdAt: "2026-11-02T10:00:00.000Z",
-    },
-  ],
-  pagination: {
-    total: 1,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  },
-};
-
 describe("AdminSettingsView Integration", () => {
   const mockUpdateGeneral = vi.fn();
   const mockUpdatePayment = vi.fn();
@@ -106,13 +99,6 @@ describe("AdminSettingsView Integration", () => {
 
     vi.spyOn(adminApiModule, "useGetAdminSettingsQuery").mockReturnValue({
       data: { success: true, data: MOCK_SETTINGS_OVERVIEW },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    } as any);
-
-    vi.spyOn(adminApiModule, "useGetAdminSettingAuditLogsQuery").mockReturnValue({
-      data: { success: true, data: MOCK_AUDIT_RESPONSE },
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
@@ -159,7 +145,7 @@ describe("AdminSettingsView Integration", () => {
     ] as any);
   });
 
-  it("renders the settings dashboard with all 7 navigation tabs", () => {
+  it("renders the settings dashboard with the 6 active navigation tabs (Audit Logs completely removed)", () => {
     render(<AdminSettingsView />);
 
     expect(screen.getByText("System Settings & Security Center")).toBeInTheDocument();
@@ -169,7 +155,9 @@ describe("AdminSettingsView Integration", () => {
     expect(screen.getByRole("button", { name: /^Webhook Configuration$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Cloudinary Settings$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Email & SMTP$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Security & Audit Logs$/i })).toBeInTheDocument();
+
+    // Security & Audit Logs must NOT be present
+    expect(screen.queryByRole("button", { name: /Security & Audit Logs/i })).not.toBeInTheDocument();
   });
 
   it("renders General Settings initially and does NOT contain any native HTML select elements", () => {
@@ -187,18 +175,31 @@ describe("AdminSettingsView Integration", () => {
     expect(customSelectButtons.length).toBeGreaterThan(0);
   });
 
-  it("switches to Payment Gateway tab and displays masked secret key safely", () => {
+  it("switches to Payment Gateway tab, renders Stripe and PayPal provider selector cards, and displays masked secret key safely", () => {
     render(<AdminSettingsView />);
 
     fireEvent.click(screen.getByRole("button", { name: /Payment Gateway/i }));
 
-    expect(screen.getByText("Payment Gateway & Settlement Credentials")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Stripe")).toBeInTheDocument();
+    expect(screen.getByText("Stripe Gateway Configuration")).toBeInTheDocument();
+    expect(screen.getByText("Stripe")).toBeInTheDocument();
+    expect(screen.getByText("PayPal")).toBeInTheDocument();
     expect(screen.getByDisplayValue("pk_test_1234567890")).toBeInTheDocument();
 
     // Masked value should be visible
     expect(screen.getByText("••••••••••••3210")).toBeInTheDocument();
     expect(screen.getByText(/Key Saved & Active/i)).toBeInTheDocument();
+  });
+
+  it("switches to PayPal provider in Payment Gateway tab and displays PayPal fields", () => {
+    render(<AdminSettingsView />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Payment Gateway/i }));
+
+    // Click PayPal provider card
+    fireEvent.click(screen.getByRole("button", { name: /PayPal/i }));
+
+    expect(screen.getByText("PayPal Gateway Configuration")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/PayPal REST Client ID/i)).toBeInTheDocument();
   });
 
   it("switches to Webhook Configuration tab and allows copying endpoint URL", () => {
@@ -240,21 +241,5 @@ describe("AdminSettingsView Integration", () => {
     expect(screen.getByText("••••••••••••pass")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Test Connection/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Send Test Email/i })).toBeInTheDocument();
-  });
-
-  it("switches to Security & Audit Logs tab and displays log history without native select", () => {
-    const { container } = render(<AdminSettingsView />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Security & Audit Logs/i }));
-
-    expect(
-      screen.getByText(/Configuration Audit History & Security Log/i)
-    ).toBeInTheDocument();
-    expect(screen.getByText("UPDATE_PAYMENT_SETTINGS")).toBeInTheDocument();
-    expect(screen.getByText("Super Admin")).toBeInTheDocument();
-
-    // Verify no native select in audit tab either
-    const nativeSelects = container.querySelectorAll("select");
-    expect(nativeSelects.length).toBe(0);
   });
 });

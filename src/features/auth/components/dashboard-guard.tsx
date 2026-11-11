@@ -134,7 +134,6 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
       "settings.webhook.manage",
       "settings.cloudinary.manage",
       "settings.smtp.manage",
-      "settings.audit.view",
     ] as const;
     return moduleViewPerms.some((p) => staffPermissions.includes(p));
   }, [staffPermissions]);

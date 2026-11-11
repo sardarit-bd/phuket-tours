@@ -43,7 +43,6 @@ export const SUPPORTED_PERMISSION_IDS = [
   "settings.webhook.manage",
   "settings.cloudinary.manage",
   "settings.smtp.manage",
-  "settings.audit.view",
 ] as const;
 
 export type PermissionId = (typeof SUPPORTED_PERMISSION_IDS)[number];

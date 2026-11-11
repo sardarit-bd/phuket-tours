@@ -8,6 +8,9 @@ import type {
   ForgotPasswordRequest,
   ResetPasswordRequest,
   ValidateTokenResponse,
+  UpdateEmailRequest,
+  AvatarSignatureResponse,
+  ConfirmAvatarRequest,
 } from "../types/auth";
 
 export const authApi = baseApi.injectEndpoints({
@@ -100,6 +103,41 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Auth", "User"],
     }),
+    updateEmail: builder.mutation<UserProfileResponse, UpdateEmailRequest>({
+      query: (body) => ({
+        url: "/users/me/email",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["User", "Auth"],
+    }),
+    getAvatarSignature: builder.mutation<
+      { success: boolean; data: AvatarSignatureResponse },
+      void
+    >({
+      query: () => ({
+        url: "/users/me/avatar/signature",
+        method: "POST",
+      }),
+    }),
+    confirmAvatar: builder.mutation<
+      UserProfileResponse,
+      ConfirmAvatarRequest
+    >({
+      query: (body) => ({
+        url: "/users/me/avatar/confirm",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["User", "Auth"],
+    }),
+    removeAvatar: builder.mutation<UserProfileResponse, void>({
+      query: () => ({
+        url: "/users/me/avatar",
+        method: "DELETE",
+      }),
+      invalidatesTags: ["User", "Auth"],
+    }),
   }),
 });
 
@@ -117,6 +155,10 @@ export const {
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useSetupPasswordMutation,
+  useUpdateEmailMutation,
+  useGetAvatarSignatureMutation,
+  useConfirmAvatarMutation,
+  useRemoveAvatarMutation,
 } = authApi;
 
 export * from "../types/auth";

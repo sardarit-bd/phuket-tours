@@ -8,6 +8,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string | null;
 }
 
 export interface UserProfile {
@@ -17,6 +18,7 @@ export interface UserProfile {
   phone: string | null;
   role: UserRole;
   status: UserStatus;
+  avatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -47,6 +49,29 @@ export interface ValidateTokenResponse {
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface UpdateEmailRequest {
+  newEmail: string;
+  currentPassword: string;
+}
+
+export interface AvatarSignatureResponse {
+  uploadUrl: string;
+  signature: string;
+  timestamp: number;
+  apiKey: string;
+  folder: string;
+  publicId: string;
+  uploadToken: string;
+}
+
+export interface ConfirmAvatarRequest {
+  uploadToken: string;
+  publicId: string;
+  secureUrl: string;
+  format?: string;
+  bytes?: number;
 }
 
 export interface AuthResponseEnvelope<T> extends ApiResponse<T> {

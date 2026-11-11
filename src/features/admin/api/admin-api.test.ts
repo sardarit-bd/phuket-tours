@@ -1561,22 +1561,6 @@ describe("adminApi RTK Query endpoints", () => {
       expect(capturedRequest?.method).toBe("POST");
       expect(JSON.parse(capturedRequest?.body || "{}").recipientEmail).toBe("test@domain.com");
     });
-
-    it("GET /admin/settings/audit fetches paginated configuration audit records", async () => {
-      setupMockFetch(200, {
-        success: true,
-        data: { logs: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 1 } },
-      });
-      const store = makeStore();
-
-      await store.dispatch(
-        adminApi.endpoints.getAdminSettingAuditLogs.initiate({ category: "PAYMENT", page: 1 })
-      );
-
-      expect(capturedRequest?.url).toContain("/admin/settings/audit");
-      expect(capturedRequest?.url).toContain("category=PAYMENT");
-      expect(capturedRequest?.method).toBe("GET");
-    });
   });
 });
 

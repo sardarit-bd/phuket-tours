@@ -177,9 +177,17 @@ export function Header() {
                 aria-haspopup="menu"
                 aria-label="Account"
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">
-                  {getInitials(user.name)}
-                </span>
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name || "User"}
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                    {getInitials(user.name)}
+                  </span>
+                )}
                 <span>Account</span>
                 <ChevronDown
                   className={cn(

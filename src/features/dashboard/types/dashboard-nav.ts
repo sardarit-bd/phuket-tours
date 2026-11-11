@@ -55,7 +55,6 @@ export const SETTINGS_ACCESS_PERMISSIONS: PermissionId[] = [
   "settings.webhook.manage",
   "settings.cloudinary.manage",
   "settings.smtp.manage",
-  "settings.audit.view",
 ];
 
 export const userNavConfig: DashboardNavConfig = {

@@ -10,6 +10,10 @@ import {
 vi.mock("@/features/auth/api/auth-api", () => ({
   useGetMeQuery: vi.fn(),
   useUpdateProfileMutation: vi.fn(),
+  useUpdateEmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetAvatarSignatureMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useConfirmAvatarMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useRemoveAvatarMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 const mockUseGetMeQuery = vi.mocked(useGetMeQuery);
