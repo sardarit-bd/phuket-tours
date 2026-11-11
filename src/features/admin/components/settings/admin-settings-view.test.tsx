@@ -33,6 +33,8 @@ const MOCK_SETTINGS_OVERVIEW: SystemSettingsOverview = {
       maskedSecretKey: "••••••••••••3210",
       hasWebhookSecret: true,
       maskedWebhookSecret: "••••••••••••whsec",
+      configured: true,
+      source: "database",
     },
     paypal: {
       enabled: false,
@@ -41,6 +43,8 @@ const MOCK_SETTINGS_OVERVIEW: SystemSettingsOverview = {
       hasClientSecret: false,
       maskedClientSecret: "",
       webhookId: "",
+      configured: false,
+      source: "none",
     },
     isCustomized: true,
   },

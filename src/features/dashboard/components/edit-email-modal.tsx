@@ -28,6 +28,24 @@ export function EditEmailModal({
 
   const [updateEmail, { isLoading, error, reset }] = useUpdateEmailMutation();
 
+  const errorMessage: string = React.useMemo(() => {
+    if (!error) return "";
+    if (
+      typeof error === "object" &&
+      "data" in error &&
+      error.data &&
+      typeof error.data === "object" &&
+      "message" in error.data &&
+      typeof (error.data as { message: unknown }).message === "string"
+    ) {
+      return (error.data as { message: string }).message;
+    }
+    return formatErrorMessage(error, {
+      context: "auth",
+      fallback: "Failed to update email. Please check your credentials.",
+    });
+  }, [error]);
+
   React.useEffect(() => {
     if (isOpen) {
       setNewEmail("");
@@ -84,7 +102,7 @@ export function EditEmailModal({
       description="Update your primary login and notification email. You will need to enter your current password for security verification."
       size="sm"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {validationError && (
           <ErrorAlert
             data-testid="edit-email-validation-error"
@@ -95,10 +113,7 @@ export function EditEmailModal({
         {error && (
           <ErrorAlert
             data-testid="edit-email-api-error"
-            description={formatErrorMessage(error, {
-              context: "auth",
-              fallback: "Failed to update email. Please check your credentials.",
-            })}
+            description={errorMessage}
           />
         )}
 
@@ -175,7 +190,7 @@ export function EditEmailModal({
           </Button>
           <Button
             type="submit"
-            disabled={isLoading || !newEmail || !currentPassword}
+            disabled={isLoading}
             className="h-9 bg-[#176779] text-white text-xs font-semibold hover:bg-[#135664] disabled:opacity-50"
             data-testid="edit-email-submit-btn"
           >

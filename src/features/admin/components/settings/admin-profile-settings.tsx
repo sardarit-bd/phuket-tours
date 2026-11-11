@@ -105,7 +105,7 @@ export function AdminProfileSettings({
       saveError={saveError}
       roleLabel={resolvedRoleLabel}
       badgeLabel={resolvedBadge}
-      description="Manage your personal contact details. Your email address and role are managed by the platform and cannot be changed here."
+      description="Manage your personal contact details and account email address."
       onEnterEdit={enterEdit}
       onHandleSave={handleSave}
       onHandleCancel={handleCancel}

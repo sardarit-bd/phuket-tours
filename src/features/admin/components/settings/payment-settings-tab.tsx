@@ -17,6 +17,8 @@ import { CustomSelect, type SelectOption } from "@/components/ui/custom-select";
 import { StripeLogo, PayPalLogo } from "@/components/ui/payment-provider-logos";
 import type {
   PaymentGatewaySummary,
+  StripePaymentConfigSummary,
+  PayPalPaymentConfigSummary,
   UpdatePaymentSettingsInput,
 } from "../../types/admin-settings";
 
@@ -42,7 +44,7 @@ export function PaymentSettingsTab({
   );
 
   // Stripe state
-  const stripeInitial = initialData.stripe || {
+  const stripeInitial: StripePaymentConfigSummary = initialData.stripe || {
     enabled: initialData.enabled,
     environment: initialData.environment,
     publishableKey: initialData.publishableKey,
@@ -50,6 +52,8 @@ export function PaymentSettingsTab({
     maskedSecretKey: initialData.maskedSecretKey,
     hasWebhookSecret: false,
     maskedWebhookSecret: "",
+    configured: !!(initialData.publishableKey && initialData.hasSecretKey),
+    source: "database",
   };
 
   const [stripeEnabled, setStripeEnabled] = React.useState(stripeInitial.enabled);
@@ -61,13 +65,15 @@ export function PaymentSettingsTab({
   const [newStripeWebhook, setNewStripeWebhook] = React.useState("");
 
   // PayPal state
-  const paypalInitial = initialData.paypal || {
+  const paypalInitial: PayPalPaymentConfigSummary = initialData.paypal || {
     enabled: false,
     environment: "sandbox",
     clientId: "",
     hasClientSecret: false,
     maskedClientSecret: "",
     webhookId: "",
+    configured: false,
+    source: "none",
   };
 
   const [paypalEnabled, setPaypalEnabled] = React.useState(paypalInitial.enabled);
