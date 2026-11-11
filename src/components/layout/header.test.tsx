@@ -1,6 +1,6 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { Header } from "./header";
@@ -72,6 +72,110 @@ describe("Header / Navbar component", () => {
     // Hovering over Tours does not display a dropdown menu or category links
     await user.hover(toursLink);
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  describe("Travel Services Dropdown Menu", () => {
+    it("renders Travel Services trigger between main nav and action controls", () => {
+      renderWithStore(<Header />);
+      const triggers = screen.getAllByRole("button", {
+        name: /travel services/i,
+      });
+      expect(triggers.length).toBeGreaterThan(0);
+      expect(triggers[0]).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("opens dropdown on click and displays Trip.com and 12Go affiliate links with target='_blank' and rel='noopener noreferrer'", async () => {
+      renderWithStore(<Header />);
+
+      const desktopTrigger = screen.getAllByRole("button", {
+        name: /travel services/i,
+      })[0];
+
+      fireEvent.click(desktopTrigger);
+      expect(desktopTrigger).toHaveAttribute("aria-expanded", "true");
+
+      const menu = screen.getByRole("menu", { name: /travel services options/i });
+      expect(menu).toBeInTheDocument();
+
+      const tripLink = screen.getByRole("menuitem", { name: /hotels & flights/i });
+      expect(tripLink).toBeInTheDocument();
+      expect(tripLink).toHaveAttribute("href", "https://www.trip.com/t/vKM1Lhak6X2");
+      expect(tripLink).toHaveAttribute("target", "_blank");
+      expect(tripLink).toHaveAttribute("rel", "noopener noreferrer");
+
+      const transferLink = screen.getByRole("menuitem", { name: /airport transfers/i });
+      expect(transferLink).toBeInTheDocument();
+      expect(transferLink).toHaveAttribute("href", "https://qblc-travel.12go.asia/en");
+      expect(transferLink).toHaveAttribute("target", "_blank");
+      expect(transferLink).toHaveAttribute("rel", "noopener noreferrer");
+    });
+
+    it("opens dropdown on mouseEnter on parent container and stays open", () => {
+      renderWithStore(<Header />);
+
+      const desktopTrigger = screen.getAllByRole("button", {
+        name: /travel services/i,
+      })[0];
+      const parentContainer = desktopTrigger.closest("div.relative")!;
+
+      fireEvent.mouseEnter(parentContainer);
+      expect(desktopTrigger).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("menu", { name: /travel services options/i })).toBeInTheDocument();
+
+      // Moving mouse inside dropdown menu keeps it open
+      const dropdownBridge = screen.getByRole("menu", { name: /travel services options/i }).parentElement!;
+      fireEvent.mouseEnter(dropdownBridge);
+      expect(desktopTrigger).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("opens dropdown with keyboard navigation (Enter and ArrowDown)", () => {
+      renderWithStore(<Header />);
+
+      const desktopTrigger = screen.getAllByRole("button", {
+        name: /travel services/i,
+      })[0];
+
+      fireEvent.keyDown(desktopTrigger, { key: "ArrowDown" });
+      expect(desktopTrigger).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("menu", { name: /travel services options/i })).toBeInTheDocument();
+
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(desktopTrigger).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("renders Travel Services in mobile drawer and allows expanding partner links", async () => {
+      renderWithStore(<Header />);
+
+      // Open mobile drawer
+      const mobileToggle = screen.getByRole("button", {
+        name: /toggle navigation menu/i,
+      });
+      fireEvent.click(mobileToggle);
+
+      // Find mobile Travel Services accordion
+      const mobileServicesBtn = screen.getByRole("button", {
+        name: /travel services partners menu/i,
+      });
+      expect(mobileServicesBtn).toBeInTheDocument();
+      expect(mobileServicesBtn).toHaveAttribute("aria-expanded", "false");
+
+      // Expand accordion
+      fireEvent.click(mobileServicesBtn);
+      expect(mobileServicesBtn).toHaveAttribute("aria-expanded", "true");
+
+      // Verify links
+      const tripLink = screen.getByText("Hotels & Flights").closest("a");
+      expect(tripLink).not.toBeNull();
+      expect(tripLink).toHaveAttribute("href", "https://www.trip.com/t/vKM1Lhak6X2");
+      expect(tripLink).toHaveAttribute("target", "_blank");
+      expect(tripLink).toHaveAttribute("rel", "noopener noreferrer");
+
+      const transferLink = screen.getByText("Airport Transfers").closest("a");
+      expect(transferLink).not.toBeNull();
+      expect(transferLink).toHaveAttribute("href", "https://qblc-travel.12go.asia/en");
+      expect(transferLink).toHaveAttribute("target", "_blank");
+      expect(transferLink).toHaveAttribute("rel", "noopener noreferrer");
+    });
   });
 
   it("renders and toggles mobile menu", async () => {

@@ -7,13 +7,17 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
   ChevronDown,
+  ExternalLink,
+  Hotel,
   LayoutDashboard,
   LogOut,
   Menu,
+  Plane,
+  Car,
   User,
   X,
 } from "lucide-react";
-import { mainNav } from "@/config/navigation";
+import { mainNav, travelServicesNav } from "@/config/navigation";
 import { Button } from "@/components/ui/button";
 import { Container } from "./container";
 import { cn } from "@/lib/utils";
@@ -36,6 +40,36 @@ export function Header() {
 
   const [accountDropdownOpen, setAccountDropdownOpen] = React.useState(false);
   const accountDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const [travelServicesDropdownOpen, setTravelServicesDropdownOpen] = React.useState(false);
+  const travelServicesDropdownRef = React.useRef<HTMLDivElement>(null);
+  const travelServicesTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [mobileTravelServicesOpen, setMobileTravelServicesOpen] = React.useState(false);
+
+  const handleTravelServicesMouseEnter = () => {
+    if (travelServicesTimeoutRef.current) {
+      clearTimeout(travelServicesTimeoutRef.current);
+      travelServicesTimeoutRef.current = null;
+    }
+    setTravelServicesDropdownOpen(true);
+  };
+
+  const handleTravelServicesMouseLeave = () => {
+    if (travelServicesTimeoutRef.current) {
+      clearTimeout(travelServicesTimeoutRef.current);
+    }
+    travelServicesTimeoutRef.current = setTimeout(() => {
+      setTravelServicesDropdownOpen(false);
+    }, 150);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (travelServicesTimeoutRef.current) {
+        clearTimeout(travelServicesTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const user = useAppSelector(selectCurrentUser);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
@@ -64,20 +98,27 @@ export function Header() {
       ) {
         setAccountDropdownOpen(false);
       }
+      if (
+        travelServicesDropdownRef.current &&
+        !travelServicesDropdownRef.current.contains(event.target as Node)
+      ) {
+        setTravelServicesDropdownOpen(false);
+      }
     }
-    if (accountDropdownOpen) {
+    if (accountDropdownOpen || travelServicesDropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [accountDropdownOpen]);
+  }, [accountDropdownOpen, travelServicesDropdownOpen]);
 
   // Handle escape key
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setAccountDropdownOpen(false);
+        setTravelServicesDropdownOpen(false);
         setMobileMenuOpen(false);
       }
     }
@@ -162,7 +203,111 @@ export function Header() {
               </Link>
             );
           })}
-        </nav>
+
+          {/* Travel Services Dropdown */}
+          <div
+            className="relative"
+            ref={travelServicesDropdownRef}
+            onMouseEnter={handleTravelServicesMouseEnter}
+            onMouseLeave={handleTravelServicesMouseLeave}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (travelServicesTimeoutRef.current) {
+                  clearTimeout(travelServicesTimeoutRef.current);
+                  travelServicesTimeoutRef.current = null;
+                }
+                setTravelServicesDropdownOpen((prev) => !prev);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+                  if (!travelServicesDropdownOpen) {
+                    e.preventDefault();
+                    setTravelServicesDropdownOpen(true);
+                  }
+                }
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 text-[15px] font-medium transition-colors py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md cursor-pointer select-none",
+                travelServicesDropdownOpen
+                  ? "text-primary font-semibold"
+                  : "text-[#263238] hover:text-primary"
+              )}
+              aria-expanded={travelServicesDropdownOpen}
+              aria-haspopup="menu"
+              aria-label="Travel Services"
+            >
+              <span>Travel Services</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-[#74818A] transition-transform duration-200",
+                  travelServicesDropdownOpen && "rotate-180 text-primary"
+                )}
+                aria-hidden="true"
+              />
+            </button>
+
+            {travelServicesDropdownOpen && (
+              <div
+                className="absolute left-0 top-full pt-1.5 z-50"
+                onMouseEnter={handleTravelServicesMouseEnter}
+                onMouseLeave={handleTravelServicesMouseLeave}
+              >
+                <div
+                  role="menu"
+                  aria-label="Travel Services options"
+                  className="w-72 rounded-2xl border border-[#E5EAED] bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150 focus:outline-none"
+                >
+                <div className="px-3 pt-2 pb-1.5 border-b border-[#E5EAED]/80 mb-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#74818A]">
+                    Partner Travel Services
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  {travelServicesNav.map((service) => {
+                    const isHotels = service.category === "hotels-flights";
+                    const IconComponent = isHotels ? Hotel : Car;
+
+                    return (
+                      <a
+                        key={service.provider}
+                        href={service.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        role="menuitem"
+                        onClick={() => setTravelServicesDropdownOpen(false)}
+                        className="group flex items-start gap-3 rounded-xl p-2.5 transition-all hover:bg-[#FAFEFF] hover:border hover:border-primary/20 border border-transparent"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white mt-0.5">
+                          <IconComponent className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-[#18282A] group-hover:text-primary transition-colors">
+                              {service.title}
+                            </span>
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-[#74818A] group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                              {service.provider}
+                            </span>
+                            <ExternalLink className="ml-auto h-3 w-3 text-[#74818A] opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                          </div>
+                          {service.description && (
+                            <p className="text-[11px] text-[#74818A] line-clamp-1 mt-0.5">
+                              {service.description}
+                            </p>
+                          )}
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
 
         {/* Right: Auth Controls & CTA */}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -177,9 +322,17 @@ export function Header() {
                 aria-haspopup="menu"
                 aria-label="Account"
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">
-                  {getInitials(user.name)}
-                </span>
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name || "User"}
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                    {getInitials(user.name)}
+                  </span>
+                )}
                 <span>Account</span>
                 <ChevronDown
                   className={cn(
@@ -324,6 +477,70 @@ export function Header() {
                 </Link>
               );
             })}
+
+            {/* Mobile Travel Services Accordion / Dropdown */}
+            <div className="rounded-xl border border-[#E5EAED] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setMobileTravelServicesOpen(!mobileTravelServicesOpen)}
+                className="flex w-full items-center justify-between px-4 py-3 text-base font-medium text-[#263238] hover:bg-muted transition-colors"
+                aria-expanded={mobileTravelServicesOpen}
+                aria-label="Travel Services partners menu"
+              >
+                <span className="flex items-center gap-2">
+                  <span>Travel Services</span>
+                  <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    Partners
+                  </span>
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-[#74818A] transition-transform duration-200",
+                    mobileTravelServicesOpen && "rotate-180 text-primary"
+                  )}
+                />
+              </button>
+
+              {mobileTravelServicesOpen && (
+                <div className="bg-[#FAFEFF] px-3 py-2 space-y-1.5 border-t border-[#E5EAED]">
+                  {travelServicesNav.map((service) => {
+                    const isHotels = service.category === "hotels-flights";
+                    const IconComponent = isHotels ? Hotel : Car;
+
+                    return (
+                      <a
+                        key={service.provider}
+                        href={service.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white transition-colors border border-transparent hover:border-[#E5EAED]"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <IconComponent className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-semibold text-[#18282A]">
+                              {service.title}
+                            </span>
+                            <span className="text-[10px] text-[#74818A] bg-slate-100 px-1.5 py-0.5 rounded-full">
+                              {service.provider}
+                            </span>
+                          </div>
+                          {service.description && (
+                            <p className="text-xs text-[#74818A] truncate">
+                              {service.description}
+                            </p>
+                          )}
+                        </div>
+                        <ExternalLink className="h-3.5 w-3.5 text-[#74818A] shrink-0" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Mobile Auth Actions */}
             {isAuthenticated && user ? (

@@ -145,12 +145,21 @@ export function DashboardTopbar({
           aria-haspopup="menu"
           aria-label="Account menu"
         >
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3297A3]/15 text-[#3297A3] font-outfit text-xs font-bold"
-            aria-label="Current User Avatar"
-          >
-            {avatarInitials}
-          </span>
+          {user?.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={displayName}
+              className="h-7 w-7 rounded-full object-cover"
+              aria-label="Current User Avatar"
+            />
+          ) : (
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3297A3]/15 text-[#3297A3] font-outfit text-xs font-bold"
+              aria-label="Current User Avatar"
+            >
+              {avatarInitials}
+            </span>
+          )}
           <span className="hidden sm:inline font-medium text-[#18282A] max-w-[150px] truncate">
             {displayName}
           </span>

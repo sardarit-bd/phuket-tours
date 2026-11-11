@@ -1,7 +1,14 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { Provider } from "react-redux";
+import { makeStore } from "@/store";
 import { ProfileSettingsView } from "./profile-settings-view";
+
+function renderWithStore(ui: React.ReactElement) {
+  const store = makeStore();
+  return render(<Provider store={store}>{ui}</Provider>);
+}
 
 function Harness({
   initialProfile,
@@ -10,7 +17,7 @@ function Harness({
   saveError = null,
   isDirty = false,
 }: {
-  initialProfile: { name: string; email: string; phone: string | null } | null;
+  initialProfile: { name: string; email: string; phone: string | null; avatarUrl?: string | null } | null;
   onSave?: () => Promise<boolean>;
   isSaving?: boolean;
   saveError?: unknown;
@@ -72,7 +79,7 @@ describe("ProfileSettingsView", () => {
   });
 
   it("renders in view mode by default with read-only text, not inputs", () => {
-    render(<Harness initialProfile={PROFILE} />);
+    renderWithStore(<Harness initialProfile={PROFILE} />);
 
     expect(screen.getByTestId("profile-settings-page")).toBeInTheDocument();
     expect(screen.getByTestId("profile-settings-edit-btn")).toBeInTheDocument();
@@ -90,7 +97,7 @@ describe("ProfileSettingsView", () => {
   });
 
   it("switches to edit mode when Edit Profile is clicked", () => {
-    render(<Harness initialProfile={PROFILE} />);
+    renderWithStore(<Harness initialProfile={PROFILE} />);
 
     fireEvent.click(screen.getByTestId("profile-settings-edit-btn"));
 
@@ -104,7 +111,7 @@ describe("ProfileSettingsView", () => {
   });
 
   it("disables Save when no changes have been made (dirty state)", () => {
-    render(<Harness initialProfile={PROFILE} isDirty={false} />);
+    renderWithStore(<Harness initialProfile={PROFILE} isDirty={false} />);
 
     fireEvent.click(screen.getByTestId("profile-settings-edit-btn"));
 
@@ -113,7 +120,7 @@ describe("ProfileSettingsView", () => {
   });
 
   it("enables Save when a change is tracked", () => {
-    render(<Harness initialProfile={PROFILE} isDirty={true} />);
+    renderWithStore(<Harness initialProfile={PROFILE} isDirty={true} />);
 
     fireEvent.click(screen.getByTestId("profile-settings-edit-btn"));
 
@@ -122,7 +129,7 @@ describe("ProfileSettingsView", () => {
   });
 
   it("shows a loading skeleton while profile is loading", () => {
-    render(
+    renderWithStore(
       <ProfileSettingsView
         profile={null}
         isProfileLoading={true}
@@ -150,7 +157,7 @@ describe("ProfileSettingsView", () => {
 
   it("shows a load error state with retry", () => {
     const onRefetch = vi.fn();
-    render(
+    renderWithStore(
       <ProfileSettingsView
         profile={null}
         isProfileLoading={false}
@@ -180,7 +187,7 @@ describe("ProfileSettingsView", () => {
 
   it("shows saving state and returns to view mode after a successful save", async () => {
     const onSave = vi.fn(async () => true);
-    const { rerender } = render(<Harness initialProfile={PROFILE} isDirty={true} onSave={onSave} />);
+    const { rerender } = renderWithStore(<Harness initialProfile={PROFILE} isDirty={true} onSave={onSave} />);
 
     fireEvent.click(screen.getByTestId("profile-settings-edit-btn"));
     fireEvent.click(screen.getByTestId("profile-settings-save-btn"));
@@ -192,12 +199,12 @@ describe("ProfileSettingsView", () => {
     );
     expect(screen.getByTestId("profile-settings-saved")).toBeInTheDocument();
 
-    rerender(<Harness initialProfile={PROFILE} isDirty={true} onSave={onSave} />);
+    rerender(<Provider store={makeStore()}><Harness initialProfile={PROFILE} isDirty={true} onSave={onSave} /></Provider>);
   });
 
   it("stays in edit mode and shows an error banner when save fails", async () => {
     const onSave = vi.fn(async () => false);
-    render(
+    renderWithStore(
       <Harness
         initialProfile={PROFILE}
         isDirty={true}
@@ -218,7 +225,7 @@ describe("ProfileSettingsView", () => {
   });
 
   it("discards unsaved changes and returns to view mode on Cancel", () => {
-    render(<Harness initialProfile={PROFILE} />);
+    renderWithStore(<Harness initialProfile={PROFILE} />);
 
     fireEvent.click(screen.getByTestId("profile-settings-edit-btn"));
     fireEvent.change(screen.getByTestId("profile-settings-name-input"), {
@@ -230,5 +237,43 @@ describe("ProfileSettingsView", () => {
 
     expect(screen.getByTestId("profile-settings-edit-btn")).toBeInTheDocument();
     expect(screen.getByTestId("profile-settings-name-view")).toHaveTextContent("Ada Admin");
+  });
+
+  it("renders email change button and opens edit email modal", async () => {
+    renderWithStore(<Harness initialProfile={PROFILE} />);
+
+    const editEmailBtn = screen.getByTestId("profile-settings-change-email-btn");
+    expect(editEmailBtn).toBeInTheDocument();
+    fireEvent.click(editEmailBtn);
+
+    expect(screen.getByText("Change Email Address")).toBeInTheDocument();
+    expect(screen.getByTestId("edit-email-input")).toBeInTheDocument();
+    expect(screen.getByTestId("edit-email-password-input")).toBeInTheDocument();
+  });
+
+  it("renders profile avatar uploader with initials when no avatar exists", () => {
+    renderWithStore(<Harness initialProfile={PROFILE} />);
+
+    expect(screen.getByTestId("profile-settings-avatar-container")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-settings-avatar-fallback")).toHaveTextContent("AA");
+    expect(screen.getByTestId("profile-settings-avatar-change-btn")).toHaveTextContent("Upload Photo");
+  });
+
+  it("renders current avatar image and remove button when avatar exists", () => {
+    renderWithStore(
+      <Harness
+        initialProfile={{
+          ...PROFILE,
+          avatarUrl: "https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg",
+        }}
+      />
+    );
+
+    expect(screen.getByTestId("profile-settings-avatar-img")).toHaveAttribute(
+      "src",
+      "https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg"
+    );
+    expect(screen.getByTestId("profile-settings-avatar-change-btn")).toHaveTextContent("Change Photo");
+    expect(screen.getByTestId("profile-settings-avatar-remove-btn")).toBeInTheDocument();
   });
 });

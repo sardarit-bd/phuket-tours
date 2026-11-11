@@ -184,12 +184,21 @@ export function DashboardSidebar({
         {/* Dynamic Profile Identity Representation */}
         <div className="mt-2 flex items-center rounded-lg border border-[#E5EAED] bg-white p-2">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#3297A3]/10 text-[#3297A3] font-outfit text-xs font-bold"
-              aria-label="User Avatar Initials"
-            >
-              {avatarInitials}
-            </div>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={displayName}
+                className="h-8 w-8 shrink-0 rounded-full object-cover"
+                aria-label="User Avatar"
+              />
+            ) : (
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#3297A3]/10 text-[#3297A3] font-outfit text-xs font-bold"
+                aria-label="User Avatar Initials"
+              >
+                {avatarInitials}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-[#18282A]">
                 {displayName}

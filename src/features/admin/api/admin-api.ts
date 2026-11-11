@@ -65,7 +65,6 @@ import type {
 } from "../types/admin";
 import type {
   SystemSettingsOverview,
-  SettingAuditLogsResponse,
   UpdateGeneralSettingsInput,
   UpdatePaymentSettingsInput,
   UpdateWebhookSettingsInput,
@@ -74,7 +73,6 @@ import type {
   TestConnectionResult,
   SendTestEmailInput,
   SendTestEmailResult,
-  GetSettingAuditLogsParams,
 } from "../types/admin-settings";
 
 export const adminApi = baseApi.injectEndpoints({
@@ -1230,18 +1228,6 @@ export const adminApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["AdminSetting"],
     }),
-
-    getAdminSettingAuditLogs: builder.query<
-      AdminApiResponse<SettingAuditLogsResponse>,
-      GetSettingAuditLogsParams | void
-    >({
-      query: (params) => ({
-        url: "/admin/settings/audit",
-        method: "GET",
-        params: params || undefined,
-      }),
-      providesTags: ["AdminSetting"],
-    }),
   }),
 });
 
@@ -1351,8 +1337,6 @@ export const {
   useUpdateAdminSmtpSettingsMutation,
   useTestAdminSmtpConnectionMutation,
   useSendAdminTestEmailMutation,
-  useGetAdminSettingAuditLogsQuery,
-  useLazyGetAdminSettingAuditLogsQuery,
 } = adminApi;
 
 export * from "../types/admin";

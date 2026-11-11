@@ -17,7 +17,31 @@ export interface GeneralSettingsSummary {
   isCustomized: boolean;
 }
 
+export interface StripePaymentConfigSummary {
+  enabled: boolean;
+  environment: "sandbox" | "live";
+  publishableKey: string;
+  hasSecretKey: boolean;
+  maskedSecretKey: string;
+  hasWebhookSecret: boolean;
+  maskedWebhookSecret: string;
+  configured: boolean;
+  source: "database" | "environment" | "none";
+}
+
+export interface PayPalPaymentConfigSummary {
+  enabled: boolean;
+  environment: "sandbox" | "live";
+  clientId: string;
+  hasClientSecret: boolean;
+  maskedClientSecret: string;
+  webhookId: string;
+  configured: boolean;
+  source: "database" | "environment" | "none";
+}
+
 export interface PaymentGatewaySummary {
+  activeProvider: "stripe" | "paypal";
   providerName: string;
   enabled: boolean;
   environment: "sandbox" | "live";
@@ -25,6 +49,8 @@ export interface PaymentGatewaySummary {
   hasSecretKey: boolean;
   maskedSecretKey: string;
   merchantId: string;
+  stripe?: StripePaymentConfigSummary;
+  paypal?: PayPalPaymentConfigSummary;
   isCustomized: boolean;
 }
 
@@ -77,33 +103,6 @@ export interface SystemSettingsOverview {
   serverTime: string;
 }
 
-export interface SettingAuditLogItem {
-  id: string;
-  category: "GENERAL" | "PAYMENT" | "WEBHOOK" | "CLOUDINARY" | "SMTP" | "SECURITY";
-  action: string;
-  actorId: string | null;
-  actorName: string | null;
-  actorEmail: string | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-  status: "SUCCESS" | "FAILED";
-  errorMessage: string | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: string;
-}
-
-export interface SettingAuditLogsPagination {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-export interface SettingAuditLogsResponse {
-  logs: SettingAuditLogItem[];
-  pagination: SettingAuditLogsPagination;
-}
-
 export interface UpdateGeneralSettingsInput {
   platformName?: string;
   supportEmail?: string;
@@ -115,6 +114,7 @@ export interface UpdateGeneralSettingsInput {
 }
 
 export interface UpdatePaymentSettingsInput {
+  activeProvider?: "stripe" | "paypal";
   providerName?: string;
   enabled?: boolean;
   environment?: "sandbox" | "live";
@@ -122,6 +122,21 @@ export interface UpdatePaymentSettingsInput {
   publishableKey?: string;
   secretKey?: string;
   merchantId?: string;
+
+  stripe?: {
+    enabled?: boolean;
+    environment?: "sandbox" | "live";
+    publishableKey?: string;
+    secretKey?: string;
+    webhookSecret?: string;
+  };
+  paypal?: {
+    enabled?: boolean;
+    environment?: "sandbox" | "live";
+    clientId?: string;
+    clientSecret?: string;
+    webhookId?: string;
+  };
 }
 
 export interface UpdateWebhookSettingsInput {
@@ -165,14 +180,4 @@ export interface SendTestEmailResult {
   message: string;
   messageId?: string;
   recipient: string;
-}
-
-export interface GetSettingAuditLogsParams {
-  category?: string;
-  actorId?: string;
-  status?: string;
-  startDate?: string;
-  endDate?: string;
-  page?: number;
-  limit?: number;
 }

@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
 import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
+import { EditEmailModal } from "./edit-email-modal";
+import { ProfileAvatarUploader } from "./profile-avatar-uploader";
 
 export type ProfileMode = "view" | "edit";
 
@@ -38,6 +40,7 @@ export interface ProfileSettingsViewProps {
     name: string;
     email: string;
     phone: string | null;
+    avatarUrl?: string | null;
   } | null;
 
   isProfileLoading: boolean;
@@ -90,6 +93,11 @@ export interface ProfileSettingsViewProps {
 
   /** Test ID prefix for data-testid attributes. Defaults to "profile-settings". */
   testIdPrefix?: string;
+
+  /** Allow editing email address. Defaults to true. */
+  allowEmailEdit?: boolean;
+  /** Allow uploading profile picture. Defaults to true. */
+  allowAvatarUpload?: boolean;
 }
 
 /**
@@ -123,9 +131,12 @@ export function ProfileSettingsView({
   extraEditableFieldsView,
   extraReadonlyFields,
   testIdPrefix = "profile-settings",
+  allowEmailEdit = true,
+  allowAvatarUpload = true,
 }: ProfileSettingsViewProps) {
   const [mode, setMode] = React.useState<ProfileMode>("view");
   const [saved, setSaved] = React.useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = React.useState(false);
 
   const enterEdit = () => {
     setMode("edit");
@@ -259,6 +270,23 @@ export function ProfileSettingsView({
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Profile Picture Upload Section */}
+          {allowAvatarUpload && (
+            <div className="border-b border-[#E5EAED] pb-5">
+              <label className="mb-2 block text-xs font-semibold text-[#18282A]">
+                Profile Picture
+              </label>
+              <ProfileAvatarUploader
+                currentAvatarUrl={profile.avatarUrl}
+                userName={profile.name}
+                onAvatarUpdated={() => {
+                  onRefetchProfile();
+                }}
+                testIdPrefix={`${testIdPrefix}-avatar`}
+              />
+            </div>
+          )}
+
           {/* Editable fields */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Name */}
@@ -323,15 +351,30 @@ export function ProfileSettingsView({
           {/* Read-only fields */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-[#18282A]">
-                <Mail className="h-3.5 w-3.5 text-[#74818A]" />
-                Email Address
-                <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase text-[#74818A]">
-                  Read-only
-                </span>
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-[#18282A]">
+                  <Mail className="h-3.5 w-3.5 text-[#74818A]" />
+                  Email Address
+                </label>
+                {allowEmailEdit ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEmailModalOpen(true)}
+                    className="h-6 px-2 text-[11px] font-semibold text-[#176779] hover:bg-teal-50 hover:text-[#135664]"
+                    data-testid={`${testIdPrefix}-change-email-btn`}
+                  >
+                    Edit Email
+                  </Button>
+                ) : (
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase text-[#74818A]">
+                    Read-only
+                  </span>
+                )}
+              </div>
               <p
-                className="flex h-10 items-center rounded-xl border border-[#E5EAED] bg-[#F8FAFB] px-3 text-sm text-[#74818A]"
+                className="flex h-10 items-center rounded-xl border border-[#E5EAED] bg-[#F8FAFB] px-3 text-sm text-[#18282A]"
                 data-testid={`${testIdPrefix}-email-view`}
               >
                 {profile.email}
@@ -402,6 +445,18 @@ export function ProfileSettingsView({
           )}
         </div>
       </div>
+
+      {/* Edit Email Modal */}
+      {allowEmailEdit && (
+        <EditEmailModal
+          isOpen={isEmailModalOpen}
+          onClose={() => setIsEmailModalOpen(false)}
+          currentEmail={profile.email}
+          onSuccess={() => {
+            onRefetchProfile();
+          }}
+        />
+      )}
     </div>
   );
 }

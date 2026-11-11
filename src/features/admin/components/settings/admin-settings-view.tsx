@@ -7,7 +7,6 @@ import {
   Webhook,
   Cloud,
   Mail,
-  ShieldCheck,
   RotateCcw,
   AlertCircle,
   User,
@@ -24,14 +23,12 @@ import {
   useUpdateAdminSmtpSettingsMutation,
   useTestAdminSmtpConnectionMutation,
   useSendAdminTestEmailMutation,
-  useGetAdminSettingAuditLogsQuery,
 } from "../../api/admin-api";
 import { GeneralSettingsTab } from "./general-settings-tab";
 import { PaymentSettingsTab } from "./payment-settings-tab";
 import { WebhookSettingsTab } from "./webhook-settings-tab";
 import { CloudinarySettingsTab } from "./cloudinary-settings-tab";
 import { SmtpSettingsTab } from "./smtp-settings-tab";
-import { SettingsAuditLogsTab } from "./settings-audit-logs-tab";
 import { AdminProfileSettings } from "./admin-profile-settings";
 import type {
   UpdateGeneralSettingsInput,
@@ -39,7 +36,6 @@ import type {
   UpdateWebhookSettingsInput,
   UpdateCloudinarySettingsInput,
   UpdateSmtpSettingsInput,
-  GetSettingAuditLogsParams,
 } from "../../types/admin-settings";
 
 type SettingsTab =
@@ -48,8 +44,7 @@ type SettingsTab =
   | "payment"
   | "webhook"
   | "cloudinary"
-  | "smtp"
-  | "audit";
+  | "smtp";
 
 interface TabItem {
   id: SettingsTab;
@@ -95,12 +90,6 @@ const SETTINGS_TABS: TabItem[] = [
     description: "Outbound relay, templates & connection test",
     icon: Mail,
   },
-  {
-    id: "audit",
-    label: "Security & Audit Logs",
-    description: "Configuration change trail & actor logs",
-    icon: ShieldCheck,
-  },
 ];
 
 interface ActionFeedback {
@@ -144,20 +133,6 @@ export function AdminSettingsView() {
     useTestAdminSmtpConnectionMutation();
   const [sendTestEmail, { isLoading: isSendingEmail }] =
     useSendAdminTestEmailMutation();
-
-  // Audit Logs Query State
-  const [auditParams, setAuditParams] = React.useState<GetSettingAuditLogsParams>({
-    page: 1,
-    limit: 10,
-    category: "ALL",
-    status: "ALL",
-  });
-
-  const {
-    data: auditResponse,
-    isLoading: isAuditLoading,
-    refetch: refetchAudit,
-  } = useGetAdminSettingAuditLogsQuery(auditParams);
 
   const settingsOverview = settingsResponse?.data;
 
@@ -294,14 +269,13 @@ export function AdminSettingsView() {
             System Settings & Security Center
           </h2>
           <p className="mt-1 text-sm text-[#74818A]">
-            Manage platform identity, payment credentials, webhook secrets, Cloudinary storage, SMTP relay, and audit history.
+            Manage platform identity, payment credentials, webhook secrets, Cloudinary storage, and SMTP relay.
           </p>
         </div>
         <button
           type="button"
           onClick={() => {
             refetchSettings();
-            refetchAudit();
           }}
           className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-[8px] border border-[#D5DDE2] bg-white px-3.5 py-2 text-xs font-semibold text-[#18282A] hover:bg-[#F8FAFB] transition-colors"
         >
@@ -432,18 +406,6 @@ export function AdminSettingsView() {
               isLoading={isUpdatingSmtp}
               isTesting={isTestingSmtp}
               isSendingEmail={isSendingEmail}
-            />
-          )}
-
-          {activeTab === "audit" && (
-            <SettingsAuditLogsTab
-              data={auditResponse?.data}
-              isLoading={isAuditLoading}
-              queryParams={auditParams}
-              onFilterChange={(newFilters) =>
-                setAuditParams((prev) => ({ ...prev, ...newFilters }))
-              }
-              onRefresh={refetchAudit}
             />
           )}
         </div>

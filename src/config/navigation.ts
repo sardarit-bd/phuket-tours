@@ -2,6 +2,7 @@ export interface DropdownItem {
   title: string;
   href: string;
   description?: string;
+  external?: boolean;
 }
 
 export interface NavItem {
@@ -9,6 +10,31 @@ export interface NavItem {
   href: string;
   dropdown?: DropdownItem[];
 }
+
+export interface TravelServiceItem {
+  title: string;
+  provider: string;
+  href: string;
+  description?: string;
+  category: "hotels-flights" | "transfers";
+}
+
+export const travelServicesNav: TravelServiceItem[] = [
+  {
+    title: "Hotels & Flights",
+    provider: "Trip.com",
+    href: "https://www.trip.com/t/vKM1Lhak6X2",
+    description: "Book hotels, flights & stays worldwide",
+    category: "hotels-flights",
+  },
+  {
+    title: "Airport Transfers",
+    provider: "12Go",
+    href: "https://qblc-travel.12go.asia/en",
+    description: "Taxis, ferries & seamless airport transit",
+    category: "transfers",
+  },
+];
 
 export const mainNav: NavItem[] = [
   {

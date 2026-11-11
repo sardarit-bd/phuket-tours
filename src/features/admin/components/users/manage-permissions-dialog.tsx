@@ -123,7 +123,6 @@ export function ManagePermissionsDialog({
     "settings.webhook.manage",
     "settings.cloudinary.manage",
     "settings.smtp.manage",
-    "settings.audit.view",
   ] as const;
 
   const hasAnyModuleViewSelected = MODULE_VIEW_PERMISSION_IDS.some((id) =>
