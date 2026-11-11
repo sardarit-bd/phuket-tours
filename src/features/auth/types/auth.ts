@@ -9,6 +9,8 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   avatarUrl?: string | null;
+  accessToken?: string;
+  token?: string;
 }
 
 export interface UserProfile {
