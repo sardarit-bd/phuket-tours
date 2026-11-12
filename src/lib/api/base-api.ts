@@ -68,7 +68,7 @@ const rawBaseQuery = fetchBaseQuery({
   baseUrl: env.NEXT_PUBLIC_API_URL,
   credentials: "include",
   prepareHeaders: (headers, { getState }) => {
-    const state = getState() as RootState;
+    const state = getState() as { auth?: { accessToken?: string | null } };
     const token = state?.auth?.accessToken;
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
@@ -111,16 +111,22 @@ export const baseQueryWithReauth: BaseQueryFn<
             const data = refreshResult.data as AuthUserResponse;
             const newAccessToken = data.data?.accessToken;
             if (newAccessToken) {
-              api.dispatch(setAccessToken(newAccessToken));
+              api.dispatch({
+                type: "auth/setAccessToken",
+                payload: newAccessToken,
+              });
             }
             if (data.data) {
-              api.dispatch(setCredentials(data.data));
+              api.dispatch({
+                type: "auth/setCredentials",
+                payload: data.data,
+              });
             }
 
             // Retry the original query with the newly refreshed access token
             result = await rawBaseQuery(args, api, extraOptions);
           } else {
-            api.dispatch(clearCredentials());
+            api.dispatch({ type: "auth/clearCredentials" });
           }
         } finally {
           release();
