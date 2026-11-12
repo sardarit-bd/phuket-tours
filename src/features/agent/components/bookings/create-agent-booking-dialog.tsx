@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useGetToursQuery } from "@/features/tours/api/tours-api";
 import {
   useGetAgentCustomersQuery,
@@ -93,13 +94,22 @@ export function CreateAgentBookingDialog({
   const [generatedPaymentUrl, setGeneratedPaymentUrl] = React.useState<string | null>(null);
   const [isCopied, setIsCopied] = React.useState(false);
 
-  const { data: toursData, isLoading: isToursLoading } = useGetToursQuery(
+  const {
+    data: toursData,
+    isLoading: isToursLoading,
+    isError: isToursError,
+    error: toursError,
+  } = useGetToursQuery(
     { page: 1, limit: 50 },
     { skip: !isOpen },
   );
 
-  const { data: customersRes, isLoading: isCustomersLoading } =
-    useGetAgentCustomersQuery({ limit: 50 }, { skip: !isOpen });
+  const {
+    data: customersRes,
+    isLoading: isCustomersLoading,
+    isError: isCustomersError,
+    error: customersError,
+  } = useGetAgentCustomersQuery({ limit: 50 }, { skip: !isOpen });
 
   const { data: pricingLimitsRes } = useGetAgentPricingLimitsQuery(
     { serviceId: selectedTourId || undefined },
@@ -115,6 +125,28 @@ export function CreateAgentBookingDialog({
 
   const tours = toursData?.data || [];
   const customers = customersRes?.data?.items || [];
+
+  const tourOptions = React.useMemo(() => {
+    return tours.map((t) => ({
+      value: t.id,
+      label: `${t.title} (${formatAgentCurrency(t.price?.amount ?? 0, t.price?.currency || "USD")})`,
+    }));
+  }, [tours]);
+
+  const customerOptions = React.useMemo(() => {
+    return customers.map((c) => ({
+      value: c.id,
+      label: `${c.name} — ${c.email}${c.phone ? ` (${c.phone})` : ""}`,
+    }));
+  }, [customers]);
+
+  const toursErrorMessage = isToursError
+    ? "Failed to load tours. Please retry."
+    : null;
+
+  const customersErrorMessage = isCustomersError
+    ? "Failed to load past clients."
+    : null;
 
   // Reset state when opening
   React.useEffect(() => {
@@ -573,7 +605,7 @@ export function CreateAgentBookingDialog({
             )}
           </div>
 
-          {customerMode === "EXISTING" && customers.length > 0 ? (
+          {customerMode === "EXISTING" && (
             <div>
               <label
                 htmlFor="agent-existing-customer"
@@ -581,22 +613,22 @@ export function CreateAgentBookingDialog({
               >
                 Select Client
               </label>
-              <select
+              <SearchableSelect
                 id="agent-existing-customer"
                 value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                disabled={isCustomersLoading}
-                className="h-9 w-full rounded-xl border border-[#E5EAED] bg-white px-3 text-xs text-[#18282A] focus:outline-none focus:ring-1 focus:ring-[#176779]"
+                options={customerOptions}
+                onChange={(val) => setSelectedCustomerId(val)}
+                isLoading={isCustomersLoading}
+                errorMessage={customersErrorMessage}
+                placeholder="Select an existing client"
+                searchPlaceholder="Search past clients by name or email..."
+                emptyMessage="No matching clients found."
+                triggerClassName="h-9 rounded-xl text-xs"
                 data-testid="agent-existing-customer-select"
-              >
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} — {c.email} {c.phone ? `(${c.phone})` : ""}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
-          ) : (
+          )}
+          {customerMode === "NEW" && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label
@@ -666,24 +698,19 @@ export function CreateAgentBookingDialog({
               >
                 Select Tour *
               </label>
-              <select
+              <SearchableSelect
                 id="agent-tour-select"
                 value={selectedTourId}
-                onChange={(e) => setSelectedTourId(e.target.value)}
-                disabled={isToursLoading}
-                className="h-9 w-full rounded-xl border border-[#E5EAED] bg-white px-3 text-xs text-[#18282A] focus:outline-none focus:ring-1 focus:ring-[#176779]"
+                options={tourOptions}
+                onChange={(val) => setSelectedTourId(val)}
+                isLoading={isToursLoading}
+                errorMessage={toursErrorMessage}
+                placeholder="Select a tour package"
+                searchPlaceholder="Search tours by name..."
+                emptyMessage="No tours available."
+                triggerClassName="h-9 rounded-xl text-xs"
                 data-testid="agent-booking-tour-select"
-              >
-                {tours.length === 0 ? (
-                  <option value="">Loading tours...</option>
-                ) : (
-                  tours.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.title} ({formatAgentCurrency(t.price?.amount ?? 0, t.price?.currency || "USD")})
-                    </option>
-                  ))
-                )}
-              </select>
+              />
             </div>
 
             <div>
