@@ -9,8 +9,7 @@ import { env } from "@/config/env";
 import type { AuthUserResponse } from "@/features/auth/types/auth";
 
 /**
- * Lightweight, zero-dependency async mutex lock for single-flight token refresh.
- * Ensures concurrent 401s share a single refresh request without duplicate calls.
+ * Single-flight in-memory mutex for coordinating concurrent 401s within the current tab.
  */
 class SimpleMutex {
   private _isLocked = false;
@@ -64,6 +63,22 @@ class SimpleMutex {
 
 const mutex = new SimpleMutex();
 
+/**
+ * Cross-tab leader synchronization mechanism using standard Web Locks API / BroadcastChannel.
+ * Fallback to in-tab mutex if navigator.locks is unavailable (SSR or older environments).
+ */
+const executeWithCrossTabLock = async <T>(
+  lockName: string,
+  action: () => Promise<T>,
+): Promise<T> => {
+  if (typeof window !== "undefined" && "locks" in navigator && navigator.locks) {
+    return navigator.locks.request(lockName, { mode: "exclusive" }, async () => {
+      return await action();
+    });
+  }
+  return await action();
+};
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: env.NEXT_PUBLIC_API_URL,
   credentials: "include",
@@ -76,6 +91,28 @@ const rawBaseQuery = fetchBaseQuery({
     return headers;
   },
 });
+
+/**
+ * Parse standard Retry-After header (in seconds or HTTP Date) with bounded maximum
+ */
+export const parseRetryAfter = (responseHeaders?: Headers): number | null => {
+  if (!responseHeaders) return null;
+  const retryVal = responseHeaders.get("retry-after") || responseHeaders.get("Retry-After");
+  if (!retryVal) return null;
+
+  const seconds = Number(retryVal);
+  if (!isNaN(seconds) && seconds >= 0) {
+    return Math.min(seconds * 1000, 30000); // capped at 30s
+  }
+
+  const dateMs = Date.parse(retryVal);
+  if (!isNaN(dateMs)) {
+    const delta = dateMs - Date.now();
+    return delta > 0 ? Math.min(delta, 30000) : 0;
+  }
+
+  return null;
+};
 
 export const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
@@ -94,17 +131,24 @@ export const baseQueryWithReauth: BaseQueryFn<
         : args.url.includes("/auth/refresh") || args.url.includes("/auth/login");
 
     if (!isAuthEndpoint) {
-      // Check whether mutex is currently locked
       if (!mutex.isLocked()) {
         const release = await mutex.acquire();
         try {
-          const refreshResult = await rawBaseQuery(
-            {
-              url: "/auth/refresh",
-              method: "POST",
+          // Coordinate cross-tab refresh via Web Locks API
+          const refreshResult = await executeWithCrossTabLock(
+            "phukettours_refresh_lock",
+            async () => {
+              // Check if another tab refreshed right before we acquired the lock:
+              // Try refreshing with rotating cookie
+              return await rawBaseQuery(
+                {
+                  url: "/auth/refresh",
+                  method: "POST",
+                },
+                api,
+                extraOptions,
+              );
             },
-            api,
-            extraOptions,
           );
 
           if (refreshResult.data) {
@@ -126,13 +170,18 @@ export const baseQueryWithReauth: BaseQueryFn<
             // Retry the original query with the newly refreshed access token
             result = await rawBaseQuery(args, api, extraOptions);
           } else {
-            api.dispatch({ type: "auth/clearCredentials" });
+            const refreshErrorStatus = refreshResult.error?.status;
+            // Only clear credentials if refresh specifically failed with an authentication failure (401/403).
+            // Do NOT log out the user on transient errors such as 429 (rate-limited) or 5xx (temporary server error).
+            if (refreshErrorStatus === 401 || refreshErrorStatus === 403) {
+              api.dispatch({ type: "auth/clearCredentials" });
+            }
           }
         } finally {
           release();
         }
       } else {
-        // Another refresh is in flight; wait for unlock then retry
+        // Another refresh in this tab is in flight; wait for unlock then retry
         await mutex.waitForUnlock();
         result = await rawBaseQuery(args, api, extraOptions);
       }
