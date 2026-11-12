@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { baseApi } from "./base-api";
+import { describe, it, expect, vi } from "vitest";
+import { baseApi, parseRetryAfter } from "./base-api";
 import { toursApi } from "@/features/tours/api/tours-api";
 import { makeStore } from "@/store";
 
-describe("baseApi configuration", () => {
+describe("baseApi configuration & Retry-After parser", () => {
   it("initializes baseApi with correct reducerPath", () => {
     expect(baseApi.reducerPath).toBe("api");
   });
@@ -17,7 +17,6 @@ describe("baseApi configuration", () => {
   });
 
   it("supports endpoints using Tour, Experience, Booking, Category, Auth, and User tag types", () => {
-    // Testing that tag types can be provided/invalidated without runtime error
     const testApi = baseApi.injectEndpoints({
       endpoints: (builder) => ({
         testAuthEndpoint: builder.query<{ status: string }, void>({
@@ -29,6 +28,24 @@ describe("baseApi configuration", () => {
     });
 
     expect(testApi.endpoints.testAuthEndpoint).toBeDefined();
+  });
+
+  it("correctly parses integer seconds Retry-After header with bounded max cap", () => {
+    const headers = new Headers();
+    headers.set("retry-after", "15");
+    expect(parseRetryAfter(headers)).toBe(15000);
+
+    // Capped at 30 seconds
+    headers.set("retry-after", "120");
+    expect(parseRetryAfter(headers)).toBe(30000);
+  });
+
+  it("returns null when Retry-After header is missing or invalid", () => {
+    expect(parseRetryAfter(undefined)).toBeNull();
+    const headers = new Headers();
+    expect(parseRetryAfter(headers)).toBeNull();
+    headers.set("retry-after", "invalid-str");
+    expect(parseRetryAfter(headers)).toBeNull();
   });
 
   it("keeps existing toursApi query functional through the store", async () => {
