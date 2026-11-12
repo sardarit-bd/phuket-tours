@@ -154,4 +154,41 @@ describe("CreatableSelect", () => {
     const trigger = screen.getByRole("combobox");
     expect(trigger).toHaveTextContent("Koh Tao Diving");
   });
+
+  it("handles loading, error, and empty states properly when creatable=false", () => {
+    const { rerender } = render(
+      <CreatableSelect
+        id="test-loading"
+        options={[]}
+        isLoading={true}
+        creatable={false}
+      />
+    );
+
+    const loadingTrigger = screen.getByRole("combobox");
+    expect(loadingTrigger).toHaveTextContent("Loading...");
+    expect(loadingTrigger).toBeDisabled();
+
+    rerender(
+      <CreatableSelect
+        id="test-error"
+        options={[]}
+        errorMessage="Failed to load items"
+        creatable={false}
+      />
+    );
+    expect(screen.getByRole("combobox")).toHaveTextContent("Failed to load items");
+
+    rerender(
+      <CreatableSelect
+        id="test-empty"
+        options={[]}
+        emptyMessage="No available items"
+        creatable={false}
+      />
+    );
+    fireEvent.click(screen.getByRole("combobox"));
+    expect(screen.getByText("No available items")).toBeInTheDocument();
+    expect(screen.queryByTestId("test-empty-create-option-btn")).not.toBeInTheDocument();
+  });
 });

@@ -4,7 +4,7 @@ import * as React from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import { CreatableSelect } from "@/components/ui/creatable-select";
 import { useGetToursQuery } from "@/features/tours/api/tours-api";
 import {
   useGetAgentCustomersQuery,
@@ -613,11 +613,12 @@ export function CreateAgentBookingDialog({
               >
                 Select Client
               </label>
-              <SearchableSelect
+              <CreatableSelect
                 id="agent-existing-customer"
                 value={selectedCustomerId}
                 options={customerOptions}
                 onChange={(val) => setSelectedCustomerId(val)}
+                creatable={false}
                 isLoading={isCustomersLoading}
                 errorMessage={customersErrorMessage}
                 placeholder="Select an existing client"
@@ -698,11 +699,12 @@ export function CreateAgentBookingDialog({
               >
                 Select Tour *
               </label>
-              <SearchableSelect
+              <CreatableSelect
                 id="agent-tour-select"
                 value={selectedTourId}
                 options={tourOptions}
                 onChange={(val) => setSelectedTourId(val)}
+                creatable={false}
                 isLoading={isToursLoading}
                 errorMessage={toursErrorMessage}
                 placeholder="Select a tour package"
