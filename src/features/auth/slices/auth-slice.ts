@@ -5,6 +5,7 @@ import type { RootState } from "@/store";
 
 export interface AuthState {
   user: AuthUser | UserProfile | null;
+  accessToken?: string | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
   status: "idle" | "loading" | "succeeded" | "failed";
@@ -12,6 +13,7 @@ export interface AuthState {
 
 const initialState: AuthState = {
   user: null,
+  accessToken: null,
   isAuthenticated: false,
   isInitialized: false,
   status: "idle",
@@ -30,8 +32,12 @@ export const authSlice = createSlice({
       state.isInitialized = true;
       state.status = action.payload ? "succeeded" : "idle";
     },
+    setAccessToken: (state, action: PayloadAction<string | null>) => {
+      state.accessToken = action.payload;
+    },
     clearCredentials: (state) => {
       state.user = null;
+      state.accessToken = null;
       state.isAuthenticated = false;
       state.isInitialized = true;
       state.status = "idle";
@@ -49,6 +55,7 @@ export const authSlice = createSlice({
         authApi.endpoints.login.matchFulfilled,
         (state, { payload }) => {
           state.user = payload.data;
+          state.accessToken = payload.data.accessToken || null;
           state.isAuthenticated = true;
           state.isInitialized = true;
           state.status = "succeeded";
@@ -58,6 +65,17 @@ export const authSlice = createSlice({
         authApi.endpoints.register.matchFulfilled,
         (state, { payload }) => {
           state.user = payload.data;
+          state.accessToken = payload.data.accessToken || null;
+          state.isAuthenticated = true;
+          state.isInitialized = true;
+          state.status = "succeeded";
+        }
+      )
+      .addMatcher(
+        authApi.endpoints.refresh.matchFulfilled,
+        (state, { payload }) => {
+          state.user = payload.data;
+          state.accessToken = payload.data.accessToken || null;
           state.isAuthenticated = true;
           state.isInitialized = true;
           state.status = "succeeded";
@@ -109,12 +127,14 @@ export const authSlice = createSlice({
       })
       .addMatcher(authApi.endpoints.logout.matchFulfilled, (state) => {
         state.user = null;
+        state.accessToken = null;
         state.isAuthenticated = false;
         state.isInitialized = true;
         state.status = "idle";
       })
       .addMatcher(authApi.endpoints.logout.matchRejected, (state) => {
         state.user = null;
+        state.accessToken = null;
         state.isAuthenticated = false;
         state.isInitialized = true;
         state.status = "idle";
@@ -124,12 +144,14 @@ export const authSlice = createSlice({
 
 export const {
   setCredentials,
+  setAccessToken,
   clearCredentials,
   setAuthStatus,
   setInitialized,
 } = authSlice.actions;
 
 export const selectCurrentUser = (state: RootState) => state.auth.user;
+export const selectAccessToken = (state: RootState) => state.auth.accessToken;
 export const selectIsAuthenticated = (state: RootState) =>
   state.auth.isAuthenticated;
 export const selectIsAuthInitialized = (state: RootState) =>

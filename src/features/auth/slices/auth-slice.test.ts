@@ -18,6 +18,7 @@ import type { AuthUser, UserProfile } from "../types/auth";
 describe("authSlice", () => {
   const initialAuthState: AuthState = {
     user: null,
+    accessToken: null,
     isAuthenticated: false,
     isInitialized: false,
     status: "idle",
