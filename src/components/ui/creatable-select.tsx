@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Check, Search, Plus, X } from "lucide-react";
+import { ChevronDown, Check, Search, Plus, X, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SelectOption, SelectSize } from "./custom-select";
 
@@ -13,6 +13,10 @@ export interface CreatableSelectProps {
   defaultValue?: string;
   onChange?: (value: string) => void;
   onCreateOption?: (newOption: SelectOption<string>) => void;
+  creatable?: boolean;
+  emptyMessage?: string;
+  errorMessage?: string | null;
+  isLoading?: boolean;
   placeholder?: string;
   searchPlaceholder?: string;
   createLabel?: (query: string) => string;
@@ -64,6 +68,10 @@ export function CreatableSelect({
   defaultValue,
   onChange,
   onCreateOption,
+  creatable = true,
+  emptyMessage = "No matching options found.",
+  errorMessage = null,
+  isLoading = false,
   placeholder = "Select or add option",
   searchPlaceholder = "Search or type new...",
   createLabel = (q) => `Add "${q}"`,
@@ -100,7 +108,7 @@ export function CreatableSelect({
   const optionsList = React.useMemo(() => {
     const mergedMap = new Map<string, SelectOption<string>>();
     initialOptions.forEach((opt) => mergedMap.set(opt.value, opt));
-    if (currentValue && !mergedMap.has(currentValue)) {
+    if (creatable && currentValue && !mergedMap.has(currentValue)) {
       mergedMap.set(currentValue, { value: currentValue, label: currentValue });
     }
     customOptions.forEach((opt) => {
@@ -109,10 +117,10 @@ export function CreatableSelect({
       }
     });
     return Array.from(mergedMap.values());
-  }, [initialOptions, currentValue, customOptions]);
+  }, [initialOptions, currentValue, customOptions, creatable]);
 
   const selectedOption = optionsList.find((opt) => opt.value === currentValue) || (
-    currentValue ? { value: currentValue, label: currentValue } : undefined
+    creatable && currentValue ? { value: currentValue, label: currentValue } : undefined
   );
 
   // Filter options based on search query
@@ -137,8 +145,8 @@ export function CreatableSelect({
     );
   }, [optionsList, trimmedQuery]);
 
-  // Show "Add new" action if there is a query that isn't an exact match
-  const showCreateOption = Boolean(trimmedQuery && !isExactMatch);
+  // Show "Add new" action if there is a query that isn't an exact match and creatable is enabled
+  const showCreateOption = Boolean(creatable && trimmedQuery && !isExactMatch);
 
   // Total navigable items: filtered options + create action (if visible)
   const totalItemsCount = filteredOptions.length + (showCreateOption ? 1 : 0);
@@ -155,7 +163,7 @@ export function CreatableSelect({
   }, [totalItemsCount]);
 
   const toggleOpen = () => {
-    if (disabled) return;
+    if (disabled || isLoading) return;
     if (!isOpen) {
       updateDirection();
       setSearchQuery("");
@@ -245,7 +253,7 @@ export function CreatableSelect({
 
   // Keyboard navigation inside search input and menu
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled) return;
+    if (disabled || isLoading) return;
 
     if (!isOpen) {
       if (
@@ -332,18 +340,36 @@ export function CreatableSelect({
         aria-controls={`${id}-menu`}
         aria-label={ariaLabel || id}
         aria-labelledby={ariaLabelledBy}
-        disabled={disabled}
+        disabled={disabled || isLoading}
         onClick={toggleOpen}
         onKeyDown={handleKeyDown}
         className={cn(
           "inline-flex w-full items-center justify-between border border-[#E5EAED] bg-white text-[#18282A] shadow-2xs hover:border-[#176779]/60 focus:border-[#176779] focus:outline-none focus:ring-1 focus:ring-[#176779] cursor-pointer transition-colors relative select-none disabled:opacity-40 disabled:cursor-not-allowed",
           currentSize.trigger,
           isOpen && "border-[#176779] ring-1 ring-[#176779]/30",
+          errorMessage && "border-red-300 focus:border-red-500 focus:ring-red-500",
           triggerClassName
         )}
       >
-        <span className={cn("truncate pr-4", currentSize.text)}>
-          {selectedOption ? selectedOption.label : placeholder}
+        <span className={cn("truncate pr-4 flex items-center gap-2", currentSize.text)}>
+          {isLoading ? (
+            <span className="flex items-center gap-1.5 text-[#74818A]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#176779]" />
+              <span>Loading...</span>
+            </span>
+          ) : errorMessage ? (
+            <span className="text-red-600 flex items-center gap-1.5 truncate">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{errorMessage}</span>
+            </span>
+          ) : selectedOption ? (
+            <span className="truncate flex items-center gap-1.5">
+              {selectedOption.icon && <span className="shrink-0">{selectedOption.icon}</span>}
+              <span className="truncate">{selectedOption.label}</span>
+            </span>
+          ) : (
+            <span className="text-[#74818A]">{placeholder}</span>
+          )}
         </span>
         <ChevronDown
           className={cn(
@@ -407,7 +433,7 @@ export function CreatableSelect({
           >
             {filteredOptions.length === 0 && !showCreateOption ? (
               <li className="px-3 py-3 text-center text-xs text-[#74818A]">
-                No matching options found.
+                {emptyMessage}
               </li>
             ) : (
               filteredOptions.map((opt, index) => {
