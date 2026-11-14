@@ -136,14 +136,14 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["User", "Auth"],
+      invalidatesTags: ["User", "Auth", "AgentProfile"],
     }),
     removeAvatar: builder.mutation<UserProfileResponse, void>({
       query: () => ({
         url: "/users/me/avatar",
         method: "DELETE",
       }),
-      invalidatesTags: ["User", "Auth"],
+      invalidatesTags: ["User", "Auth", "AgentProfile"],
     }),
   }),
 });

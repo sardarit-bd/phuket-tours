@@ -74,6 +74,7 @@ export default function UserSettingsPage() {
       roleLabel="Customer"
       badgeLabel="Customer"
       description="Manage your contact details. Your email address is used for login and cannot be changed here."
+      allowEmailEdit={false}
       onEnterEdit={enterEdit}
       onHandleSave={handleSave}
       onHandleCancel={handleCancel}

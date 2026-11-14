@@ -147,4 +147,23 @@ describe("AdminProfileSettings", () => {
       "Ada Admin"
     );
   });
+
+  it("shows Change Email button for admin users", () => {
+    setProfile("admin");
+    render(<AdminProfileSettings />);
+
+    expect(
+      screen.getByTestId("admin-profile-settings-change-email-btn")
+    ).toBeInTheDocument();
+  });
+
+  it("hides Change Email button and shows Read-only badge for staff users", () => {
+    setProfile("staff");
+    render(<AdminProfileSettings />);
+
+    expect(
+      screen.queryByTestId("admin-profile-settings-change-email-btn")
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("admin-profile-settings-email-view")).toBeInTheDocument();
+  });
 });

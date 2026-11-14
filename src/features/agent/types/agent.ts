@@ -215,6 +215,7 @@ export interface AgentProfileRecord {
   phone: string | null;
   role: "agent";
   status: "active" | "deactivated";
+  avatarUrl?: string | null;
   agencyName: string | null;
   createdAt: string;
 }

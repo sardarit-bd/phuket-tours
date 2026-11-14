@@ -113,9 +113,11 @@ export function AgencyProfileForm() {
       isDirty={hasChanges}
       isSaving={isUpdating}
       saveError={saveError}
+      pageTitle="Agency Profile"
       roleLabel="Agent (B2B Partner)"
       badgeLabel="Partner Account"
       description="Manage your business contact details and agency identity on PhuketTours."
+      allowEmailEdit={false}
       onEnterEdit={enterEdit}
       onHandleSave={handleSave}
       onHandleCancel={handleCancel}

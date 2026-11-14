@@ -7,6 +7,10 @@ import { useUpdateProfileMutation } from "@/features/customer/api/customer-api";
 
 vi.mock("@/features/auth/api/auth-api", () => ({
   useGetMeQuery: vi.fn(),
+  useGetAvatarSignatureMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useConfirmAvatarMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useRemoveAvatarMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateEmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/features/customer/api/customer-api", () => ({

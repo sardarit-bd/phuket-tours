@@ -93,6 +93,18 @@ export const authSlice = createSlice({
           state.user = payload.data;
         }
       )
+      .addMatcher(
+        authApi.endpoints.confirmAvatar.matchFulfilled,
+        (state, { payload }) => {
+          state.user = payload.data;
+        }
+      )
+      .addMatcher(
+        authApi.endpoints.removeAvatar.matchFulfilled,
+        (state, { payload }) => {
+          state.user = payload.data;
+        }
+      )
       .addMatcher(authApi.endpoints.getMe.matchPending, (state) => {
         state.status = "loading";
       })
