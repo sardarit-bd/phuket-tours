@@ -67,7 +67,7 @@ const INITIAL_BASIC_INFO: BasicInfoFormData = {
 const INITIAL_PRICING: PricingFormData = {
   currency: "USD",
   basePrice: 120,
-  discountedPrice: 99,
+  discountedPrice: null,
   taxRate: 7,
   pricingTiers: [
     { tierName: "Adult", price: 120 },
@@ -437,7 +437,7 @@ function TourEditorFormContent({
         serviceId: activeTourId,
         currency: pricing.currency,
         basePrice: pricing.basePrice,
-        discountedPrice: pricing.discountedPrice ?? undefined,
+        discountedPrice: pricing.discountedPrice ?? null,
         taxRate: pricing.taxRate,
       }).unwrap();
 
