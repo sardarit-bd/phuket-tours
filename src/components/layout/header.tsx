@@ -156,7 +156,7 @@ export function Header() {
 
   const dashboardHref = getDashboardDestination(user?.role);
   const profileHref = getProfileDestination(user?.role);
-  const showBookNow = pathname !== "/tours";
+  const showBookNow = pathname !== "/tours" && !pathname.startsWith("/tours/");
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#E5EAED] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all">

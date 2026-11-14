@@ -45,6 +45,22 @@ export function TourCard({
 
   const tourHref = `/tours/${tour.id}`;
 
+  const formatCurrencyAmount = (amount: number): string => {
+    try {
+      return formatPrice(amount, tour.price.currency);
+    } catch {
+      return `${tour.price.currency} ${amount.toLocaleString("en-US", {
+        maximumFractionDigits: 0,
+      })}`;
+    }
+  };
+
+  const hasDiscount =
+    tour.price.hasPrice !== false &&
+    tour.price.originalAmount !== undefined &&
+    tour.price.originalAmount > tour.price.amount &&
+    tour.price.amount > 0;
+
   // Price display:
   //  - hasPrice explicitly false (no pricing record from backend) → "Price unavailable"
   //  - hasPrice true or undefined (legacy/mock data) with amount===0 → "Free"
@@ -55,18 +71,11 @@ export function TourCard({
       ? "Price unavailable"
       : tour.price.amount === 0
         ? "Free"
-        : (() => {
-            try {
-              return formatPrice(tour.price.amount, tour.price.currency);
-            } catch {
-              // Non-ISO currency code (e.g. "$") — fall back to
-              // a plain prefix so we never render a malformed string.
-              return `${tour.price.currency} ${tour.price.amount.toLocaleString(
-                "en-US",
-                { maximumFractionDigits: 0 }
-              )}`;
-            }
-          })();
+        : formatCurrencyAmount(tour.price.amount);
+
+  const originalPriceDisplay = hasDiscount
+    ? formatCurrencyAmount(tour.price.originalAmount!)
+    : null;
 
   return (
     <article
@@ -164,28 +173,35 @@ export function TourCard({
           )}
         </div>
 
-        {/* Card Footer: Price & CTA Button */}
-        <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#EEF2F3] pt-3">
-          {/* Price block: constrained width so "Price unavailable" stays compact */}
-          <div className="min-w-0 flex-1">
+        {/* Card Footer: Full-Width Pricing Section + Full-Width View Tour Button */}
+        <div className="mt-4 flex flex-col gap-3 border-t border-[#EEF2F3] pt-3">
+          {/* Full-width price block */}
+          <div className="w-full min-w-0">
             <span className="block text-[11px] text-[#8A9A9C] leading-none">
               From
             </span>
             {tour.price.hasPrice === false ? (
-              <span className="mt-0.5 block text-sm font-semibold text-[#8A9A9C] leading-tight">
+              <span className="mt-1 block text-sm font-semibold text-[#8A9A9C] leading-tight">
                 Price unavailable
               </span>
             ) : (
-              <span className="mt-0.5 block text-lg sm:text-[21px] font-bold text-primary leading-tight">
-                {priceDisplay}
-              </span>
+              <div className="mt-1 flex flex-col gap-0.5">
+                {originalPriceDisplay && (
+                  <span className="whitespace-nowrap text-xs text-[#8A9A9C] line-through leading-tight">
+                    {originalPriceDisplay}
+                  </span>
+                )}
+                <span className="whitespace-nowrap text-lg sm:text-[21px] font-bold text-primary leading-tight">
+                  {priceDisplay}
+                </span>
+              </div>
             )}
           </div>
 
-          {/* CTA button: fixed, non-shrinking, label on one line */}
+          {/* Full-width View Tour CTA button */}
           <Link
             href={tourHref}
-            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary px-3 sm:px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-primary-dark group-hover:bg-primary-dark"
+            className="inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-primary-dark group-hover:bg-primary-dark"
             aria-label={`View tour details for ${tour.title}`}
           >
             <span>View Tour</span>

@@ -1,4 +1,5 @@
 import { baseApi } from "@/lib/api/base-api";
+import { resolveTourPricing } from "@/lib/pricing";
 import {
   GetServicesParams,
   ServicesApiResponse,
@@ -323,24 +324,20 @@ function mapServiceToTour(
     (record as import("../types/tour").ServiceDetail).pricing?.[0];
   const pricingSource = pricingRecord ?? record.pricingSummary;
 
-  const price = pricingSource
-    ? {
-        amount: pricingSource.basePrice,
-        currency: pricingSource.currency || "USD",
-        originalAmount: pricingSource.discountedPrice
-          ? pricingSource.basePrice
-          : undefined,
-        discountPercentage:
-          pricingSource.discountedPrice && pricingSource.discountedPrice > 0
-            ? Math.round(
-                ((pricingSource.basePrice - pricingSource.discountedPrice) /
-                  pricingSource.basePrice) *
-                  100
-              )
-            : undefined,
-        hasPrice: true,
-      }
-    : { amount: 0, currency: "USD", hasPrice: false };
+  const resolvedPricing = pricingSource
+    ? resolveTourPricing(pricingSource.basePrice, pricingSource.discountedPrice)
+    : null;
+
+  const price =
+    pricingSource && resolvedPricing
+      ? {
+          amount: resolvedPricing.effectivePrice,
+          currency: pricingSource.currency || "USD",
+          originalAmount: resolvedPricing.originalPrice,
+          discountPercentage: resolvedPricing.discountPercentage,
+          hasPrice: true,
+        }
+      : { amount: 0, currency: "USD", hasPrice: false };
 
   // Extract pricing tiers from metadata (child/infant/adult rates)
   const pricingTiers = (metadata.pricingTiers as

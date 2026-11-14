@@ -12,6 +12,7 @@ import { ToursHeader } from "./tours-header";
 import { ToursSummaryCards } from "./tours-summary-cards";
 import { ToursToolbar } from "./tours-toolbar";
 import { ToursTable } from "./tours-table";
+import { ToursCardGrid } from "./tours-card-grid";
 import { ToursPagination } from "./tours-pagination";
 import { ToursTableSkeleton } from "./tours-table-skeleton";
 import { ToursEmptyState } from "./tours-empty-state";
@@ -46,6 +47,24 @@ export function AdminToursView() {
   const [sortOrder, setSortOrder] = React.useState<AdminSortOrder>("desc");
   const [page, setPage] = React.useState<number>(1);
   const [pageSize, setPageSize] = React.useState<number>(10);
+  const [viewMode, setViewMode] = React.useState<"table" | "card">(() => {
+    if (typeof window === "undefined") return "table";
+    try {
+      const saved = window.localStorage.getItem("admin-tours-view-mode");
+      return saved === "card" ? "card" : "table";
+    } catch {
+      return "table";
+    }
+  });
+
+  const handleViewModeChange = React.useCallback((mode: "table" | "card") => {
+    setViewMode(mode);
+    try {
+      window.localStorage.setItem("admin-tours-view-mode", mode);
+    } catch {
+      // Ignore storage errors in restricted environments
+    }
+  }, []);
 
   // 2. Selection state
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
@@ -350,6 +369,8 @@ export function AdminToursView() {
         onPageSizeChange={handlePageSizeChange}
         onResetFilters={handleResetFilters}
         isFiltered={isFiltered}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
       />
 
       {/* Table Container Card */}
@@ -382,24 +403,46 @@ export function AdminToursView() {
           />
         ) : (
           <>
-            <ToursTable
-              tours={tours}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onToggleSelectAll={handleToggleSelectAll}
-              onViewDetails={(tour) => setActiveTourForDetails(tour)}
-              onEditTour={(tour) =>
-                setAddTourModal({
-                  isOpen: true,
-                  mode: "edit",
-                  tourName: tour.name,
-                  tour,
-                })
-              }
-              onStatusChange={handleSingleStatusChange}
-              isStatusUpdating={isStatusUpdating}
-              canEdit={canEditTour}
-            />
+            {viewMode === "card" ? (
+              <div className="p-4">
+                <ToursCardGrid
+                  tours={tours}
+                  selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect}
+                  onViewDetails={(tour) => setActiveTourForDetails(tour)}
+                  onEditTour={(tour) =>
+                    setAddTourModal({
+                      isOpen: true,
+                      mode: "edit",
+                      tourName: tour.name,
+                      tour,
+                    })
+                  }
+                  onStatusChange={handleSingleStatusChange}
+                  isUpdatingStatusId={isStatusUpdating ? activeTourForDetails?.id ?? null : null}
+                  canEdit={canEditTour}
+                />
+              </div>
+            ) : (
+              <ToursTable
+                tours={tours}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
+                onToggleSelectAll={handleToggleSelectAll}
+                onViewDetails={(tour) => setActiveTourForDetails(tour)}
+                onEditTour={(tour) =>
+                  setAddTourModal({
+                    isOpen: true,
+                    mode: "edit",
+                    tourName: tour.name,
+                    tour,
+                  })
+                }
+                onStatusChange={handleSingleStatusChange}
+                isStatusUpdating={isStatusUpdating}
+                canEdit={canEditTour}
+              />
+            )}
 
             {/* Server-side Pagination */}
             {pagination && (
