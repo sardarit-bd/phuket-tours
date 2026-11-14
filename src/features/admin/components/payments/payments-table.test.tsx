@@ -125,4 +125,123 @@ describe("PaymentsTable component", () => {
     fireEvent.click(screen.getByTestId("payment-row-f47ac10b-58cc-4372-a567-0e02b2c3d479"));
     expect(handleView).toHaveBeenCalledWith(MOCK_PAYMENTS[0]);
   });
+
+  describe("Agent / Source column rendering", () => {
+    it("displays only Agency Name when agencyName is present", () => {
+      const agentPaymentWithAgency: AdminPaymentRecord = {
+        ...MOCK_PAYMENTS[0],
+        id: "pay-agent-agency",
+        booking: {
+          ...MOCK_PAYMENTS[0].booking!,
+          source: "AGENT",
+          agent: {
+            id: "agent-1",
+            name: "cicek",
+            email: "cicek@example.com",
+            agentProfile: {
+              agencyName: "Cicek Travel Co",
+            },
+          },
+        },
+      };
+
+      render(
+        <PaymentsTable
+          payments={[agentPaymentWithAgency]}
+          isLoading={false}
+          onViewDetails={vi.fn()}
+        />
+      );
+
+      const row = screen.getByTestId("payment-row-pay-agent-agency");
+      expect(row).toHaveTextContent("Agent");
+      expect(row).toHaveTextContent("Cicek Travel Co");
+      expect(row).not.toHaveTextContent("cicek");
+    });
+
+    it("falls back to Agent Full Name when agencyName is missing or empty", () => {
+      const agentPaymentWithoutAgency: AdminPaymentRecord = {
+        ...MOCK_PAYMENTS[0],
+        id: "pay-agent-no-agency",
+        booking: {
+          ...MOCK_PAYMENTS[0].booking!,
+          source: "AGENT",
+          agent: {
+            id: "agent-1",
+            name: "cicek",
+            email: "cicek@example.com",
+            agentProfile: {
+              agencyName: "",
+            },
+          },
+        },
+      };
+
+      render(
+        <PaymentsTable
+          payments={[agentPaymentWithoutAgency]}
+          isLoading={false}
+          onViewDetails={vi.fn()}
+        />
+      );
+
+      const row = screen.getByTestId("payment-row-pay-agent-no-agency");
+      expect(row).toHaveTextContent("Agent");
+      expect(row).toHaveTextContent("cicek");
+    });
+
+    it("displays Direct Booking for direct payments without creator info", () => {
+      const directPayment: AdminPaymentRecord = {
+        ...MOCK_PAYMENTS[0],
+        id: "pay-direct",
+        booking: {
+          ...MOCK_PAYMENTS[0].booking!,
+          source: "DIRECT",
+          agent: null,
+          createdBy: null,
+        },
+      };
+
+      render(
+        <PaymentsTable
+          payments={[directPayment]}
+          isLoading={false}
+          onViewDetails={vi.fn()}
+        />
+      );
+
+      const row = screen.getByTestId("payment-row-pay-direct");
+      expect(row).toHaveTextContent("Direct");
+      expect(row).toHaveTextContent("Direct Booking");
+    });
+
+    it("displays creator attribution for non-customer internal creators", () => {
+      const adminCreatedPayment: AdminPaymentRecord = {
+        ...MOCK_PAYMENTS[0],
+        id: "pay-admin-created",
+        booking: {
+          ...MOCK_PAYMENTS[0].booking!,
+          source: "ADMIN",
+          agent: null,
+          createdBy: {
+            id: "admin-1",
+            name: "Super Admin",
+            role: "admin",
+          },
+        },
+      };
+
+      render(
+        <PaymentsTable
+          payments={[adminCreatedPayment]}
+          isLoading={false}
+          onViewDetails={vi.fn()}
+        />
+      );
+
+      const row = screen.getByTestId("payment-row-pay-admin-created");
+      expect(row).toHaveTextContent("Admin");
+      expect(row).toHaveTextContent("By: Super Admin");
+    });
+  });
 });
