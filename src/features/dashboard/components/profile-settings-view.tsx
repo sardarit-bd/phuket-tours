@@ -59,6 +59,8 @@ export interface ProfileSettingsViewProps {
   isSaving: boolean;
   saveError: unknown;
 
+  /** Title displayed in the page header. Defaults to "Profile Settings". */
+  pageTitle?: string;
   /** Displayed in the "Account Role" read-only field. */
   roleLabel: string;
   /** Short badge shown next to the heading. */
@@ -121,6 +123,7 @@ export function ProfileSettingsView({
   isDirty,
   isSaving,
   saveError,
+  pageTitle = "Profile Settings",
   roleLabel,
   badgeLabel,
   description,
@@ -208,7 +211,7 @@ export function ProfileSettingsView({
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
-              Profile Settings
+              {pageTitle}
             </h1>
             <span className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
               {badgeLabel}

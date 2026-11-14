@@ -200,4 +200,95 @@ describe("BookingsTable component", () => {
     expect(screen.getByText("AS")).toBeInTheDocument();
     expect(screen.queryByText("Unassigned")).not.toBeInTheDocument();
   });
+
+  describe("Amount column rendering", () => {
+    it("displays finalPrice formatted with booking currency", () => {
+      const bookingWithFinalPrice: OperationalBookingRecord = {
+        ...MOCK_BOOKING_1,
+        id: "bkg-final-price",
+        currency: "USD",
+        basePrice: 500,
+        finalPrice: 450,
+      };
+
+      render(
+        <BookingsTable
+          bookings={[bookingWithFinalPrice]}
+          onViewDetails={mockViewDetails}
+          onAssignStaff={mockAssignStaff}
+          onUpdateFulfillment={mockUpdateFulfillment}
+        />
+      );
+
+      const row = screen.getByTestId("booking-row-bkg-final-price");
+      expect(row).toHaveTextContent("$450.00");
+    });
+
+    it("falls back to basePrice when finalPrice is null or undefined", () => {
+      const bookingWithBasePriceOnly: OperationalBookingRecord = {
+        ...MOCK_BOOKING_1,
+        id: "bkg-base-price",
+        currency: "USD",
+        basePrice: 300,
+        finalPrice: undefined,
+      };
+
+      render(
+        <BookingsTable
+          bookings={[bookingWithBasePriceOnly]}
+          onViewDetails={mockViewDetails}
+          onAssignStaff={mockAssignStaff}
+          onUpdateFulfillment={mockUpdateFulfillment}
+        />
+      );
+
+      const row = screen.getByTestId("booking-row-bkg-base-price");
+      expect(row).toHaveTextContent("$300.00");
+    });
+
+    it("formats different currencies correctly (e.g. THB)", () => {
+      const bookingInTHB: OperationalBookingRecord = {
+        ...MOCK_BOOKING_1,
+        id: "bkg-thb",
+        currency: "THB",
+        basePrice: 1500,
+        finalPrice: 1500,
+      };
+
+      render(
+        <BookingsTable
+          bookings={[bookingInTHB]}
+          onViewDetails={mockViewDetails}
+          onAssignStaff={mockAssignStaff}
+          onUpdateFulfillment={mockUpdateFulfillment}
+        />
+      );
+
+      const row = screen.getByTestId("booking-row-bkg-thb");
+      expect(row).toHaveTextContent("THB 1,500.00");
+    });
+
+    it("displays em-dash when both finalPrice and basePrice are missing", () => {
+      const bookingWithNoPrice: OperationalBookingRecord = {
+        ...MOCK_BOOKING_1,
+        id: "bkg-no-price",
+        currency: "USD",
+        basePrice: undefined,
+        finalPrice: undefined,
+      };
+
+      render(
+        <BookingsTable
+          bookings={[bookingWithNoPrice]}
+          onViewDetails={mockViewDetails}
+          onAssignStaff={mockAssignStaff}
+          onUpdateFulfillment={mockUpdateFulfillment}
+        />
+      );
+
+      const row = screen.getByTestId("booking-row-bkg-no-price");
+      expect(row).toHaveTextContent("—");
+      expect(row).not.toHaveTextContent("$0.00");
+    });
+  });
 });

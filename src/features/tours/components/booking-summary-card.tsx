@@ -36,9 +36,9 @@ export function BookingSummaryCard({ tour }: { tour: Tour }) {
   const hasPrice = price.hasPrice !== false;
   const isFree = hasPrice && price.amount === 0;
   const hasDiscount =
-    price.discountPercentage !== undefined &&
-    price.discountPercentage > 0 &&
-    price.originalAmount !== undefined;
+    price.originalAmount !== undefined &&
+    price.originalAmount > price.amount &&
+    price.amount > 0;
 
   // Starting price display.
   let priceValue: string;

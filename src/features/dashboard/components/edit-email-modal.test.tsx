@@ -162,7 +162,8 @@ describe("EditEmailModal", () => {
     });
   });
 
-  it("displays server error message when mutation fails", () => {
+  it("displays server error message when mutation fails and keeps modal open", () => {
+    const mockOnClose = vi.fn();
     vi.spyOn(authApi, "useUpdateEmailMutation").mockReturnValue([
       mockUpdateEmail,
       {
@@ -179,6 +180,109 @@ describe("EditEmailModal", () => {
       <Provider store={makeStore()}>
         <EditEmailModal
           isOpen={true}
+          onClose={mockOnClose}
+          currentEmail="admin@example.com"
+        />
+      </Provider>
+    );
+
+    expect(
+      screen.getByText(
+        "Email address is already in use by another account. Please choose a different email address."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText("Email Update Failed")).toBeInTheDocument();
+    expect(screen.getByText("HTTP 409")).toBeInTheDocument();
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Change Email Address")).toBeInTheDocument();
+  });
+
+  it("does not close modal or call onClose when mutation rejects with 400", async () => {
+    const mockOnClose = vi.fn();
+    const mockOnSuccess = vi.fn();
+    mockUpdateEmail.mockReturnValue({
+      unwrap: vi.fn().mockRejectedValue({
+        status: 400,
+        data: { message: "Invalid current password. Re-authentication failed." },
+      }),
+    });
+
+    const { rerender } = render(
+      <Provider store={makeStore()}>
+        <EditEmailModal
+          isOpen={true}
+          onClose={mockOnClose}
+          currentEmail="admin@example.com"
+          onSuccess={mockOnSuccess}
+        />
+      </Provider>
+    );
+
+    fireEvent.change(screen.getByTestId("edit-email-input"), {
+      target: { value: "newadmin@example.com" },
+    });
+    fireEvent.change(screen.getByTestId("edit-email-password-input"), {
+      target: { value: "wrongpassword" },
+    });
+    fireEvent.click(screen.getByTestId("edit-email-submit-btn"));
+
+    await waitFor(() => {
+      expect(mockUpdateEmail).toHaveBeenCalled();
+    });
+
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+    expect(screen.getByText("Change Email Address")).toBeInTheDocument();
+
+    // Now re-render as RTK Query hook would with the rejection error
+    vi.spyOn(authApi, "useUpdateEmailMutation").mockReturnValue([
+      mockUpdateEmail,
+      {
+        isLoading: false,
+        error: {
+          status: 400,
+          data: { message: "Invalid current password. Re-authentication failed." },
+        },
+        reset: mockReset,
+      } as any,
+    ]);
+
+    rerender(
+      <Provider store={makeStore()}>
+        <EditEmailModal
+          isOpen={true}
+          onClose={mockOnClose}
+          currentEmail="admin@example.com"
+          onSuccess={mockOnSuccess}
+        />
+      </Provider>
+    );
+
+    // Error must remain visible and modal must stay open
+    expect(
+      screen.getByText("Invalid current password. Re-authentication failed.")
+    ).toBeInTheDocument();
+    expect(mockOnClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Change Email Address")).toBeInTheDocument();
+  });
+
+  it("clears error when user types into new email or current password fields", () => {
+    vi.spyOn(authApi, "useUpdateEmailMutation").mockReturnValue([
+      mockUpdateEmail,
+      {
+        isLoading: false,
+        error: {
+          status: 400,
+          data: { message: "Invalid current password. Re-authentication failed." },
+        },
+        reset: mockReset,
+      } as any,
+    ]);
+
+    render(
+      <Provider store={makeStore()}>
+        <EditEmailModal
+          isOpen={true}
           onClose={vi.fn()}
           currentEmail="admin@example.com"
         />
@@ -186,8 +290,14 @@ describe("EditEmailModal", () => {
     );
 
     expect(
-      screen.getByText("Email address is already in use by another account")
+      screen.getByText("Invalid current password. Re-authentication failed.")
     ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("edit-email-password-input"), {
+      target: { value: "newattempt" },
+    });
+
+    expect(mockReset).toHaveBeenCalled();
   });
 });
 

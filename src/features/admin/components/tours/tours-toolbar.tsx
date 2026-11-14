@@ -7,6 +7,8 @@ import {
   RotateCcw,
   ArrowUp,
   ArrowDown,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomDropdown, DropdownOption } from "@/components/ui/custom-dropdown";
@@ -29,6 +31,8 @@ export interface ToursToolbarProps {
   onPageSizeChange: (size: number) => void;
   onResetFilters: () => void;
   isFiltered: boolean;
+  viewMode?: "table" | "card";
+  onViewModeChange?: (mode: "table" | "card") => void;
 }
 
 const STATUS_OPTIONS: DropdownOption<string>[] = [
@@ -66,6 +70,8 @@ export function ToursToolbar({
   onPageSizeChange,
   onResetFilters,
   isFiltered,
+  viewMode = "table",
+  onViewModeChange,
 }: ToursToolbarProps) {
   // Local state for debounced search input
   const [prevSearch, setPrevSearch] = React.useState(search);
@@ -180,6 +186,46 @@ export function ToursToolbar({
               aria-label="Select items per page"
             />
           </div>
+
+          {/* View Mode Toggle */}
+          {onViewModeChange && (
+            <div
+              className="inline-flex h-9 items-center rounded-xl border border-[#E5EAED] bg-[#F8FAFB] p-0.5"
+              role="group"
+              aria-label="View mode"
+            >
+              <button
+                type="button"
+                onClick={() => onViewModeChange("table")}
+                aria-label="Table view"
+                aria-pressed={viewMode === "table"}
+                data-testid="tours-view-toggle-table"
+                className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors cursor-pointer ${
+                  viewMode === "table"
+                    ? "bg-white text-[#176779] shadow-2xs"
+                    : "text-[#74818A] hover:text-[#18282A]"
+                }`}
+              >
+                <List className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewModeChange("card")}
+                aria-label="Card view"
+                aria-pressed={viewMode === "card"}
+                data-testid="tours-view-toggle-card"
+                className={`inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors cursor-pointer ${
+                  viewMode === "card"
+                    ? "bg-white text-[#176779] shadow-2xs"
+                    : "text-[#74818A] hover:text-[#18282A]"
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">Cards</span>
+              </button>
+            </div>
+          )}
 
           {/* Reset Filters Action */}
           {isFiltered && (

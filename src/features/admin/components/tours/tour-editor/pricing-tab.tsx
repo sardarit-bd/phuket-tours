@@ -217,7 +217,7 @@ export function PricingTab({ data, onChange, errors }: PricingTabProps) {
               <p className="mt-1 text-xs text-red-500">{errors.discountedPrice}</p>
             ) : (
               <p className="mt-1 text-[11px] text-[#74818A]">
-                Optional. Shown with strike-through on customer catalog.
+                Optional final sale price (must be greater than 0 and lower than adult price).
               </p>
             )}
           </div>

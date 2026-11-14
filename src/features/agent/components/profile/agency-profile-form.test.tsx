@@ -13,6 +13,13 @@ vi.mock("../../api/agent-api", () => ({
   useUpdateAgentProfileMutation: vi.fn(),
 }));
 
+vi.mock("@/features/auth/api/auth-api", () => ({
+  useGetAvatarSignatureMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useConfirmAvatarMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useRemoveAvatarMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateEmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+}));
+
 const mockUseGetAgentProfileQuery = vi.mocked(useGetAgentProfileQuery);
 const mockUseUpdateAgentProfileMutation = vi.mocked(
   useUpdateAgentProfileMutation
@@ -56,6 +63,10 @@ describe("AgencyProfileForm", () => {
     render(<AgencyProfileForm />);
 
     expect(screen.getByTestId("agency-profile-page")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Agency Profile");
+    expect(
+      screen.queryByTestId("agency-profile-change-email-btn")
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("agency-profile-edit-btn")).toBeInTheDocument();
     expect(screen.getByTestId("agency-profile-name-view")).toHaveTextContent(
       "Somchai Agent"

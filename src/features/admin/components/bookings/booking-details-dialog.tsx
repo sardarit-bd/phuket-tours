@@ -150,8 +150,12 @@ export function BookingDetailsDialog({
     }
   );
 
-  const amountNum = Number(booking.finalPrice ?? booking.basePrice ?? 0);
-  const formattedAmount = formatReportMoney(amountNum, booking.currency || "USD");
+  const rawPrice = booking.finalPrice ?? booking.basePrice;
+  const amountNum =
+    rawPrice !== null && rawPrice !== undefined && rawPrice !== ""
+      ? Number(rawPrice)
+      : null;
+  const formattedAmount = formatReportMoney(amountNum, booking.currency);
 
   const totalGuests =
     parsedNotes.guests.adults +

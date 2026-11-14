@@ -316,11 +316,13 @@ function TourEditorFormContent({
     if (pricing.basePrice < 0 || isNaN(pricing.basePrice)) {
       newErrors.basePrice = "Adult price cannot be negative.";
     }
-    if (
-      pricing.discountedPrice !== null &&
-      (pricing.discountedPrice < 0 || isNaN(pricing.discountedPrice))
-    ) {
-      newErrors.discountedPrice = "Discount price cannot be negative.";
+    if (pricing.discountedPrice !== null) {
+      if (isNaN(pricing.discountedPrice) || pricing.discountedPrice <= 0) {
+        newErrors.discountedPrice = "Discount price must be greater than 0.";
+      } else if (pricing.discountedPrice >= pricing.basePrice) {
+        newErrors.discountedPrice =
+          "Discount price must be lower than the adult price.";
+      }
     }
     if (pricing.taxRate < 0 || pricing.taxRate > 100 || isNaN(pricing.taxRate)) {
       newErrors.taxRate = "Tax rate must be between 0% and 100%.";

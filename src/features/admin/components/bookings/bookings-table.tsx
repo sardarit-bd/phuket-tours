@@ -184,8 +184,12 @@ export function BookingsTable({
           {bookings.map((booking) => {
             const isCopied = copiedId === booking.id;
             const shortId = booking.id.length > 8 ? `${booking.id.slice(0, 8)}…` : booking.id;
-            const amountNum = Number(booking.finalPrice ?? booking.basePrice ?? 0);
-            const formattedPrice = formatReportMoney(amountNum, booking.currency || "USD");
+            const rawPrice = booking.finalPrice ?? booking.basePrice;
+            const amountNum =
+              rawPrice !== null && rawPrice !== undefined && rawPrice !== ""
+                ? Number(rawPrice)
+                : null;
+            const formattedPrice = formatReportMoney(amountNum, booking.currency);
 
             // Resolve assigned staff from relation or fallback to staffMemberMap by ID
             const assignedStaffName =
@@ -276,19 +280,17 @@ export function BookingsTable({
                       <BookingSourceBadge source={booking.source || (booking.agentId ? "AGENT" : "DIRECT")} />
                     </div>
                     {booking.agent ? (
-                      <div className="text-[11px] leading-tight min-w-0 mt-0.5">
-                        <span className="font-medium text-[#18282A] truncate block" title={booking.agent.name}>
-                          {booking.agent.name}
-                        </span>
-                        {booking.agent.agentProfile?.agencyName && (
-                          <span
-                            className="inline-block text-[10px] text-purple-700 bg-purple-50 px-1 py-0.2 rounded font-semibold truncate max-w-full mt-0.5"
-                            title={booking.agent.agentProfile.agencyName}
-                          >
-                            {booking.agent.agentProfile.agencyName}
-                          </span>
-                        )}
-                      </div>
+                      (() => {
+                        const agencyName = booking.agent.agentProfile?.agencyName?.trim();
+                        const displayName = agencyName || booking.agent.name;
+                        return (
+                          <div className="text-[11px] leading-tight min-w-0 mt-0.5">
+                            <span className="font-medium text-[#18282A] truncate block" title={displayName}>
+                              {displayName}
+                            </span>
+                          </div>
+                        );
+                      })()
                     ) : booking.createdBy && booking.source !== "CUSTOMER" ? (
                       <span className="text-[11px] text-[#74818A] truncate mt-0.5" title={`Created by ${booking.createdBy.name} (${booking.createdBy.role})`}>
                         By: {booking.createdBy.name}

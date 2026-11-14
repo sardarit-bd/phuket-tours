@@ -106,6 +106,7 @@ export function AdminProfileSettings({
       roleLabel={resolvedRoleLabel}
       badgeLabel={resolvedBadge}
       description="Manage your personal contact details and account email address."
+      allowEmailEdit={profile?.role === "admin"}
       onEnterEdit={enterEdit}
       onHandleSave={handleSave}
       onHandleCancel={handleCancel}

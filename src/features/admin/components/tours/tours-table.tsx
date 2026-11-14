@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { isValidDiscount } from "@/lib/pricing";
 import { TourStatusBadge } from "./tour-status-badge";
 import { TourActionsMenu } from "./tour-actions-menu";
 import { formatDate } from "../../utils/format";
@@ -171,10 +172,13 @@ export function ToursTable({
                         {tour.pricingSummary.currency}{" "}
                         {tour.pricingSummary.basePrice.toLocaleString()}
                       </div>
-                      {tour.pricingSummary.discountedPrice != null && (
+                      {isValidDiscount(
+                        tour.pricingSummary.basePrice,
+                        tour.pricingSummary.discountedPrice
+                      ) && (
                         <div className="text-[10px] font-medium text-[#0E7A67]">
                           Sale: {tour.pricingSummary.currency}{" "}
-                          {tour.pricingSummary.discountedPrice.toLocaleString()}
+                          {tour.pricingSummary.discountedPrice!.toLocaleString()}
                         </div>
                       )}
                     </div>

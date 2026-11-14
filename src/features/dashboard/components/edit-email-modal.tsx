@@ -4,7 +4,7 @@ import * as React from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ErrorAlert } from "@/components/ui/alert";
+import { FeedbackAlert } from "@/components/ui/feedback-alert";
 import { useUpdateEmailMutation } from "@/features/auth/api/auth-api";
 import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import { Mail, Lock, Loader2 } from "lucide-react";
@@ -28,36 +28,100 @@ export function EditEmailModal({
 
   const [updateEmail, { isLoading, error, reset }] = useUpdateEmailMutation();
 
-  const errorMessage: string = React.useMemo(() => {
-    if (!error) return "";
+  const prevIsOpenRef = React.useRef(isOpen);
+
+  React.useEffect(() => {
+    // Only reset inputs and mutation state when modal transitions from closed to open
+    if (isOpen && !prevIsOpenRef.current) {
+      setNewEmail("");
+      setCurrentPassword("");
+      setValidationError(null);
+      reset();
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, reset]);
+
+  const errorDetails = React.useMemo(() => {
+    if (!error) return null;
+    const status =
+      typeof error === "object" && "status" in error
+        ? (error as { status?: unknown }).status
+        : undefined;
+
+    const statusCode = typeof status === "number" ? status : undefined;
+
+    if (status === 409) {
+      return {
+        title: "Email Update Failed",
+        message:
+          "Email address is already in use by another account. Please choose a different email address.",
+        code: 409,
+      };
+    }
+
+    if (status === "FETCH_ERROR") {
+      return {
+        title: "Connection Failed",
+        message:
+          "Unable to connect. Please check your internet connection and try again.",
+      };
+    }
+
+    if (typeof status === "number" && status >= 500) {
+      return {
+        title: "Server Error",
+        message: "A server error occurred. Please try again later.",
+        code: statusCode,
+      };
+    }
+
     if (
       typeof error === "object" &&
       "data" in error &&
       error.data &&
       typeof error.data === "object" &&
       "message" in error.data &&
-      typeof (error.data as { message: unknown }).message === "string"
+      typeof (error.data as { message: unknown }).message === "string" &&
+      (error.data as { message: string }).message.trim().length > 0
     ) {
-      return (error.data as { message: string }).message;
+      return {
+        title: "Email Update Failed",
+        message: (error.data as { message: string }).message,
+        code: statusCode,
+      };
     }
-    return formatErrorMessage(error, {
-      context: "auth",
-      fallback: "Failed to update email. Please check your credentials.",
-    });
-  }, [error]);
 
-  React.useEffect(() => {
-    if (isOpen) {
-      setNewEmail("");
-      setCurrentPassword("");
-      setValidationError(null);
-      reset();
+    if (status === 429) {
+      return {
+        title: "Too Many Requests",
+        message: "Too many requests. Please wait a moment and try again.",
+        code: 429,
+      };
     }
-  }, [isOpen, reset]);
+
+    if (status === 401) {
+      return {
+        title: "Session Expired",
+        message: "Your session has expired. Please sign in again.",
+        code: 401,
+      };
+    }
+
+    return {
+      title: "Email Update Failed",
+      message: formatErrorMessage(error, {
+        context: "auth",
+        fallback: "Failed to update email. Please check your credentials.",
+      }),
+      code: statusCode,
+    };
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setValidationError(null);
+    if (error) reset();
 
     const trimmedEmail = newEmail.trim().toLowerCase();
     if (!trimmedEmail) {
@@ -103,20 +167,6 @@ export function EditEmailModal({
       size="sm"
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        {validationError && (
-          <ErrorAlert
-            data-testid="edit-email-validation-error"
-            description={validationError}
-          />
-        )}
-
-        {error && (
-          <ErrorAlert
-            data-testid="edit-email-api-error"
-            description={errorMessage}
-          />
-        )}
-
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-[#74818A]">
             Current Email
@@ -142,6 +192,7 @@ export function EditEmailModal({
             onChange={(e) => {
               setNewEmail(e.target.value);
               setValidationError(null);
+              if (error) reset();
             }}
             disabled={isLoading}
             required
@@ -166,6 +217,7 @@ export function EditEmailModal({
             onChange={(e) => {
               setCurrentPassword(e.target.value);
               setValidationError(null);
+              if (error) reset();
             }}
             disabled={isLoading}
             required
@@ -176,6 +228,25 @@ export function EditEmailModal({
             Required to prevent unauthorized modifications to your account.
           </p>
         </div>
+
+        {validationError && (
+          <FeedbackAlert
+            type="error"
+            title="Validation Error"
+            message={validationError}
+            data-testid="edit-email-validation-error"
+          />
+        )}
+
+        {errorDetails && (
+          <FeedbackAlert
+            type="error"
+            title={errorDetails.title}
+            message={errorDetails.message}
+            code={errorDetails.code}
+            data-testid="edit-email-api-error"
+          />
+        )}
 
         <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E5EAED]">
           <Button

@@ -251,6 +251,53 @@ describe("ProfileSettingsView", () => {
     expect(screen.getByTestId("edit-email-password-input")).toBeInTheDocument();
   });
 
+  it("keeps EditEmailModal open when email update fails and displays the error", async () => {
+    const mockUpdateEmail = vi.fn().mockReturnValue({
+      unwrap: vi.fn().mockRejectedValue({
+        status: 400,
+        data: { message: "Invalid current password. Re-authentication failed." },
+      }),
+    });
+
+    const authApi = await import("@/features/auth/api/auth-api");
+    vi.spyOn(authApi, "useUpdateEmailMutation").mockReturnValue([
+      mockUpdateEmail,
+      {
+        isLoading: false,
+        error: {
+          status: 400,
+          data: { message: "Invalid current password. Re-authentication failed." },
+        },
+        reset: vi.fn(),
+      } as any,
+    ]);
+
+    renderWithStore(<Harness initialProfile={PROFILE} />);
+
+    // Open modal
+    fireEvent.click(screen.getByTestId("profile-settings-change-email-btn"));
+    expect(screen.getByText("Change Email Address")).toBeInTheDocument();
+
+    // Type input and submit
+    fireEvent.change(screen.getByTestId("edit-email-input"), {
+      target: { value: "newemail@example.com" },
+    });
+    fireEvent.change(screen.getByTestId("edit-email-password-input"), {
+      target: { value: "wrongpass" },
+    });
+    fireEvent.click(screen.getByTestId("edit-email-submit-btn"));
+
+    await waitFor(() => {
+      expect(mockUpdateEmail).toHaveBeenCalled();
+    });
+
+    // Verify modal remains open and error is rendered in the DOM
+    expect(screen.getByText("Change Email Address")).toBeInTheDocument();
+    expect(
+      screen.getByText("Invalid current password. Re-authentication failed.")
+    ).toBeInTheDocument();
+  });
+
   it("renders profile avatar uploader with initials when no avatar exists", () => {
     renderWithStore(<Harness initialProfile={PROFILE} />);
 
