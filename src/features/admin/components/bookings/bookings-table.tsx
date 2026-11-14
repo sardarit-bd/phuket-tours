@@ -184,8 +184,12 @@ export function BookingsTable({
           {bookings.map((booking) => {
             const isCopied = copiedId === booking.id;
             const shortId = booking.id.length > 8 ? `${booking.id.slice(0, 8)}…` : booking.id;
-            const amountNum = Number(booking.finalPrice ?? booking.basePrice ?? 0);
-            const formattedPrice = formatReportMoney(amountNum, booking.currency || "USD");
+            const rawPrice = booking.finalPrice ?? booking.basePrice;
+            const amountNum =
+              rawPrice !== null && rawPrice !== undefined && rawPrice !== ""
+                ? Number(rawPrice)
+                : null;
+            const formattedPrice = formatReportMoney(amountNum, booking.currency);
 
             // Resolve assigned staff from relation or fallback to staffMemberMap by ID
             const assignedStaffName =
