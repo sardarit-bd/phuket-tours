@@ -231,6 +231,20 @@ export const adminApi = baseApi.injectEndpoints({
       invalidatesTags: [{ type: "AdminService", id: "LIST" }],
     }),
 
+    deleteAdminService: builder.mutation<
+      AdminApiResponse<{ id: string; name: string }>,
+      string
+    >({
+      query: (serviceId) => ({
+        url: `/admin/services/${serviceId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, serviceId) => [
+        { type: "AdminService", id: serviceId },
+        { type: "AdminService", id: "LIST" },
+      ],
+    }),
+
     getAdminServicePricing: builder.query<
       AdminApiResponse<AdminServicePricingRecord[]>,
       string
@@ -1248,6 +1262,7 @@ export const {
   useUpdateAdminServiceMutation,
   useUpdateAdminServiceStatusMutation,
   useBulkUpdateAdminServiceStatusMutation,
+  useDeleteAdminServiceMutation,
   useGetAdminServicePricingQuery,
   useLazyGetAdminServicePricingQuery,
   useUpdateAdminServicePricingMutation,

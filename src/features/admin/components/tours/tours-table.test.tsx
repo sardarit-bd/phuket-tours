@@ -133,4 +133,52 @@ describe("ToursTable component", () => {
     fireEvent.click(tourTitleBtn);
     expect(handleViewDetails).toHaveBeenCalledWith(MOCK_TOURS[0]);
   });
+
+  it("renders Delete Tour action and calls onDeleteTour when canDelete is true", () => {
+    const handleDeleteTour = vi.fn();
+
+    render(
+      <ToursTable
+        tours={MOCK_TOURS}
+        selectedIds={[]}
+        onToggleSelect={vi.fn()}
+        onToggleSelectAll={vi.fn()}
+        onViewDetails={vi.fn()}
+        onEditTour={vi.fn()}
+        onStatusChange={vi.fn()}
+        onDeleteTour={handleDeleteTour}
+        canDelete={true}
+      />
+    );
+
+    // Open action menu for tour-1
+    const menuTrigger = screen.getByTestId("tour-actions-trigger-tour-1");
+    fireEvent.click(menuTrigger);
+
+    const deleteBtn = screen.getByTestId("delete-tour-action-tour-1");
+    expect(deleteBtn).toBeInTheDocument();
+    fireEvent.click(deleteBtn);
+
+    expect(handleDeleteTour).toHaveBeenCalledWith(MOCK_TOURS[0]);
+  });
+
+  it("does not render Delete Tour action when canDelete is false", () => {
+    render(
+      <ToursTable
+        tours={MOCK_TOURS}
+        selectedIds={[]}
+        onToggleSelect={vi.fn()}
+        onToggleSelectAll={vi.fn()}
+        onViewDetails={vi.fn()}
+        onEditTour={vi.fn()}
+        onStatusChange={vi.fn()}
+        canDelete={false}
+      />
+    );
+
+    const menuTrigger = screen.getByTestId("tour-actions-trigger-tour-1");
+    fireEvent.click(menuTrigger);
+
+    expect(screen.queryByTestId("delete-tour-action-tour-1")).not.toBeInTheDocument();
+  });
 });
