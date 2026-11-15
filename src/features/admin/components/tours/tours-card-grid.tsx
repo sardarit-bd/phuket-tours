@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MapPin, CalendarCheck, Compass, Eye, Pencil } from "lucide-react";
+import { MapPin, CalendarCheck, Compass, Eye, Pencil, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { TourStatusBadge } from "./tour-status-badge";
@@ -17,9 +17,11 @@ export interface ToursCardGridProps {
   onToggleSelect: (id: string) => void;
   onViewDetails: (tour: AdminServiceRecord) => void;
   onEditTour?: (tour: AdminServiceRecord) => void;
+  onDeleteTour?: (tour: AdminServiceRecord) => void;
   onStatusChange: (tourId: string, status: AdminServiceStatus) => void;
   isUpdatingStatusId: string | null;
   canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function ToursCardGrid({
@@ -28,7 +30,9 @@ export function ToursCardGrid({
   onToggleSelect,
   onViewDetails,
   onEditTour,
+  onDeleteTour,
   canEdit = true,
+  canDelete = false,
 }: ToursCardGridProps) {
   return (
     <div
@@ -188,6 +192,19 @@ export function ToursCardGrid({
                         className="h-8 w-8 p-0 text-[#74818A] hover:text-[#176779]"
                       >
                         <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canDelete && onDeleteTour && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteTour(tour)}
+                        aria-label={`Delete ${tour.name}`}
+                        data-testid={`delete-tour-card-button-${tour.id}`}
+                        className="h-8 w-8 p-0 text-[#74818A] hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

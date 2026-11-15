@@ -21,6 +21,7 @@ import { BulkActionBar } from "./bulk-action-bar";
 import { BulkConfirmDialog } from "./bulk-confirm-dialog";
 import { TourDetailsDialog } from "./tour-details-dialog";
 import { AddTourDialog } from "./add-tour-dialog";
+import { DeleteTourDialog } from "./delete-tour-dialog";
 import { usePermissions } from "../../hooks/use-permissions";
 import type {
   AdminServiceRecord,
@@ -39,6 +40,7 @@ export function AdminToursView() {
   const { isAdmin, hasPermission } = usePermissions();
   const canCreateTour = isAdmin || hasPermission("tours.create");
   const canEditTour = isAdmin || hasPermission("tours.edit");
+  const canDeleteTour = isAdmin; // Strictly Admin-only action per requirements
 
   // 1. Filter and sorting state
   const [search, setSearch] = React.useState<string>("");
@@ -88,6 +90,8 @@ export function AdminToursView() {
     isOpen: false,
     targetStatus: "PUBLISHED",
   });
+  const [tourForDelete, setTourForDelete] =
+    React.useState<AdminServiceRecord | null>(null);
   const [feedback, setFeedback] = React.useState<ActionFeedback | null>(null);
 
   // Auto-dismiss feedback after 6 seconds
@@ -418,9 +422,11 @@ export function AdminToursView() {
                       tour,
                     })
                   }
+                  onDeleteTour={(tour) => setTourForDelete(tour)}
                   onStatusChange={handleSingleStatusChange}
                   isUpdatingStatusId={isStatusUpdating ? activeTourForDetails?.id ?? null : null}
                   canEdit={canEditTour}
+                  canDelete={canDeleteTour}
                 />
               </div>
             ) : (
@@ -438,9 +444,11 @@ export function AdminToursView() {
                     tour,
                   })
                 }
+                onDeleteTour={(tour) => setTourForDelete(tour)}
                 onStatusChange={handleSingleStatusChange}
                 isStatusUpdating={isStatusUpdating}
                 canEdit={canEditTour}
+                canDelete={canDeleteTour}
               />
             )}
 
@@ -516,6 +524,24 @@ export function AdminToursView() {
               addTourModal.mode === "create" ? "created" : "updated"
             }.`,
           });
+        }}
+      />
+
+      {/* Delete Tour Modal */}
+      <DeleteTourDialog
+        isOpen={tourForDelete !== null}
+        onClose={() => setTourForDelete(null)}
+        tour={tourForDelete}
+        onSuccess={(deletedTour) => {
+          refetchList();
+          setSelectedIds((prev) => prev.filter((id) => id !== deletedTour.id));
+          setFeedback({
+            type: "success",
+            message: `Tour "${deletedTour.name}" was permanently deleted.`,
+          });
+        }}
+        onMoveToDraft={(tour) => {
+          handleSingleStatusChange(tour.id, "DRAFT");
         }}
       />
     </div>
