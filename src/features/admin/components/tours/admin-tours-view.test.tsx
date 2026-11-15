@@ -32,6 +32,10 @@ vi.mock("@/features/admin/api/admin-api", () => {
     ]),
     useGetAdminServicePricingQuery: vi.fn(() => ({ data: { data: [] }, isLoading: false })),
     useGetAdminServiceAvailabilityQuery: vi.fn(() => ({ data: { data: [] }, isLoading: false })),
+    useDeleteAdminServiceMutation: vi.fn(() => [
+      vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true, data: { id: "tour-101", name: "Similan Islands Tour" } }) }),
+      { isLoading: false },
+    ]),
   };
 });
 
@@ -367,11 +371,12 @@ describe("AdminToursView component", () => {
     expect(menu).toBeInTheDocument();
     expect(screen.queryByText("Edit Tour")).not.toBeInTheDocument();
     expect(screen.queryByText("Publish Tour")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete Tour")).not.toBeInTheDocument();
     // View Details is always available
     expect(screen.getByText("View Details")).toBeInTheDocument();
   });
 
-  it("shows tour edit actions when the user holds tours.edit", () => {
+  it("shows tour edit actions when the user holds tours.edit but hides Delete Tour for non-admin", () => {
     vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
       permissions: ["tours.view", "tours.edit"],
       isAdmin: false,
@@ -393,5 +398,32 @@ describe("AdminToursView component", () => {
     // Edit button now visible; status transitions gated by same canEdit also visible
     expect(screen.getByText("Edit Tour")).toBeInTheDocument();
     expect(screen.getByText("Move to Draft")).toBeInTheDocument();
+    // Delete Tour is strictly Admin-only, so staff does not see it
+    expect(screen.queryByText("Delete Tour")).not.toBeInTheDocument();
+  });
+
+  it("shows Delete Tour action when the user is an Admin and opens DeleteTourDialog on click", () => {
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: ["*"],
+      isAdmin: true,
+      isStaff: false,
+      isLoading: false,
+      hasPermission: vi.fn(() => true),
+      hasAnyPermission: vi.fn(() => true),
+      hasAllPermissions: vi.fn(() => true),
+    });
+
+    render(<AdminToursView />);
+
+    const trigger = screen.getByTestId("tour-actions-trigger-tour-101");
+    fireEvent.click(trigger);
+
+    const deleteBtn = screen.getByTestId("delete-tour-action-tour-101");
+    expect(deleteBtn).toBeInTheDocument();
+    fireEvent.click(deleteBtn);
+
+    // DeleteTourDialog should open
+    expect(screen.getByText("Delete Tour Package")).toBeInTheDocument();
+    expect(screen.getByTestId("confirm-delete-tour-button")).toBeInTheDocument();
   });
 });

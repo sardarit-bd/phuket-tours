@@ -15,8 +15,10 @@ export interface ToursTableProps {
   onViewDetails: (tour: AdminServiceRecord) => void;
   onEditTour: (tour: AdminServiceRecord) => void;
   onStatusChange: (id: string, status: AdminServiceStatus) => void;
+  onDeleteTour?: (tour: AdminServiceRecord) => void;
   isStatusUpdating?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export function ToursTable({
@@ -27,8 +29,10 @@ export function ToursTable({
   onViewDetails,
   onEditTour,
   onStatusChange,
+  onDeleteTour,
   isStatusUpdating = false,
   canEdit = true,
+  canDelete = false,
 }: ToursTableProps) {
   const allSelected = tours.length > 0 && tours.every((t) => selectedIds.includes(t.id));
   const someSelected =
@@ -228,8 +232,10 @@ export function ToursTable({
                     onViewDetails={onViewDetails}
                     onEditTour={onEditTour}
                     onStatusChange={(t, status) => onStatusChange(t.id, status)}
+                    onDeleteTour={onDeleteTour}
                     isUpdatingStatus={isStatusUpdating}
                     canEdit={canEdit}
+                    canDelete={canDelete}
                   />
                 </td>
               </tr>

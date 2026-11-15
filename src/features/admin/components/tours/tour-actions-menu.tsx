@@ -10,6 +10,7 @@ import {
   EyeOff,
   FileEdit,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AdminServiceRecord, AdminServiceStatus } from "../../types/admin";
@@ -19,8 +20,10 @@ export interface TourActionsMenuProps {
   onViewDetails: (tour: AdminServiceRecord) => void;
   onEditTour: (tour: AdminServiceRecord) => void;
   onStatusChange: (tour: AdminServiceRecord, nextStatus: AdminServiceStatus) => void;
+  onDeleteTour?: (tour: AdminServiceRecord) => void;
   isUpdatingStatus?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 const emptySubscribe = () => () => {};
@@ -30,8 +33,10 @@ export function TourActionsMenu({
   onViewDetails,
   onEditTour,
   onStatusChange,
+  onDeleteTour,
   isUpdatingStatus = false,
   canEdit = true,
+  canDelete = false,
 }: TourActionsMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const isClient = React.useSyncExternalStore(emptySubscribe, () => true, () => false);
@@ -46,7 +51,7 @@ export function TourActionsMenu({
   const updatePosition = React.useCallback(() => {
     if (!buttonRef.current || typeof window === "undefined") return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const menuHeight = 180;
+    const menuHeight = canDelete ? 220 : 180;
     const menuWidth = 192; // 12rem = 192px
 
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -235,6 +240,22 @@ export function TourActionsMenu({
                     <span>Unpublish Tour</span>
                   </button>
                 )}
+              </>
+            )}
+
+            {canDelete && onDeleteTour && (
+              <>
+                <div className="my-1 border-t border-[#E5EAED]" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => handleAction(() => onDeleteTour(tour))}
+                  data-testid={`delete-tour-action-${tour.id}`}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <span>Delete Tour</span>
+                </button>
               </>
             )}
           </div>,

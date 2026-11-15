@@ -458,6 +458,39 @@ describe("adminApi RTK Query endpoints", () => {
     });
   });
 
+  describe("DELETE /admin/services/:serviceId", () => {
+    it("sends DELETE request with serviceId and invalidates cache tags", async () => {
+      const mockResponse = {
+        success: true,
+        message: "Tour package deleted successfully",
+        data: {
+          id: "tour-to-delete-123",
+          name: "Coral Island Speedboat Tour",
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminApi.endpoints.deleteAdminService.initiate("tour-to-delete-123")
+      );
+
+      expect(capturedRequest).toBeDefined();
+      expect(capturedRequest?.url).toBe(
+        "http://localhost:5000/api/v1/admin/services/tour-to-delete-123"
+      );
+      expect(capturedRequest?.method).toBe("DELETE");
+      expect(capturedRequest?.credentials).toBe("include");
+
+      expect("data" in result).toBe(true);
+      if ("data" in result && result.data) {
+        expect(result.data.data.id).toBe("tour-to-delete-123");
+        expect(result.data.data.name).toBe("Coral Island Speedboat Tour");
+      }
+    });
+  });
+
   describe("PATCH /admin/services/bulk-status", () => {
     it("sends bulk status update request with service IDs and target status", async () => {
       const mockResponse = {
