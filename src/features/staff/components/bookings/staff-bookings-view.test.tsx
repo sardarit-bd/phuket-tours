@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { StaffBookingsView } from "./staff-bookings-view";
 import * as adminApi from "@/features/admin/api/admin-api";
+import * as permissionsHookModule from "@/features/admin/hooks/use-permissions";
 import type { StaffBookingRecord } from "@/features/admin/types/admin-bookings";
+
+vi.mock("@/features/admin/hooks/use-permissions");
 
 const MOCK_ASSIGNED_BOOKINGS: StaffBookingRecord[] = [
   {
@@ -72,6 +75,16 @@ describe("StaffBookingsView component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: ["bookings.create"],
+      isAdmin: false,
+      isStaff: true,
+      isLoading: false,
+      hasPermission: vi.fn((p) => p === "bookings.create"),
+      hasAnyPermission: vi.fn(() => true),
+      hasAllPermissions: vi.fn(() => true),
+    });
+
     vi.spyOn(adminApi, "useGetStaffOperationsBookingsQuery").mockReturnValue({
       data: {
         success: true,
@@ -132,5 +145,40 @@ describe("StaffBookingsView component", () => {
 
     expect(screen.queryByText("Alice Wonderland")).not.toBeInTheDocument();
     expect(screen.getByText("Bob Builder")).toBeInTheDocument();
+  });
+
+  it("shows Create Booking button when staff holds bookings.create permission", () => {
+    render(<StaffBookingsView />);
+    expect(screen.getByTestId("staff-create-booking-btn")).toBeInTheDocument();
+  });
+
+  it("hides Create Booking button when staff lacks bookings.create permission", () => {
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: [],
+      isAdmin: false,
+      isStaff: true,
+      isLoading: false,
+      hasPermission: vi.fn(() => false),
+      hasAnyPermission: vi.fn(() => false),
+      hasAllPermissions: vi.fn(() => false),
+    });
+
+    render(<StaffBookingsView />);
+    expect(screen.queryByTestId("staff-create-booking-btn")).not.toBeInTheDocument();
+  });
+
+  it("shows Create Booking button for admin users regardless of permissions array", () => {
+    vi.mocked(permissionsHookModule.usePermissions).mockReturnValue({
+      permissions: [],
+      isAdmin: true,
+      isStaff: false,
+      isLoading: false,
+      hasPermission: vi.fn(() => true),
+      hasAnyPermission: vi.fn(() => true),
+      hasAllPermissions: vi.fn(() => true),
+    });
+
+    render(<StaffBookingsView />);
+    expect(screen.getByTestId("staff-create-booking-btn")).toBeInTheDocument();
   });
 });

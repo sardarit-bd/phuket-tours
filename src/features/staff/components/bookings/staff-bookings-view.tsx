@@ -11,8 +11,10 @@ import {
   PaymentStatusBadge,
 } from "@/features/admin/components/bookings/booking-status-badges";
 import { formatDate } from "@/features/admin/utils/format";
+import { usePermissions } from "@/features/admin/hooks/use-permissions";
 import { StaffFulfillmentDialog } from "./staff-fulfillment-dialog";
 import { StaffBookingDetailsDialog } from "./staff-booking-details-dialog";
+import { CreateStaffBookingDialog } from "./create-staff-booking-dialog";
 import type {
   StaffBookingRecord,
   FulfillmentStatusValue,
@@ -33,9 +35,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Plus,
 } from "lucide-react";
 
 export function StaffBookingsView() {
+  const { hasPermission, isAdmin } = usePermissions();
+  const canCreateBooking = isAdmin || hasPermission("bookings.create");
+
   const [page, setPage] = React.useState<number>(1);
   const [limit, setLimit] = React.useState<number>(10);
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
@@ -43,6 +49,7 @@ export function StaffBookingsView() {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
 
   // Dialog states
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState<boolean>(false);
   const [activeDetailsBooking, setActiveDetailsBooking] =
     React.useState<StaffBookingRecord | null>(null);
   const [activeFulfillmentBooking, setActiveFulfillmentBooking] =
@@ -127,6 +134,17 @@ export function StaffBookingsView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {canCreateBooking && (
+            <button
+              type="button"
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#176779] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#135664] shadow-xs transition-colors cursor-pointer"
+              data-testid="staff-create-booking-btn"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Create Booking</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => refetch()}
@@ -412,6 +430,17 @@ export function StaffBookingsView() {
           </div>
         )}
       </div>
+
+      {/* Staff Create Booking Dialog */}
+      {isCreateDialogOpen && (
+        <CreateStaffBookingDialog
+          isOpen={isCreateDialogOpen}
+          onClose={() => setIsCreateDialogOpen(false)}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
 
       {/* Staff Booking Details Dialog */}
       <StaffBookingDetailsDialog

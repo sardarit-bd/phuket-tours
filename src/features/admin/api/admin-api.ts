@@ -1,5 +1,11 @@
 import { baseApi } from "@/lib/api/base-api";
 import type {
+  CreateStaffBookingInput,
+  StaffBookingResult,
+  GenerateStaffPaymentLinkInput,
+  StaffPaymentLinkResult,
+} from "@/features/staff/types/staff-booking";
+import type {
   AdminApiResponse,
   AdminRevenueReportData,
   AdminBookingsReportData,
@@ -484,6 +490,37 @@ export const adminApi = baseApi.injectEndpoints({
         { type: "Booking", id: "LIST" },
         { type: "Booking", id: "STAFF_LIST" },
         "AdminReport",
+      ],
+    }),
+
+    createStaffBooking: builder.mutation<
+      AdminApiResponse<StaffBookingResult>,
+      CreateStaffBookingInput
+    >({
+      query: (body) => ({
+        url: "/staff/bookings",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    generateStaffPaymentLink: builder.mutation<
+      AdminApiResponse<StaffPaymentLinkResult>,
+      GenerateStaffPaymentLinkInput
+    >({
+      query: ({ bookingId, expiresInDays }) => ({
+        url: `/staff/bookings/${bookingId}/payment-link`,
+        method: "POST",
+        body: expiresInDays ? { expiresInDays } : {},
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "STAFF_LIST" },
       ],
     }),
 
@@ -1287,6 +1324,8 @@ export const {
   useGetStaffOperationsBookingByIdQuery,
   useLazyGetStaffOperationsBookingByIdQuery,
   useUpdateStaffBookingFulfillmentStatusMutation,
+  useCreateStaffBookingMutation,
+  useGenerateStaffPaymentLinkMutation,
   useGetStaffBookingHistoryQuery,
   useLazyGetStaffBookingHistoryQuery,
   // User Management Hooks
