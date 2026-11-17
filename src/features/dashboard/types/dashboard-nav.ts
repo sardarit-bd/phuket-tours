@@ -12,6 +12,7 @@ import {
   Percent,
   Building2,
   CreditCard,
+  Tag,
 } from "lucide-react";
 
 import type { PermissionId } from "@/features/admin/types/admin-permissions";
@@ -132,6 +133,12 @@ export const adminNavConfig: DashboardNavConfig = {
       href: "/dashboard/admin/commissions",
       icon: Percent,
       adminOnly: true,
+    },
+    {
+      title: "Staff Discounts",
+      href: "/dashboard/admin/discounts",
+      icon: Tag,
+      permission: "bookings.approve_price",
     },
     {
       title: "Users Management",

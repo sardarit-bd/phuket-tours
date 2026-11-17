@@ -15,6 +15,8 @@ import { usePermissions } from "@/features/admin/hooks/use-permissions";
 import { StaffFulfillmentDialog } from "./staff-fulfillment-dialog";
 import { StaffBookingDetailsDialog } from "./staff-booking-details-dialog";
 import { CreateStaffBookingDialog } from "./create-staff-booking-dialog";
+import { DiscountRequestDialog, type DiscountRequestBookingTarget } from "./discount-request-dialog";
+import { DiscountApprovalStatusBadge } from "./discount-approval-status-badge";
 import type {
   StaffBookingRecord,
   FulfillmentStatusValue,
@@ -36,6 +38,7 @@ import {
   ChevronRight,
   Sparkles,
   Plus,
+  Tag,
 } from "lucide-react";
 
 export function StaffBookingsView() {
@@ -54,6 +57,8 @@ export function StaffBookingsView() {
     React.useState<StaffBookingRecord | null>(null);
   const [activeFulfillmentBooking, setActiveFulfillmentBooking] =
     React.useState<StaffBookingRecord | null>(null);
+  const [discountBookingTarget, setDiscountBookingTarget] =
+    React.useState<DiscountRequestBookingTarget | null>(null);
 
   // Query staff assigned bookings
   const {
@@ -359,14 +364,41 @@ export function StaffBookingsView() {
                         <FulfillmentStatusBadge status={b.fulfillmentStatus} />
                       </td>
 
-                      {/* Payment Status */}
+                      {/* Payment Status & Discount Approval Status */}
                       <td className="px-4 py-3.5 align-middle">
-                        <PaymentStatusBadge status={b.paymentStatus} />
+                        <div className="flex flex-col gap-1 items-start">
+                          <PaymentStatusBadge status={b.paymentStatus} />
+                          {b.requiresApproval ? (
+                            <DiscountApprovalStatusBadge status="PENDING" />
+                          ) : null}
+                        </div>
                       </td>
 
                       {/* Actions */}
                       <td className="px-4 py-3.5 align-middle text-right">
                         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          {canCreateBooking && b.paymentStatus === "UNPAID" && b.status !== "CANCELLED" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const priceNum = Number(b.finalPrice ?? b.basePrice) || 0;
+                                setDiscountBookingTarget({
+                                  id: b.id,
+                                  customerName: b.customer?.name,
+                                  tourName: b.service?.name,
+                                  originalPrice: priceNum,
+                                  currency: b.currency || "USD",
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer"
+                              data-testid={`staff-request-discount-${b.id}`}
+                              title="Request discount for this booking"
+                            >
+                              <Tag className="h-3.5 w-3.5 text-amber-700" />
+                              <span>Discount</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => setActiveDetailsBooking(b)}
@@ -439,6 +471,9 @@ export function StaffBookingsView() {
           onSuccess={() => {
             refetch();
           }}
+          onRequestDiscount={(target) => {
+            setDiscountBookingTarget(target);
+          }}
         />
       )}
 
@@ -458,6 +493,16 @@ export function StaffBookingsView() {
         isOpen={Boolean(activeFulfillmentBooking)}
         onClose={() => setActiveFulfillmentBooking(null)}
         booking={activeFulfillmentBooking}
+        onSuccess={() => {
+          refetch();
+        }}
+      />
+
+      {/* Staff Discount Request Dialog */}
+      <DiscountRequestDialog
+        isOpen={Boolean(discountBookingTarget)}
+        onClose={() => setDiscountBookingTarget(null)}
+        booking={discountBookingTarget}
         onSuccess={() => {
           refetch();
         }}

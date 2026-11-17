@@ -59,7 +59,7 @@ describe("CreateStaffBookingDialog component", () => {
       error: null,
     } as any);
 
-    vi.spyOn(adminApiModule, "useGetAdminUsersQuery").mockReturnValue({
+    vi.spyOn(adminApiModule, "useGetStaffCustomersQuery").mockReturnValue({
       data: {
         success: true,
         data: {

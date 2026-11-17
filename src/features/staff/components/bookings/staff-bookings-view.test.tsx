@@ -106,6 +106,11 @@ describe("StaffBookingsView component", () => {
       mockUpdateStatus,
       { isLoading: false } as any,
     ]);
+
+    vi.spyOn(adminApi, "useCreateStaffDiscountRequestMutation").mockReturnValue([
+      vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true, data: { id: "test-req" } }) }),
+      { isLoading: false } as any,
+    ]);
   });
 
   it("renders staff dashboard summary metrics and assigned queue", () => {

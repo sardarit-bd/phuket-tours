@@ -9,6 +9,7 @@ import {
   FulfillmentStatusBadge,
   PaymentStatusBadge,
 } from "@/features/admin/components/bookings/booking-status-badges";
+import { DiscountApprovalStatusBadge } from "./discount-approval-status-badge";
 import {
   Calendar,
   User,
@@ -170,6 +171,9 @@ export function StaffBookingDetailsDialog({
             <BookingStatusBadge status={booking.status} />
             <FulfillmentStatusBadge status={booking.fulfillmentStatus} />
             <PaymentStatusBadge status={booking.paymentStatus} />
+            {booking.requiresApproval && (
+              <DiscountApprovalStatusBadge status="PENDING" />
+            )}
           </div>
         </div>
 

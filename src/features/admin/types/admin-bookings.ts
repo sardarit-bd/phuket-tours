@@ -52,6 +52,8 @@ export interface OperationalBookingRecord {
   currency?: string;
   finalPrice?: number | string;
   basePrice?: number | string;
+  proposedPrice?: number | string | null;
+  requiresApproval?: boolean;
   notes: string | null;
   internalNotes: string | null;
   createdAt: string;

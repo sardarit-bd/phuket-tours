@@ -9,6 +9,7 @@ import {
   PaymentStatusBadge,
   BookingSourceBadge,
 } from "./booking-status-badges";
+import { DiscountApprovalStatusBadge } from "@/features/staff/components/bookings/discount-approval-status-badge";
 import type { OperationalBookingRecord } from "../../types/admin-bookings";
 import { formatReportMoney } from "../../utils/format";
 import {
@@ -201,8 +202,11 @@ export function BookingDetailsDialog({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#74818A]">
               Booking Source
             </span>
-            <div>
+            <div className="flex flex-col gap-1 items-start">
               <BookingSourceBadge source={booking.source || (booking.agentId ? "AGENT" : "DIRECT")} />
+              {booking.requiresApproval && (
+                <DiscountApprovalStatusBadge status="PENDING" />
+              )}
             </div>
           </div>
         </div>

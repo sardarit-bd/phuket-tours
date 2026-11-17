@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { CreatableSelect } from "@/components/ui/creatable-select";
 import { useGetToursQuery } from "@/features/tours/api/tours-api";
 import {
-  useGetAdminUsersQuery,
+  useGetStaffCustomersQuery,
   useCreateStaffBookingMutation,
   useGenerateStaffPaymentLinkMutation,
 } from "@/features/admin/api/admin-api";
@@ -24,6 +24,7 @@ import {
   Copy,
   Share2,
   Check,
+  Tag,
 } from "lucide-react";
 
 export interface StaffBookingSuccessSummary {
@@ -46,6 +47,13 @@ interface CreateStaffBookingDialogProps {
   onClose: () => void;
   onSuccess?: (bookingId: string) => void;
   onViewBookingDetails?: (bookingId: string) => void;
+  onRequestDiscount?: (target: {
+    id: string;
+    customerName?: string;
+    tourName?: string;
+    originalPrice: number;
+    currency?: string;
+  }) => void;
 }
 
 function formatCurrency(amount: number, currency: string = "USD"): string {
@@ -78,6 +86,7 @@ export function CreateStaffBookingDialog({
   onClose,
   onSuccess,
   onViewBookingDetails,
+  onRequestDiscount,
 }: CreateStaffBookingDialogProps) {
   const tomorrow = React.useMemo(() => {
     const d = new Date();
@@ -116,13 +125,13 @@ export function CreateStaffBookingDialog({
   } = useGetToursQuery({ page: 1, limit: 50 }, { skip: !isOpen });
 
   const {
-    data: customersData,
-    isLoading: isCustomersLoading,
-    isError: isCustomersError,
-  } = useGetAdminUsersQuery(
-    { role: "customer", limit: 50 },
-    { skip: !isOpen }
-  );
+  data: customersData,
+  isLoading: isCustomersLoading,
+  isError: isCustomersError,
+} = useGetStaffCustomersQuery(
+  { limit: 50 },
+  { skip: !isOpen }
+);
 
   // Mutations
   const [createStaffBooking, { isLoading: isCreatingBooking }] =
@@ -507,6 +516,28 @@ export function CreateStaffBookingDialog({
 
           {/* Action Footer */}
           <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-[#E5EAED]">
+            {onRequestDiscount && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onRequestDiscount({
+                    id: createdSummary.bookingId,
+                    customerName: createdSummary.customerName,
+                    tourName: createdSummary.tourName,
+                    originalPrice: createdSummary.finalPrice,
+                    currency: createdSummary.currency,
+                  });
+                  onClose();
+                }}
+                className="w-full sm:w-auto text-xs font-semibold text-amber-900 border-amber-300 bg-amber-50/70 hover:bg-amber-100 cursor-pointer"
+                data-testid="staff-success-request-discount-btn"
+              >
+                <Tag className="mr-1.5 h-3.5 w-3.5 text-amber-700" />
+                <span>Request Discount</span>
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"

@@ -68,6 +68,12 @@ import type {
   CreateCommissionPolicyInput,
   UpdateCommissionPolicyInput,
   AdminCommissionsReportData,
+  CreateStaffDiscountRequestInput,
+  ReviewStaffDiscountRequestInput,
+  ListStaffDiscountRequestsQuery,
+  StaffDiscountRequestRecord,
+  StaffDiscountListResponse,
+  StaffDiscountSummaryResponse,
 } from "../types/admin";
 import type {
   SystemSettingsOverview,
@@ -630,6 +636,34 @@ export const adminApi = baseApi.injectEndpoints({
     }),
 
     // Users Management Endpoints
+    getStaffCustomers: builder.query<
+      AdminApiResponse<AdminUserListResponse>,
+      { page?: number; limit?: number; search?: string } | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.search && params.search.trim()) queryParams.search = params.search.trim();
+
+        return {
+          url: "/staff/customers",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((user) => ({
+                type: "User" as const,
+                id: user.id,
+              })),
+              { type: "User" as const, id: "STAFF_CUSTOMERS_LIST" },
+            ]
+          : [{ type: "User" as const, id: "STAFF_CUSTOMERS_LIST" }],
+    }),
+
     getAdminUsers: builder.query<
       AdminApiResponse<AdminUserListResponse>,
       GetAdminUsersParams | void
@@ -1279,6 +1313,54 @@ export const adminApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["AdminSetting"],
     }),
+
+    // Staff Discount & Admin Approval Endpoints
+    createStaffDiscountRequest: builder.mutation<
+      AdminApiResponse<StaffDiscountRequestRecord>,
+      CreateStaffDiscountRequestInput
+    >({
+      query: ({ bookingId, ...body }) => ({
+        url: `/staff/bookings/${bookingId}/discount-requests`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AdminDiscount", "Booking"],
+    }),
+
+    getAdminDiscounts: builder.query<
+      AdminApiResponse<StaffDiscountListResponse>,
+      ListStaffDiscountRequestsQuery | void
+    >({
+      query: (params) => ({
+        url: "/admin/discounts",
+        method: "GET",
+        params: params || undefined,
+      }),
+      providesTags: ["AdminDiscount"],
+    }),
+
+    getAdminDiscountsSummary: builder.query<
+      AdminApiResponse<StaffDiscountSummaryResponse>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/discounts/summary",
+        method: "GET",
+      }),
+      providesTags: ["AdminDiscount"],
+    }),
+
+    reviewAdminDiscount: builder.mutation<
+      AdminApiResponse<StaffDiscountRequestRecord>,
+      ReviewStaffDiscountRequestInput
+    >({
+      query: ({ requestId, ...body }) => ({
+        url: `/admin/discounts/${requestId}/review`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AdminDiscount", "Booking"],
+    }),
   }),
 });
 
@@ -1391,6 +1473,16 @@ export const {
   useUpdateAdminSmtpSettingsMutation,
   useTestAdminSmtpConnectionMutation,
   useSendAdminTestEmailMutation,
+  // Staff Customers Hooks
+  useGetStaffCustomersQuery,
+  useLazyGetStaffCustomersQuery,
+  // Discount Management Hooks
+  useCreateStaffDiscountRequestMutation,
+  useGetAdminDiscountsQuery,
+  useLazyGetAdminDiscountsQuery,
+  useGetAdminDiscountsSummaryQuery,
+  useLazyGetAdminDiscountsSummaryQuery,
+  useReviewAdminDiscountMutation,
 } = adminApi;
 
 export * from "../types/admin";
