@@ -87,7 +87,7 @@ export function DashboardSidebar({
   return (
     <aside
       className={cn(
-        "flex h-full w-[248px] shrink-0 flex-col border-r border-[#E5EAED] bg-[#FAFEFF]",
+        "flex h-full w-[270px] shrink-0 flex-col border-r border-[#E5EAED] bg-[#FAFEFF]",
         className
       )}
       aria-label={`${config.roleLabel} Navigation`}
@@ -149,56 +149,63 @@ export function DashboardSidebar({
             const Icon = item.icon;
 
             if (hasChildren && item.children) {
+              const submenuId = `sidebar-submenu-${item.href.replace(/[\/]/g, "-")}`;
+              const isChildActive = item.children.some((child) => isNavItemActive(pathname, child));
+              const isRowActive = isRouteActive || isChildActive;
+
               return (
                 <li key={item.href} className="space-y-1">
                   <div className="flex items-center">
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
+                    <button
+                      type="button"
+                      onClick={() => toggleSubmenu(item.href)}
+                      aria-expanded={isExpanded}
+                      aria-controls={submenuId}
+                      aria-label={isExpanded ? `Collapse ${item.title}` : `Expand ${item.title}`}
+                      data-testid={`sidebar-parent-btn-${item.href.replace(/[\/]/g, "-")}`}
                       className={cn(
-                        "flex flex-1 items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                        isRouteActive
+                        "group flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                        isRowActive
                           ? "bg-[#3297A3]/10 text-[#3297A3] font-semibold"
                           : "text-[#263238] hover:bg-[#EEF4F6] hover:text-[#18282A]"
                       )}
-                      aria-current={isRouteActive ? "page" : undefined}
                     >
                       <div className="flex items-center gap-3 truncate">
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0 transition-colors",
-                            isRouteActive ? "text-[#3297A3]" : "text-[#74818A]"
+                            isRowActive ? "text-[#3297A3]" : "text-[#74818A] group-hover:text-[#18282A]"
                           )}
                         />
                         <span className="truncate">{item.title}</span>
                       </div>
-                      {item.badge && (
-                        <span className="rounded-full bg-[#3297A3]/15 px-2 py-0.5 text-[10px] font-semibold text-[#3297A3]">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => toggleSubmenu(item.href)}
-                      className="p-2 text-[#74818A] hover:text-[#18282A] rounded-lg hover:bg-[#EEF4F6] transition-colors cursor-pointer shrink-0 ml-0.5"
-                      aria-label={isExpanded ? `Collapse ${item.title}` : `Expand ${item.title}`}
-                      data-testid={`sidebar-submenu-toggle-${item.href.replace(/[\/]/g, "-")}`}
-                    >
-                      <ChevronDown
-                        className={cn(
-                          "h-3.5 w-3.5 transition-transform duration-200",
-                          isExpanded ? "rotate-180 text-[#3297A3]" : ""
+                      <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                        {item.badge && (
+                          <span className="rounded-full bg-[#3297A3]/15 px-2 py-0.5 text-[10px] font-semibold text-[#3297A3]">
+                            {item.badge}
+                          </span>
                         )}
-                      />
+                        <span
+                          className="p-1 rounded-md text-[#74818A] group-hover:text-[#18282A] transition-colors"
+                          data-testid={`sidebar-submenu-toggle-${item.href.replace(/[\/]/g, "-")}`}
+                        >
+                          <ChevronDown
+                            className={cn(
+                              "h-3.5 w-3.5 transition-transform duration-200",
+                              isExpanded ? "rotate-180 text-[#3297A3]" : ""
+                            )}
+                          />
+                        </span>
+                      </div>
                     </button>
                   </div>
 
                   {/* Submenu links */}
                   {isExpanded && (
                     <ul
+                      id={submenuId}
                       className="ml-4 pl-3 border-l border-[#E5EAED] space-y-1 py-0.5"
-                      data-testid={`sidebar-submenu-${item.href.replace(/[\/]/g, "-")}`}
+                      data-testid={submenuId}
                     >
                       {item.children.map((subItem) => {
                         const isSubActive = isNavItemActive(pathname, subItem);
