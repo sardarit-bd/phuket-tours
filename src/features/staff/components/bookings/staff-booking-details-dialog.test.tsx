@@ -186,4 +186,60 @@ describe("StaffBookingDetailsDialog Component", () => {
     expect(screen.getByTestId("detail-approved-amount")).toHaveTextContent("-10% (THB 1,324.00)");
     expect(screen.getByTestId("detail-final-price")).toHaveTextContent("11,916.00");
   });
+
+  it("renders 12% requested and 10% approved discount breakdown accurately (scenario: 13,160 THB base, 11,844 THB final)", () => {
+    const scenarioBooking: StaffBookingRecord = {
+      ...baseBooking,
+      basePrice: 13160,
+      finalPrice: 11844,
+      discountRequests: [
+        {
+          id: "dr-scenario-12-10",
+          discountType: "PERCENTAGE",
+          discountValue: 12,
+          originalPrice: 13160,
+          discountAmount: 1579.2,
+          proposedFinalPrice: 11580.8,
+          status: "APPROVED",
+          approvedDiscountAmount: 1316,
+          approvedFinalPrice: 11844,
+          reason: "for my old client.",
+          rejectionReason: null,
+          adminNotes: "Approved 10% discount",
+          requestedById: "staff-creator",
+          reviewedById: "admin-1",
+          reviewedAt: "2026-11-18T10:30:00.000Z",
+          createdAt: "2026-11-18T09:00:00.000Z",
+        },
+      ],
+    };
+
+    render(
+      <StaffBookingDetailsDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        booking={scenarioBooking}
+      />
+    );
+
+    // 1. Standard Retail Price
+    expect(screen.getByTestId("detail-standard-price")).toHaveTextContent("13,160.00");
+
+    // 2. Requested Discount Box: 12% (-THB 1,579.20)
+    expect(screen.getByTestId("detail-requested-value")).toHaveTextContent("12%");
+    expect(screen.getByTestId("detail-requested-amount")).toHaveTextContent("-THB 1,579.20");
+    expect(screen.getByTestId("detail-proposed-final-price")).toHaveTextContent("11,580.80");
+
+    // 3. Admin Approved Discount Box: 10% (-10% (THB 1,316.00))
+    expect(screen.getByTestId("detail-approved-value")).toHaveTextContent("10%");
+    expect(screen.getByTestId("detail-approved-amount")).toHaveTextContent("-10% (THB 1,316.00)");
+    expect(screen.getByTestId("detail-approved-final-price")).toHaveTextContent("11,844.00");
+
+    // 4. Header Authoritative Final Price
+    expect(screen.getByTestId("detail-final-price")).toHaveTextContent("11,844.00");
+
+    // 5. Staff reason and admin notes
+    expect(screen.getByText("for my old client.")).toBeInTheDocument();
+    expect(screen.getByText("Approved 10% discount")).toBeInTheDocument();
+  });
 });

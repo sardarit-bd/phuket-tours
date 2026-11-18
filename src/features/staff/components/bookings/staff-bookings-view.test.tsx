@@ -294,6 +294,69 @@ describe("StaffBookingsView component", () => {
     expect(payLinkBtn).not.toBeDisabled();
   });
 
+  it("displays both requested and approved discount separately in booking row for partial approval (12% requested -> 10% approved)", () => {
+    const mockPartialApprovalBooking: StaffBookingRecord = {
+      ...MOCK_ASSIGNED_BOOKINGS[0],
+      id: "bkg-partial-12-10",
+      status: "CONFIRMED",
+      requiresApproval: false,
+      paymentStatus: "UNPAID",
+      basePrice: 13160,
+      finalPrice: 11844,
+      currency: "THB",
+      discountRequests: [
+        {
+          id: "dr-partial-12-10",
+          discountType: "PERCENTAGE",
+          discountValue: 12,
+          originalPrice: 13160,
+          discountAmount: 1579.2,
+          proposedFinalPrice: 11580.8,
+          status: "APPROVED",
+          approvedDiscountAmount: 1316,
+          approvedFinalPrice: 11844,
+          reason: "for my old client.",
+          rejectionReason: null,
+          adminNotes: "Approved 10% as compromise",
+          requestedById: "staff-me",
+          reviewedById: "admin-1",
+          reviewedAt: "2026-11-18T11:00:00.000Z",
+          createdAt: "2026-11-18T10:00:00.000Z",
+        },
+      ],
+    };
+
+    vi.spyOn(adminApi, "useGetStaffCreatedBookingsQuery").mockReturnValue({
+      data: {
+        success: true,
+        message: "Retrieved created bookings",
+        data: {
+          items: [mockPartialApprovalBooking],
+          total: 1,
+          page: 1,
+          limit: 10,
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    render(<StaffBookingsView />);
+
+    // 1. Both requested and approved badges are rendered separately
+    expect(screen.getByText("12% Requested")).toBeInTheDocument();
+    expect(screen.getByText("10% Approved")).toBeInTheDocument();
+
+    // 2. Persisted authoritative final price is displayed
+    expect(screen.getByText("THB 11,844.00")).toBeInTheDocument();
+
+    // 3. Pay Link is enabled for confirmed unpaid booking
+    const payLinkBtn = screen.getByTestId("staff-payment-link-bkg-partial-12-10");
+    expect(payLinkBtn).not.toBeDisabled();
+  });
+
   it("opens booking details dialog with operational manifests and pricing breakdown", () => {
     render(<StaffBookingsView />);
 

@@ -408,6 +408,23 @@ export function StaffBookingDetailsDialog({
                           <span className="font-medium text-[#18282A]">{discountReq.discountType}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs">
+                          <span className="text-[#74818A]">Approved Value:</span>
+                          <span className="font-semibold text-emerald-800" data-testid="detail-approved-value">
+                            {(() => {
+                              const approvedAmount =
+                                discountReq.approvedDiscountAmount !== null && discountReq.approvedDiscountAmount !== undefined
+                                  ? Number(discountReq.approvedDiscountAmount)
+                                  : Number(discountReq.discountAmount);
+                              const basePriceVal = Number(booking.basePrice) || 0;
+                              if (discountReq.discountType === "PERCENTAGE" && basePriceVal > 0) {
+                                const computedPct = Math.round((approvedAmount / basePriceVal) * 10000) / 100;
+                                return `${computedPct}%`;
+                              }
+                              return formatReportMoney(approvedAmount, booking.currency);
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
                           <span className="text-[#74818A]">Approved Deduction:</span>
                           <span className="font-bold text-emerald-700" data-testid="detail-approved-amount">
                             {(() => {

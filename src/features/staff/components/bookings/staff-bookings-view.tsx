@@ -509,18 +509,44 @@ export function StaffBookingsView() {
                             <DiscountApprovalStatusBadge status="PENDING" />
                           )}
                           {discountReq && (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-medium">
-                              <Tag className="h-2.5 w-2.5" />
-                              {discountReq.status === "APPROVED"
-                                ? (discountReq.discountType === "PERCENTAGE"
-                                    ? `${discountReq.discountValue}% Requested (Approved)`
-                                    : `${formatReportMoney(discountReq.discountValue, b.currency)} Off (Approved)`)
-                                : discountReq.status === "REJECTED"
-                                ? `${discountReq.discountValue}${discountReq.discountType === "PERCENTAGE" ? "%" : ""} (Rejected)`
-                                : (discountReq.discountType === "PERCENTAGE"
+                            <div className="flex flex-col gap-0.5" data-testid={`staff-discount-summary-${b.id}`}>
+                              {/* Requested Discount */}
+                              <span className="inline-flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded font-medium">
+                                <Tag className="h-2.5 w-2.5 text-amber-700" />
+                                <span>
+                                  {discountReq.discountType === "PERCENTAGE"
                                     ? `${discountReq.discountValue}% Requested`
-                                    : `${formatReportMoney(discountReq.discountValue, b.currency)} Off`)}
-                            </span>
+                                    : `${formatReportMoney(discountReq.discountValue, b.currency)} Requested`}
+                                </span>
+                              </span>
+
+                              {/* Approved or Decision Tag */}
+                              {discountReq.status === "APPROVED" && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded font-bold">
+                                  <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                  <span>
+                                    {(() => {
+                                      const approvedAmount =
+                                        discountReq.approvedDiscountAmount !== null && discountReq.approvedDiscountAmount !== undefined
+                                          ? Number(discountReq.approvedDiscountAmount)
+                                          : Number(discountReq.discountAmount);
+                                      const basePriceVal = Number(b.basePrice) || 0;
+                                      if (discountReq.discountType === "PERCENTAGE" && basePriceVal > 0) {
+                                        const computedPct = Math.round((approvedAmount / basePriceVal) * 10000) / 100;
+                                        return `${computedPct}% Approved`;
+                                      }
+                                      return `${formatReportMoney(approvedAmount, b.currency)} Approved`;
+                                    })()}
+                                  </span>
+                                </span>
+                              )}
+
+                              {discountReq.status === "REJECTED" && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-rose-800 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded font-semibold">
+                                  <span>Discount Declined</span>
+                                </span>
+                              )}
+                            </div>
                           )}
                           {!isCurrentTabCreated && (
                             <div className="mt-0.5">
