@@ -17,6 +17,8 @@ export interface BookingsToolbarProps {
   onFulfillmentStatusChange: (status: string) => void;
   assignedStaffId: string;
   onAssignedStaffIdChange: (staffId: string) => void;
+  createdById?: string;
+  onCreatedByIdChange?: (creatorId: string) => void;
   agentId?: string;
   onAgentIdChange?: (agentId: string) => void;
   source?: string;
@@ -64,6 +66,8 @@ export function BookingsToolbar({
   onFulfillmentStatusChange,
   assignedStaffId,
   onAssignedStaffIdChange,
+  createdById = "ALL",
+  onCreatedByIdChange,
   agentId = "ALL",
   onAgentIdChange,
   source = "ALL",
@@ -78,7 +82,19 @@ export function BookingsToolbar({
 }: BookingsToolbarProps) {
   const staffOptions: SelectOption<string>[] = React.useMemo(() => {
     const list: SelectOption<string>[] = [
-      { value: "ALL", label: "All Staff Members", icon: <UserCheck className="h-3.5 w-3.5" /> },
+      { value: "ALL", label: "All Assigned Staff", icon: <UserCheck className="h-3.5 w-3.5" /> },
+    ];
+    for (const s of staffMembers) {
+      if (s.status === "active") {
+        list.push({ value: s.id, label: s.name });
+      }
+    }
+    return list;
+  }, [staffMembers]);
+
+  const creatorOptions: SelectOption<string>[] = React.useMemo(() => {
+    const list: SelectOption<string>[] = [
+      { value: "ALL", label: "All Staff Creators", icon: <UserCheck className="h-3.5 w-3.5" /> },
     ];
     for (const s of staffMembers) {
       if (s.status === "active") {
@@ -214,6 +230,21 @@ export function BookingsToolbar({
             data-testid="bookings-staff-filter"
           />
         </div>
+
+        {/* Staff Creator Filter */}
+        {onCreatedByIdChange && (
+          <div className="sm:col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-2">
+            <CustomSelect
+              options={creatorOptions}
+              value={createdById}
+              onChange={(val) => onCreatedByIdChange(val)}
+              aria-label="Filter by staff creator"
+              triggerClassName="h-10"
+              usePortal={true}
+              data-testid="bookings-creator-filter"
+            />
+          </div>
+        )}
 
         {/* Source Filter */}
         {onSourceChange && (

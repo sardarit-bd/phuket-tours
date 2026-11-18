@@ -40,6 +40,9 @@ export interface StaffBookingSuccessSummary {
   currency: string;
   status: string;
   paymentStatus: string;
+  requiresApproval?: boolean;
+  requestedDiscountAmount?: number;
+  proposedFinalPrice?: number;
 }
 
 interface CreateStaffBookingDialogProps {
@@ -47,13 +50,6 @@ interface CreateStaffBookingDialogProps {
   onClose: () => void;
   onSuccess?: (bookingId: string) => void;
   onViewBookingDetails?: (bookingId: string) => void;
-  onRequestDiscount?: (target: {
-    id: string;
-    customerName?: string;
-    tourName?: string;
-    originalPrice: number;
-    currency?: string;
-  }) => void;
 }
 
 function formatCurrency(amount: number, currency: string = "USD"): string {
@@ -86,7 +82,6 @@ export function CreateStaffBookingDialog({
   onClose,
   onSuccess,
   onViewBookingDetails,
-  onRequestDiscount,
 }: CreateStaffBookingDialogProps) {
   const tomorrow = React.useMemo(() => {
     const d = new Date();
@@ -108,6 +103,12 @@ export function CreateStaffBookingDialog({
   const [children, setChildren] = React.useState(0);
   const [infants, setInfants] = React.useState(0);
   const [notes, setNotes] = React.useState("");
+
+  // Discount state
+  const [isDiscountEnabled, setIsDiscountEnabled] = React.useState(false);
+  const [discountType, setDiscountType] = React.useState<"PERCENTAGE" | "FIXED_AMOUNT">("PERCENTAGE");
+  const [discountValue, setDiscountValue] = React.useState("");
+  const [discountReason, setDiscountReason] = React.useState("");
 
   // UI status state
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -173,8 +174,19 @@ export function CreateStaffBookingDialog({
       setPaymentExpiry(null);
       setPaymentLinkError(null);
       setIsCopied(false);
+      setIsDiscountEnabled(false);
+      setDiscountType("PERCENTAGE");
+      setDiscountValue("");
+      setDiscountReason("");
     }
   }, [isOpen]);
+
+  // Auto-select first customer in existing customer mode if none selected
+  React.useEffect(() => {
+    if (customerMode === "EXISTING" && !selectedCustomerId && existingCustomers.length > 0) {
+      setSelectedCustomerId(existingCustomers[0].id);
+    }
+  }, [customerMode, selectedCustomerId, existingCustomers]);
 
   // Auto-select first tour if none selected
   React.useEffect(() => {
@@ -212,6 +224,40 @@ export function CreateStaffBookingDialog({
     );
   }, [adults, children, infants, unitAdultPrice, unitChildPrice, unitInfantPrice]);
 
+  const parsedDiscountValue = parseFloat(discountValue) || 0;
+
+  const discountPreview = React.useMemo(() => {
+    if (!isDiscountEnabled || parsedDiscountValue <= 0 || estimatedStandardPrice <= 0) {
+      return { discountAmount: 0, proposedFinalPrice: estimatedStandardPrice, isValid: false };
+    }
+
+    if (discountType === "PERCENTAGE") {
+      if (parsedDiscountValue > 100) {
+        return {
+          discountAmount: 0,
+          proposedFinalPrice: estimatedStandardPrice,
+          isValid: false,
+          error: "Percentage discount cannot exceed 100%",
+        };
+      }
+      const amount = Math.round(estimatedStandardPrice * (parsedDiscountValue / 100) * 100) / 100;
+      const finalPrice = Math.max(0, Math.round((estimatedStandardPrice - amount) * 100) / 100);
+      return { discountAmount: amount, proposedFinalPrice: finalPrice, isValid: true };
+    } else {
+      if (parsedDiscountValue >= estimatedStandardPrice) {
+        return {
+          discountAmount: 0,
+          proposedFinalPrice: estimatedStandardPrice,
+          isValid: false,
+          error: "Fixed discount must be less than the total retail price",
+        };
+      }
+      const amount = Math.round(parsedDiscountValue * 100) / 100;
+      const finalPrice = Math.max(0, Math.round((estimatedStandardPrice - amount) * 100) / 100);
+      return { discountAmount: amount, proposedFinalPrice: finalPrice, isValid: true };
+    }
+  }, [isDiscountEnabled, parsedDiscountValue, estimatedStandardPrice, discountType]);
+
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -229,10 +275,33 @@ export function CreateStaffBookingDialog({
       return;
     }
 
+    if (isDiscountEnabled) {
+      if (parsedDiscountValue <= 0) {
+        setErrorMsg("Please enter a valid discount value greater than zero.");
+        return;
+      }
+      if (!discountPreview.isValid) {
+        setErrorMsg(discountPreview.error || "Invalid discount value provided.");
+        return;
+      }
+      if (!discountReason.trim()) {
+        setErrorMsg("A business reason is mandatory when requesting a discount.");
+        return;
+      }
+    }
+
     let payload: Parameters<typeof createStaffBooking>[0];
     let resolvedCustomerName = "";
     let resolvedCustomerEmail = "";
     let resolvedCustomerPhone: string | null = null;
+
+    const discountPayload = isDiscountEnabled
+      ? {
+          discountType,
+          discountValue: parsedDiscountValue,
+          reason: discountReason.trim(),
+        }
+      : undefined;
 
     if (customerMode === "EXISTING") {
       if (!selectedCustomerId) {
@@ -253,6 +322,7 @@ export function CreateStaffBookingDialog({
         children,
         infants,
         notes: notes.trim() || undefined,
+        discount: discountPayload,
       };
     } else {
       if (!customerName.trim() || !customerEmail.trim()) {
@@ -275,6 +345,7 @@ export function CreateStaffBookingDialog({
         children,
         infants,
         notes: notes.trim() || undefined,
+        discount: discountPayload,
       };
     }
 
@@ -303,6 +374,9 @@ export function CreateStaffBookingDialog({
         currency: booking.currency || currency,
         status: booking.status || "PENDING",
         paymentStatus: booking.paymentStatus || "UNPAID",
+        requiresApproval: isDiscountEnabled,
+        requestedDiscountAmount: isDiscountEnabled ? discountPreview.discountAmount : undefined,
+        proposedFinalPrice: isDiscountEnabled ? discountPreview.proposedFinalPrice : undefined,
       };
 
       setCreatedSummary(summary);
@@ -347,29 +421,47 @@ export function CreateStaffBookingDialog({
 
   // ── SUCCESS CONFIRMATION STATE ─────────────────────────────────────────
   if (createdSummary) {
+    const isAwaitingApproval = createdSummary.requiresApproval || createdSummary.status === "AWAITING_APPROVAL";
+
     return (
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title="Staff Booking Created"
+        title={isAwaitingApproval ? "Booking Submitted for Admin Approval" : "Staff Booking Created"}
         description={`Reference: ${createdSummary.bookingId.slice(0, 8)}...`}
         size="lg"
       >
         <div className="space-y-5 pt-1" data-testid="staff-booking-created-success">
           {/* Header Banner */}
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-              <CheckCircle2 className="h-6 w-6" />
+          {isAwaitingApproval ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <Tag className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-outfit text-base font-bold text-[#18282A]">
+                  Awaiting Admin Approval
+                </h3>
+                <p className="text-xs text-[#5C6C6E] mt-0.5 leading-relaxed">
+                  This direct booking includes an optional discount request. An administrator must review and approve the booking request before a payment link can be generated.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="font-outfit text-base font-bold text-[#18282A]">
-                Booking Confirmed &amp; Saved
-              </h3>
-              <p className="text-xs text-[#5C6C6E] mt-0.5 leading-relaxed">
-                The tour reservation has been persisted at standard retail rates. You can now generate a secure customer payment link to send directly to the traveler.
-              </p>
+          ) : (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-outfit text-base font-bold text-[#18282A]">
+                  Booking Confirmed &amp; Saved
+                </h3>
+                <p className="text-xs text-[#5C6C6E] mt-0.5 leading-relaxed">
+                  The tour reservation has been persisted at standard retail rates. You can now generate a secure customer payment link to send directly to the traveler.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Structured Booking Summary Details */}
           <div className="rounded-2xl border border-[#E5EAED] bg-[#F8FAFB] p-4 text-xs space-y-3">
@@ -407,21 +499,44 @@ export function CreateStaffBookingDialog({
               </div>
               <div>
                 <span className="text-[11px] text-[#74818A] block">Booking Status</span>
-                <span className="inline-block font-semibold rounded-md px-2 py-0.5 text-[10px] bg-sky-100 text-sky-800">
-                  {createdSummary.status}
+                <span
+                  className={`inline-block font-semibold rounded-md px-2 py-0.5 text-[10px] ${
+                    isAwaitingApproval
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-sky-100 text-sky-800"
+                  }`}
+                >
+                  {isAwaitingApproval ? "AWAITING_APPROVAL" : createdSummary.status}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-[#74818A] block">Calculated Price</span>
+                <span className="text-[11px] text-[#74818A] block">
+                  {isAwaitingApproval ? "Standard Price" : "Calculated Price"}
+                </span>
                 <span className="font-bold text-sm text-[#176779]">
                   {formatCurrency(createdSummary.finalPrice, createdSummary.currency)}
                 </span>
+                {isAwaitingApproval && createdSummary.proposedFinalPrice !== undefined && (
+                  <span className="text-[11px] text-emerald-700 block mt-0.5 font-semibold">
+                    Proposed: {formatCurrency(createdSummary.proposedFinalPrice, createdSummary.currency)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Payment Link Section */}
-          {generatedPaymentUrl ? (
+          {/* Payment Link Section (Disabled/Locked when awaiting approval) */}
+          {isAwaitingApproval ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 text-center space-y-2">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                <Tag className="h-4 w-4 text-amber-700" />
+                <span>Payment Link Generation Locked</span>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed max-w-md mx-auto">
+                Payment links cannot be generated while this booking is awaiting Admin discount approval. Once approved, you can generate and share the payment link with the customer.
+              </p>
+            </div>
+          ) : generatedPaymentUrl ? (
             <div className="rounded-2xl border border-[#176779]/30 bg-[#F0F7F8] p-4 text-xs space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 font-bold text-[#176779]">
@@ -516,28 +631,6 @@ export function CreateStaffBookingDialog({
 
           {/* Action Footer */}
           <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-[#E5EAED]">
-            {onRequestDiscount && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onRequestDiscount({
-                    id: createdSummary.bookingId,
-                    customerName: createdSummary.customerName,
-                    tourName: createdSummary.tourName,
-                    originalPrice: createdSummary.finalPrice,
-                    currency: createdSummary.currency,
-                  });
-                  onClose();
-                }}
-                className="w-full sm:w-auto text-xs font-semibold text-amber-900 border-amber-300 bg-amber-50/70 hover:bg-amber-100 cursor-pointer"
-                data-testid="staff-success-request-discount-btn"
-              >
-                <Tag className="mr-1.5 h-3.5 w-3.5 text-amber-700" />
-                <span>Request Discount</span>
-              </Button>
-            )}
             <Button
               type="button"
               variant="outline"
@@ -900,6 +993,138 @@ export function CreateStaffBookingDialog({
               data-testid="staff-booking-notes-input"
             />
           </div>
+        </div>
+
+        {/* 4. Optional Discount Section */}
+        <div className="rounded-2xl border border-[#E5EAED] bg-white p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="enable-discount-toggle"
+                checked={isDiscountEnabled}
+                onChange={(e) => setIsDiscountEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-[#176779] focus:ring-[#176779] cursor-pointer"
+                data-testid="enable-discount-toggle"
+              />
+              <label
+                htmlFor="enable-discount-toggle"
+                className="text-xs font-bold uppercase tracking-wider text-[#18282A] cursor-pointer"
+              >
+                4. Optional Discount Request
+              </label>
+            </div>
+            <span className="text-[11px] text-[#74818A]">
+              Requires Admin Approval
+            </span>
+          </div>
+
+          {isDiscountEnabled && (
+            <div className="space-y-3 pt-1 border-t border-[#F0F3F4]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Discount Type */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#18282A] mb-1">
+                    Discount Type
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType("PERCENTAGE")}
+                      className={`h-9 rounded-xl border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                        discountType === "PERCENTAGE"
+                          ? "border-[#176779] bg-[#E8F8F5] text-[#176779] font-bold"
+                          : "border-[#E5EAED] bg-white text-[#556972] hover:bg-[#F8FAFB]"
+                      }`}
+                      data-testid="discount-type-percentage"
+                    >
+                      <span>Percentage (%)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType("FIXED_AMOUNT")}
+                      className={`h-9 rounded-xl border text-xs font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                        discountType === "FIXED_AMOUNT"
+                          ? "border-[#176779] bg-[#E8F8F5] text-[#176779] font-bold"
+                          : "border-[#E5EAED] bg-white text-[#556972] hover:bg-[#F8FAFB]"
+                      }`}
+                      data-testid="discount-type-fixed"
+                    >
+                      <span>Fixed Amount</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Discount Value */}
+                <div>
+                  <label
+                    htmlFor="staff-discount-value-input"
+                    className="block text-[11px] font-semibold text-[#18282A] mb-1"
+                  >
+                    Discount Value {discountType === "PERCENTAGE" ? "(%)" : `(${currency})`}
+                  </label>
+                  <Input
+                    id="staff-discount-value-input"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={discountType === "PERCENTAGE" ? "100" : undefined}
+                    placeholder={discountType === "PERCENTAGE" ? "e.g. 10" : "e.g. 500"}
+                    value={discountValue}
+                    onChange={(e) => setDiscountValue(e.target.value)}
+                    className="h-9 text-xs border-[#E5EAED] rounded-xl"
+                    data-testid="staff-discount-value-input"
+                  />
+                </div>
+              </div>
+
+              {/* Discount Reason */}
+              <div>
+                <label
+                  htmlFor="staff-discount-reason-input"
+                  className="block text-[11px] font-semibold text-[#18282A] mb-1"
+                >
+                  Discount Reason <span className="text-rose-500">* Mandatory</span>
+                </label>
+                <Input
+                  id="staff-discount-reason-input"
+                  value={discountReason}
+                  onChange={(e) => setDiscountReason(e.target.value)}
+                  placeholder="e.g. VIP returning customer, seasonal family promotion..."
+                  className="h-9 text-xs border-[#E5EAED] rounded-xl"
+                  data-testid="staff-discount-reason-input"
+                />
+              </div>
+
+              {/* Discount Calculations Preview Card */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-amber-900 font-medium">Standard Retail Price:</span>
+                  <span className="font-semibold text-[#18282A]">
+                    {formatCurrency(estimatedStandardPrice, currency)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-amber-900 font-medium">Requested Discount:</span>
+                  <span className="font-semibold text-rose-600">
+                    -{formatCurrency(discountPreview.discountAmount, currency)}
+                    {discountType === "PERCENTAGE" && parsedDiscountValue > 0 && ` (${parsedDiscountValue}%)`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-amber-200/80 font-bold">
+                  <span className="text-amber-950">Proposed Final Price:</span>
+                  <span className="text-emerald-700 text-sm" data-testid="proposed-final-price-preview">
+                    {formatCurrency(discountPreview.proposedFinalPrice, currency)}
+                  </span>
+                </div>
+                {discountPreview.error && (
+                  <p className="text-[11px] text-rose-600 font-medium pt-1">
+                    {discountPreview.error}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {errorMsg && (

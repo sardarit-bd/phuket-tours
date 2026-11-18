@@ -21,6 +21,11 @@ export interface CreateStaffBookingInput {
   children?: number;
   infants?: number;
   notes?: string;
+  discount?: {
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountValue: number;
+    reason: string;
+  };
 }
 
 export interface StaffBookingResult {

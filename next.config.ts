@@ -11,6 +11,30 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/admin/bookings",
+        destination: "/dashboard/admin/bookings",
+        permanent: false,
+      },
+      {
+        source: "/admin/bookings/staff",
+        destination: "/dashboard/admin/bookings/staff",
+        permanent: false,
+      },
+      {
+        source: "/admin/bookings/agents",
+        destination: "/dashboard/admin/bookings/agents",
+        permanent: false,
+      },
+      {
+        source: "/admin/bookings/direct",
+        destination: "/dashboard/admin/bookings/direct",
+        permanent: false,
+      },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

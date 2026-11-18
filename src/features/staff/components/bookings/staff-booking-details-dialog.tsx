@@ -8,8 +8,11 @@ import {
   BookingStatusBadge,
   FulfillmentStatusBadge,
   PaymentStatusBadge,
+  BookingSourceBadge,
 } from "@/features/admin/components/bookings/booking-status-badges";
 import { DiscountApprovalStatusBadge } from "./discount-approval-status-badge";
+import { formatReportMoney, formatDate } from "@/features/admin/utils/format";
+import { useGetStaffBookingHistoryQuery } from "@/features/admin/api/admin-api";
 import {
   Calendar,
   User,
@@ -21,6 +24,12 @@ import {
   Users,
   MapPin,
   Activity,
+  Tag,
+  BadgePercent,
+  CheckCircle2,
+  DollarSign,
+  Briefcase,
+  History,
 } from "lucide-react";
 
 export interface StaffBookingDetailsDialogProps {
@@ -126,9 +135,28 @@ export function StaffBookingDetailsDialog({
   booking,
   onUpdateStatus,
 }: StaffBookingDetailsDialogProps) {
+  const { data: historyResponse } = useGetStaffBookingHistoryQuery(
+    { bookingId: booking?.id || "" },
+    { skip: !booking?.id || !isOpen }
+  );
+
   if (!booking) return null;
 
   const parsedNotes = parseStaffNotes(booking.notes);
+  const discountReq = booking.discountRequests?.[0];
+  const auditTimeline = historyResponse?.data?.items || [];
+
+  const basePriceNum =
+    booking.basePrice !== null && booking.basePrice !== undefined && booking.basePrice !== ""
+      ? Number(booking.basePrice)
+      : null;
+  const finalPriceNum =
+    booking.finalPrice !== null && booking.finalPrice !== undefined && booking.finalPrice !== ""
+      ? Number(booking.finalPrice)
+      : basePriceNum;
+
+  const formattedBasePrice = formatReportMoney(basePriceNum, booking.currency);
+  const formattedFinalPrice = formatReportMoney(finalPriceNum, booking.currency);
 
   const travelDateFormatted = booking.availability?.date
     ? new Date(booking.availability.date).toLocaleDateString("en-US", {
@@ -288,7 +316,201 @@ export function StaffBookingDetailsDialog({
           </div>
         </div>
 
-        {/* Section 3: Pickup Location & Special Instructions */}
+        {/* Section 3: Pricing & Discount Breakdown */}
+        <div className="rounded-xl border border-[#E5EAED] p-4 space-y-3" data-testid="staff-pricing-breakdown-section">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#18282A] uppercase tracking-wider">
+            <DollarSign className="h-4 w-4 text-[#176779]" />
+            <span>Pricing & Discount Breakdown</span>
+          </div>
+
+          <div className="space-y-3 text-xs pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-[#F8FAFB] p-3 rounded-xl border border-[#E5EAED]">
+              <div>
+                <span className="text-[#74818A] block text-[11px]">1. Standard Retail Price:</span>
+                <p className="font-semibold text-[#18282A] mt-0.5" data-testid="detail-standard-price">
+                  {formattedBasePrice}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-[#74818A] block text-[11px]">Payment Status:</span>
+                <div className="mt-1">
+                  <PaymentStatusBadge status={booking.paymentStatus} />
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[#74818A] block text-[11px] font-semibold">Final Payable Price:</span>
+                <p className="font-bold text-sm text-[#18282A] mt-0.5" data-testid="detail-final-price">
+                  {formattedFinalPrice}
+                </p>
+              </div>
+            </div>
+
+            {/* Discount Breakdown (when present) */}
+            {discountReq ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3.5 space-y-3" data-testid="detail-discount-breakdown">
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
+                    <Tag className="h-3.5 w-3.5 text-amber-700" />
+                    <span>Discount Authorization Breakdown</span>
+                  </div>
+                  <DiscountApprovalStatusBadge status={discountReq.status} />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  {/* Requested Discount */}
+                  <div className="rounded-lg bg-white p-3 border border-amber-200/80 space-y-1.5" data-testid="detail-requested-discount-box">
+                    <span className="text-[10px] uppercase font-bold text-amber-800 tracking-wider block">
+                      Staff Requested Discount
+                    </span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#74818A]">Type:</span>
+                      <span className="font-medium text-[#18282A]">{discountReq.discountType}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#74818A]">Value:</span>
+                      <span className="font-semibold text-amber-900" data-testid="detail-requested-value">
+                        {discountReq.discountType === "PERCENTAGE"
+                          ? `${discountReq.discountValue}%`
+                          : formatReportMoney(Number(discountReq.discountValue), booking.currency)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs border-t border-[#F0F3F4] pt-1">
+                      <span className="text-[#74818A]">Deduction Amount:</span>
+                      <span className="font-bold text-rose-700" data-testid="detail-requested-amount">
+                        -{formatReportMoney(Number(discountReq.discountAmount), booking.currency)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#74818A]">Proposed Final Price:</span>
+                      <span className="font-medium text-[#18282A]" data-testid="detail-proposed-final-price">
+                        {formatReportMoney(Number(discountReq.proposedFinalPrice), booking.currency)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Admin Approved Discount */}
+                  <div className="rounded-lg bg-white p-3 border border-emerald-200 space-y-1.5" data-testid="detail-approved-discount-box">
+                    <span className="text-[10px] uppercase font-bold text-emerald-800 tracking-wider block">
+                      Admin Approved Discount
+                    </span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#74818A]">Approval Status:</span>
+                      <span className="font-bold text-xs text-emerald-700">
+                        {discountReq.status}
+                      </span>
+                    </div>
+                    {discountReq.status === "APPROVED" ? (
+                      <>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[#74818A]">Approved Type:</span>
+                          <span className="font-medium text-[#18282A]">{discountReq.discountType}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[#74818A]">Approved Deduction:</span>
+                          <span className="font-bold text-emerald-700" data-testid="detail-approved-amount">
+                            {(() => {
+                              const approvedAmount =
+                                discountReq.approvedDiscountAmount !== null && discountReq.approvedDiscountAmount !== undefined
+                                  ? Number(discountReq.approvedDiscountAmount)
+                                  : Number(discountReq.discountAmount);
+                              const basePriceVal = Number(booking.basePrice) || 0;
+                              if (discountReq.discountType === "PERCENTAGE" && basePriceVal > 0) {
+                                const computedPct = Math.round((approvedAmount / basePriceVal) * 10000) / 100;
+                                return `-${computedPct}% (${formatReportMoney(approvedAmount, booking.currency)})`;
+                              }
+                              return `-${formatReportMoney(approvedAmount, booking.currency)}`;
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs border-t border-[#F0F3F4] pt-1">
+                          <span className="text-[#74818A] font-semibold">Authoritative Final Price:</span>
+                          <span className="font-bold text-sm text-[#18282A]" data-testid="detail-approved-final-price">
+                            {formatReportMoney(
+                              discountReq.approvedFinalPrice !== null && discountReq.approvedFinalPrice !== undefined
+                                ? Number(discountReq.approvedFinalPrice)
+                                : finalPriceNum,
+                              booking.currency
+                            )}
+                          </span>
+                        </div>
+                      </>
+                    ) : discountReq.status === "REJECTED" ? (
+                      <div className="text-xs text-rose-700 font-medium py-2">
+                        {discountReq.rejectionReason || "Discount request was declined by administrator. Retail standard price applies."}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-amber-700 italic py-2">
+                        Awaiting Admin review and decision.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Justification and Admin Review Notes */}
+                {(discountReq.reason || discountReq.adminNotes) && (
+                  <div className="space-y-2 pt-1">
+                    {discountReq.reason && (
+                      <div className="rounded-lg bg-white/80 p-2.5 border border-amber-200/60 text-xs">
+                        <span className="text-[#74818A] font-semibold block text-[11px]">Staff Discount Reason:</span>
+                        <p className="text-[#18282A] mt-0.5 whitespace-pre-wrap">{discountReq.reason}</p>
+                      </div>
+                    )}
+                    {discountReq.adminNotes && (
+                      <div className="rounded-lg bg-white/80 p-2.5 border border-amber-200/60 text-xs">
+                        <span className="text-[#74818A] font-semibold block text-[11px]">Admin Review Notes:</span>
+                        <p className="text-[#18282A] mt-0.5 whitespace-pre-wrap">{discountReq.adminNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-[#E5EAED] bg-[#FAFCFC] p-3 text-center text-xs text-[#74818A]">
+                Standard booking rate applied. No custom discount was requested or attached.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section 4: Attribution & Ownership */}
+        <div className="rounded-xl border border-[#E5EAED] p-4 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#18282A] uppercase tracking-wider">
+            <Briefcase className="h-4 w-4 text-[#176779]" />
+            <span>Attribution & Operations Assignment</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+            <div>
+              <span className="text-[#74818A] block">Booking Creator:</span>
+              <p className="font-semibold text-[#18282A] mt-0.5">
+                {booking.createdBy?.name || "Staff / Direct Portal"}
+              </p>
+              {booking.createdBy?.role && (
+                <span className="inline-block text-[10px] uppercase font-bold text-[#176779] bg-[#E8F8F5] px-1.5 py-0.2 rounded mt-0.5">
+                  {booking.createdBy.role}
+                </span>
+              )}
+            </div>
+
+            <div>
+              <span className="text-[#74818A] block">Assigned Operational Staff:</span>
+              <p className="font-semibold text-[#18282A] mt-0.5">
+                {booking.assignedStaff?.name || "Unassigned"}
+              </p>
+            </div>
+
+            <div>
+              <span className="text-[#74818A] block">Originating Source:</span>
+              <div className="mt-1">
+                <BookingSourceBadge source={booking.source || "DIRECT"} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 5: Pickup Location & Special Instructions */}
         <div className="rounded-xl border border-[#E5EAED] p-4 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold text-[#18282A] uppercase tracking-wider">
             <MapPin className="h-4 w-4 text-[#176779]" />
@@ -320,6 +542,29 @@ export function StaffBookingDetailsDialog({
             )}
           </div>
         </div>
+
+        {/* Section 6: Audit & Activity History */}
+        {auditTimeline.length > 0 && (
+          <div className="rounded-xl border border-[#E5EAED] p-4 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#18282A] uppercase tracking-wider">
+              <History className="h-4 w-4 text-[#176779]" />
+              <span>Activity & Audit History</span>
+            </div>
+            <div className="space-y-2 max-h-40 overflow-y-auto pt-1">
+              {auditTimeline.map((item: any) => (
+                <div key={item.id} className="flex items-start justify-between text-[11px] border-b border-[#F0F3F4] pb-1.5 last:border-0">
+                  <div>
+                    <span className="font-semibold text-[#18282A]">{item.action}</span>
+                    <p className="text-[#74818A]">
+                      By: {item.actorName || "User"} ({item.actorRole})
+                    </p>
+                  </div>
+                  <span className="text-[#96A4AB] text-[10px]">{formatDate(item.createdAt)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Modal Footer */}
         <div className="flex items-center justify-between border-t border-[#E5EAED] pt-4">

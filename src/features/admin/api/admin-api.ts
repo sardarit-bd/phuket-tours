@@ -439,6 +439,45 @@ export const adminApi = baseApi.injectEndpoints({
     }),
 
     // Staff Portal Operations Endpoints
+    getStaffCreatedBookings: builder.query<
+      AdminApiResponse<StaffBookingsListResponse>,
+      GetStaffBookingsParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.status && params.status !== "ALL") {
+          queryParams.status = params.status;
+        }
+        if (params?.paymentStatus && params.paymentStatus !== "ALL") {
+          queryParams.paymentStatus = params.paymentStatus;
+        }
+        if (params?.fulfillmentStatus && params.fulfillmentStatus !== "ALL") {
+          queryParams.fulfillmentStatus = params.fulfillmentStatus;
+        }
+        if (params?.search) {
+          queryParams.search = params.search;
+        }
+
+        return {
+          url: "/staff/created-bookings",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((b) => ({
+                type: "Booking" as const,
+                id: b.id,
+              })),
+              { type: "Booking", id: "STAFF_CREATED_LIST" },
+            ]
+          : [{ type: "Booking", id: "STAFF_CREATED_LIST" }],
+    }),
+
     getStaffOperationsBookings: builder.query<
       AdminApiResponse<StaffBookingsListResponse>,
       GetStaffBookingsParams | void
@@ -511,6 +550,7 @@ export const adminApi = baseApi.injectEndpoints({
       invalidatesTags: [
         { type: "Booking", id: "LIST" },
         { type: "Booking", id: "STAFF_LIST" },
+        { type: "Booking", id: "STAFF_CREATED_LIST" },
         "AdminReport",
       ],
     }),
@@ -527,6 +567,7 @@ export const adminApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "STAFF_LIST" },
+        { type: "Booking", id: "STAFF_CREATED_LIST" },
       ],
     }),
 
@@ -583,15 +624,23 @@ export const adminApi = baseApi.injectEndpoints({
       AdminApiResponse<PendingReservationRecord>,
       ReviewPendingReservationInput
     >({
-      query: ({ bookingId, action, notes }) => ({
+      query: ({ bookingId, action, notes, approvedDiscountValue, rejectionReason }) => ({
         url: `/admin/bookings/pending/${bookingId}/review`,
         method: "POST",
-        body: { action, notes },
+        body: {
+          action,
+          notes,
+          approvedDiscountValue,
+          rejectionReason,
+        },
       }),
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
+        { type: "Booking", id: "STAFF_CREATED_LIST" },
         "AdminReport",
+        "AdminDiscount",
       ],
     }),
 
@@ -1401,6 +1450,8 @@ export const {
   useGetAdminBookingHistoryQuery,
   useLazyGetAdminBookingHistoryQuery,
   // Staff Portal Hooks
+  useGetStaffCreatedBookingsQuery,
+  useLazyGetStaffCreatedBookingsQuery,
   useGetStaffOperationsBookingsQuery,
   useLazyGetStaffOperationsBookingsQuery,
   useGetStaffOperationsBookingByIdQuery,

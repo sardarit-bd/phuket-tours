@@ -6,6 +6,21 @@ import * as permissionsHookModule from "@/features/admin/hooks/use-permissions";
 import type { StaffBookingRecord } from "@/features/admin/types/admin-bookings";
 
 vi.mock("@/features/admin/hooks/use-permissions");
+vi.mock("@/features/admin/api/admin-api", async (importOriginal) => {
+  const actual = await importOriginal<typeof adminApi>();
+  return {
+    ...actual,
+    useGetStaffBookingHistoryQuery: vi.fn().mockReturnValue({
+      data: {
+        success: true,
+        data: {
+          items: [],
+        },
+      },
+      isLoading: false,
+    }),
+  };
+});
 
 const MOCK_ASSIGNED_BOOKINGS: StaffBookingRecord[] = [
   {
@@ -102,6 +117,28 @@ describe("StaffBookingsView component", () => {
       refetch: mockRefetch,
     } as any);
 
+    vi.spyOn(adminApi, "useGetStaffCreatedBookingsQuery").mockReturnValue({
+      data: {
+        success: true,
+        message: "Retrieved created bookings",
+        data: {
+          items: MOCK_ASSIGNED_BOOKINGS,
+          total: 2,
+          page: 1,
+          limit: 10,
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: mockRefetch,
+    } as any);
+
+    vi.spyOn(adminApi, "useGenerateStaffPaymentLinkMutation").mockReturnValue([
+      vi.fn().mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ success: true, data: { paymentUrl: "http://pay.local" } }) }),
+      { isLoading: false } as any,
+    ]);
+
     vi.spyOn(adminApi, "useUpdateStaffBookingFulfillmentStatusMutation").mockReturnValue([
       mockUpdateStatus,
       { isLoading: false } as any,
@@ -117,10 +154,10 @@ describe("StaffBookingsView component", () => {
     render(<StaffBookingsView />);
 
     expect(screen.getByTestId("staff-bookings-dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Staff Operations Workspace")).toBeInTheDocument();
+    expect(screen.getByText("Staff Bookings Workspace")).toBeInTheDocument();
 
     // Summary counts
-    expect(screen.getByText("Total Assigned")).toBeInTheDocument();
+    expect(screen.getAllByText("My Created Bookings").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1);
 
     // Check table rows
@@ -130,7 +167,134 @@ describe("StaffBookingsView component", () => {
     expect(screen.getByText("James Bond Island Explorer")).toBeInTheDocument();
   });
 
-  it("opens booking details dialog with operational manifests", () => {
+  it("disables Pay Link button with informative tooltip when booking is paid", () => {
+    render(<StaffBookingsView />);
+    const payLinkBtn = screen.getByTestId("staff-payment-link-bkg-staff-1");
+    expect(payLinkBtn).toBeDisabled();
+    expect(payLinkBtn).toHaveAttribute("title", "Payment has already been completed.");
+  });
+
+  it("disables Pay Link button when awaiting approval (with or without discount)", () => {
+    const mockAwaitingBooking: StaffBookingRecord = {
+      ...MOCK_ASSIGNED_BOOKINGS[0],
+      id: "bkg-awaiting",
+      status: "AWAITING_APPROVAL",
+      requiresApproval: true,
+      paymentStatus: "UNPAID",
+      discountRequests: [
+        {
+          id: "dr-pending",
+          discountType: "PERCENTAGE",
+          discountValue: 10,
+          originalPrice: 13240,
+          discountAmount: 1324,
+          proposedFinalPrice: 11916,
+          status: "PENDING",
+          reason: "VIP client",
+          rejectionReason: null,
+          adminNotes: null,
+          requestedById: "staff-me",
+          reviewedById: null,
+          reviewedAt: null,
+          createdAt: "2026-11-18T10:00:00.000Z",
+        },
+      ],
+    };
+
+    const mockPendingNoDiscountBooking: StaffBookingRecord = {
+      ...MOCK_ASSIGNED_BOOKINGS[0],
+      id: "bkg-pending-no-discount",
+      status: "PENDING",
+      requiresApproval: false,
+      paymentStatus: "UNPAID",
+      discountRequests: [],
+    };
+
+    vi.spyOn(adminApi, "useGetStaffCreatedBookingsQuery").mockReturnValue({
+      data: {
+        success: true,
+        message: "Retrieved created bookings",
+        data: {
+          items: [mockAwaitingBooking, mockPendingNoDiscountBooking],
+          total: 2,
+          page: 1,
+          limit: 10,
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    render(<StaffBookingsView />);
+
+    // 1. Booking with discount awaiting approval
+    const payLinkBtnWithDiscount = screen.getByTestId("staff-payment-link-bkg-awaiting");
+    expect(payLinkBtnWithDiscount).toBeDisabled();
+    expect(payLinkBtnWithDiscount).toHaveAttribute("title", "Waiting for Admin approval.");
+
+    // 2. Booking without discount in PENDING status awaiting approval
+    const payLinkBtnNoDiscount = screen.getByTestId("staff-payment-link-bkg-pending-no-discount");
+    expect(payLinkBtnNoDiscount).toBeDisabled();
+    expect(payLinkBtnNoDiscount).toHaveAttribute("title", "Waiting for Admin approval.");
+  });
+
+  it("enables Pay Link button when booking is confirmed and unpaid", () => {
+    const mockConfirmedUnpaidBooking: StaffBookingRecord = {
+      ...MOCK_ASSIGNED_BOOKINGS[0],
+      id: "bkg-unpaid-confirmed",
+      status: "CONFIRMED",
+      requiresApproval: false,
+      paymentStatus: "UNPAID",
+      basePrice: 13240,
+      finalPrice: 12578,
+      currency: "THB",
+      discountRequests: [
+        {
+          id: "dr-approved",
+          discountType: "PERCENTAGE",
+          discountValue: 10,
+          originalPrice: 13240,
+          discountAmount: 1324,
+          proposedFinalPrice: 11916,
+          status: "APPROVED",
+          approvedDiscountAmount: 662,
+          approvedFinalPrice: 12578,
+          reason: "Loyal customer",
+          rejectionReason: null,
+          adminNotes: "Approved 5% partial discount",
+          requestedById: "staff-me",
+          reviewedById: "admin-1",
+          reviewedAt: "2026-11-18T11:00:00.000Z",
+          createdAt: "2026-11-18T10:00:00.000Z",
+        },
+      ],
+    };
+
+    vi.spyOn(adminApi, "useGetStaffCreatedBookingsQuery").mockReturnValue({
+      data: {
+        success: true,
+        message: "Retrieved created bookings",
+        data: {
+          items: [mockConfirmedUnpaidBooking],
+          total: 1,
+          page: 1,
+          limit: 10,
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    render(<StaffBookingsView />);
+    const payLinkBtn = screen.getByTestId("staff-payment-link-bkg-unpaid-confirmed");
+    expect(payLinkBtn).not.toBeDisabled();
+  });
+
+  it("opens booking details dialog with operational manifests and pricing breakdown", () => {
     render(<StaffBookingsView />);
 
     const detailsBtn = screen.getByTestId("staff-view-details-bkg-staff-1");

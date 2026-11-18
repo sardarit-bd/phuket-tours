@@ -90,6 +90,38 @@ export interface OperationalBookingRecord {
     receivedAt: string | null;
     createdAt: string;
   }>;
+  priceApproval?: {
+    id: string;
+    requestedPrice: number | string;
+    approvedPrice: number | string | null;
+    status: string;
+    notes: string | null;
+    reviewedAt: string | null;
+  } | null;
+  discountRequests?: Array<{
+    id: string;
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountValue: number;
+    originalPrice: number;
+    discountAmount: number;
+    proposedFinalPrice: number;
+    approvedDiscountAmount?: number | null;
+    approvedFinalPrice?: number | null;
+    status: string;
+    reason: string;
+    rejectionReason: string | null;
+    adminNotes: string | null;
+    requestedById: string;
+    reviewedById: string | null;
+    reviewedAt: string | null;
+    createdAt: string;
+    requestedBy?: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+    } | null;
+  }>;
 }
 
 export interface GetAdminBookingsParams {
@@ -97,6 +129,7 @@ export interface GetAdminBookingsParams {
   limit?: number;
   fulfillmentStatus?: string;
   assignedStaffId?: string;
+  createdById?: string;
   agentId?: string;
   source?: string;
 }
@@ -105,6 +138,9 @@ export interface GetStaffBookingsParams {
   page?: number;
   limit?: number;
   fulfillmentStatus?: string;
+  status?: string;
+  paymentStatus?: string;
+  search?: string;
 }
 
 export interface StaffBookingRecord extends OperationalBookingRecord {}
@@ -165,6 +201,7 @@ export interface PendingReservationRecord {
   status: "PENDING" | "AWAITING_APPROVAL" | "CONFIRMED" | "CANCELLED";
   paymentStatus: BookingPaymentStatus;
   fulfillmentStatus: FulfillmentStatusValue;
+  source?: BookingSourceValue | null;
   currency: string;
   basePrice: number | string;
   proposedPrice?: number | string | null;
@@ -172,6 +209,8 @@ export interface PendingReservationRecord {
   requiresApproval: boolean;
   notes: string | null;
   internalNotes: string | null;
+  createdById?: string | null;
+  createdBy?: CreatorAttributionInfo | null;
   assignedStaffId?: string | null;
   assignedStaff?: {
     id: string;
@@ -218,6 +257,30 @@ export interface PendingReservationRecord {
     notes: string | null;
     reviewedAt: string | null;
   } | null;
+  discountRequests?: Array<{
+    id: string;
+    discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+    discountValue: number;
+    originalPrice: number;
+    discountAmount: number;
+    proposedFinalPrice: number;
+    approvedDiscountAmount?: number | null;
+    approvedFinalPrice?: number | null;
+    status: string;
+    reason: string;
+    rejectionReason: string | null;
+    adminNotes: string | null;
+    requestedById: string;
+    reviewedById: string | null;
+    reviewedAt: string | null;
+    createdAt: string;
+    requestedBy?: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+    } | null;
+  }>;
 }
 
 export interface AdminPendingReservationsResponse {
@@ -231,6 +294,8 @@ export interface ReviewPendingReservationInput {
   bookingId: string;
   action: "CONFIRM" | "REJECT";
   notes?: string;
+  approvedDiscountValue?: number;
+  rejectionReason?: string;
 }
 
 export interface BookingHistoryRecord {

@@ -375,4 +375,136 @@ describe("CreateStaffBookingDialog component", () => {
       ).toBeInTheDocument();
     });
   });
+
+  it("submits booking with optional discount request when discount toggle is enabled", async () => {
+    mockCreateStaffBooking.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: "bkg-discount-req-1",
+          serviceId: "tour-1",
+          customerId: "cust-1",
+          basePrice: 240,
+          finalPrice: 240,
+          currency: "USD",
+          status: "AWAITING_APPROVAL",
+          paymentStatus: "UNPAID",
+          requiresApproval: true,
+        },
+      }),
+    });
+
+    render(<CreateStaffBookingDialog isOpen={true} onClose={mockOnClose} />);
+
+    // Select existing customer
+    fireEvent.click(screen.getByTestId("staff-customer-mode-existing"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("staff-existing-customer-select")).toBeInTheDocument();
+    });
+
+    // Enable discount toggle
+    const toggle = screen.getByTestId("enable-discount-toggle");
+    fireEvent.click(toggle);
+
+    expect(screen.getByTestId("staff-discount-value-input")).toBeInTheDocument();
+    expect(screen.getByTestId("staff-discount-reason-input")).toBeInTheDocument();
+
+    // Fill in discount details: 10%
+    fireEvent.change(screen.getByTestId("staff-discount-value-input"), {
+      target: { value: "10" },
+    });
+    fireEvent.change(screen.getByTestId("staff-discount-reason-input"), {
+      target: { value: "Loyal VIP Customer promotion" },
+    });
+
+    // Check preview calculation: 10% of 240 = 24 -> proposed: $216.00
+    expect(screen.getByTestId("proposed-final-price-preview")).toHaveTextContent("$216.00");
+
+    // Submit booking form
+    fireEvent.submit(screen.getByTestId("create-staff-booking-dialog"));
+
+    await waitFor(() => {
+      expect(mockCreateStaffBooking).toHaveBeenCalledTimes(1);
+    });
+
+    const calledPayload = mockCreateStaffBooking.mock.calls[0][0];
+    expect(calledPayload.discount).toEqual({
+      discountType: "PERCENTAGE",
+      discountValue: 10,
+      reason: "Loyal VIP Customer promotion",
+    });
+
+    // Verify success banner states awaiting approval and locks payment link
+    await waitFor(() => {
+      expect(screen.getByText("Awaiting Admin Approval")).toBeInTheDocument();
+      expect(screen.getByText("Payment Link Generation Locked")).toBeInTheDocument();
+      expect(screen.queryByTestId("staff-generate-payment-link-btn")).not.toBeInTheDocument();
+    });
+  });
+
+  it("accepts valid decimal percentage values (e.g., 10.5) and decimal fixed-amounts without HTML step mismatch", async () => {
+    mockCreateStaffBooking.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          id: "bkg-decimal-1",
+          serviceId: "tour-1",
+          customerId: "cust-1",
+          basePrice: 240,
+          finalPrice: 240,
+          currency: "USD",
+          status: "AWAITING_APPROVAL",
+          paymentStatus: "UNPAID",
+          requiresApproval: true,
+        },
+      }),
+    });
+
+    render(<CreateStaffBookingDialog isOpen={true} onClose={mockOnClose} />);
+
+    fireEvent.click(screen.getByTestId("staff-customer-mode-existing"));
+    await waitFor(() => {
+      expect(screen.getByTestId("staff-existing-customer-select")).toBeInTheDocument();
+    });
+
+    // Enable discount toggle
+    fireEvent.click(screen.getByTestId("enable-discount-toggle"));
+
+    const input = screen.getByTestId("staff-discount-value-input") as HTMLInputElement;
+    // Step should be 0.01 and min 0.01
+    expect(input.step).toBe("0.01");
+    expect(input.min).toBe("0.01");
+
+    // Test decimal percentage: 10.5%
+    fireEvent.change(input, { target: { value: "10.5" } });
+    fireEvent.change(screen.getByTestId("staff-discount-reason-input"), {
+      target: { value: "Partner 10.5% promo" },
+    });
+
+    // 10.5% of 240 = 25.20 -> proposed: $214.80
+    expect(screen.getByTestId("proposed-final-price-preview")).toHaveTextContent("$214.80");
+
+    // Switch to fixed amount and test decimal: 25.50 USD
+    fireEvent.click(screen.getByTestId("discount-type-fixed"));
+    expect(input.step).toBe("0.01");
+    expect(input.min).toBe("0.01");
+
+    fireEvent.change(input, { target: { value: "25.50" } });
+    // 240 - 25.50 = 214.50
+    expect(screen.getByTestId("proposed-final-price-preview")).toHaveTextContent("$214.50");
+
+    fireEvent.submit(screen.getByTestId("create-staff-booking-dialog"));
+
+    await waitFor(() => {
+      expect(mockCreateStaffBooking).toHaveBeenCalledTimes(1);
+    });
+
+    const calledPayload = mockCreateStaffBooking.mock.calls[0][0];
+    expect(calledPayload.discount).toEqual({
+      discountType: "FIXED_AMOUNT",
+      discountValue: 25.5,
+      reason: "Partner 10.5% promo",
+    });
+  });
 });

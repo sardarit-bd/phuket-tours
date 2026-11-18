@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import {
   DashboardNavConfig,
   hasAllPermissions,
@@ -30,6 +30,16 @@ export function DashboardSidebar({
   const pathname = usePathname() ?? "/dashboard";
   const user = useAppSelector(selectCurrentUser);
   const { hasPermission, isAdmin, permissions } = usePermissions();
+
+  // State to track manually expanded/collapsed submenus
+  const [openSubmenus, setOpenSubmenus] = React.useState<Record<string, boolean>>({});
+
+  const toggleSubmenu = (key: string) => {
+    setOpenSubmenus((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const isViewAdmin = config.role === "admin";
   const isViewStaff = config.role === "staff";
@@ -132,8 +142,106 @@ export function DashboardSidebar({
         </div>
         <ul className="space-y-1">
           {visibleItems.map((item) => {
-            const isActive = isNavItemActive(pathname, item);
+            const hasChildren = Boolean(item.children && item.children.length > 0);
+            const isRouteActive = isNavItemActive(pathname, item);
+            const isSubmenuExplicitlyOpen = openSubmenus[item.href];
+            const isExpanded = isSubmenuExplicitlyOpen ?? isRouteActive;
             const Icon = item.icon;
+
+            if (hasChildren && item.children) {
+              return (
+                <li key={item.href} className="space-y-1">
+                  <div className="flex items-center">
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex flex-1 items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        isRouteActive
+                          ? "bg-[#3297A3]/10 text-[#3297A3] font-semibold"
+                          : "text-[#263238] hover:bg-[#EEF4F6] hover:text-[#18282A]"
+                      )}
+                      aria-current={isRouteActive ? "page" : undefined}
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-colors",
+                            isRouteActive ? "text-[#3297A3]" : "text-[#74818A]"
+                          )}
+                        />
+                        <span className="truncate">{item.title}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="rounded-full bg-[#3297A3]/15 px-2 py-0.5 text-[10px] font-semibold text-[#3297A3]">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => toggleSubmenu(item.href)}
+                      className="p-2 text-[#74818A] hover:text-[#18282A] rounded-lg hover:bg-[#EEF4F6] transition-colors cursor-pointer shrink-0 ml-0.5"
+                      aria-label={isExpanded ? `Collapse ${item.title}` : `Expand ${item.title}`}
+                      data-testid={`sidebar-submenu-toggle-${item.href.replace(/[\/]/g, "-")}`}
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 transition-transform duration-200",
+                          isExpanded ? "rotate-180 text-[#3297A3]" : ""
+                        )}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Submenu links */}
+                  {isExpanded && (
+                    <ul
+                      className="ml-4 pl-3 border-l border-[#E5EAED] space-y-1 py-0.5"
+                      data-testid={`sidebar-submenu-${item.href.replace(/[\/]/g, "-")}`}
+                    >
+                      {item.children.map((subItem) => {
+                        const isSubActive = isNavItemActive(pathname, subItem);
+                        const SubIcon = subItem.icon;
+                        return (
+                          <li key={subItem.href}>
+                            <Link
+                              href={subItem.href}
+                              onClick={onNavigate}
+                              className={cn(
+                                "flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                                isSubActive
+                                  ? "bg-[#3297A3]/10 text-[#3297A3] font-semibold"
+                                  : "text-[#556972] hover:bg-[#EEF4F6] hover:text-[#18282A]"
+                              )}
+                              aria-current={isSubActive ? "page" : undefined}
+                              data-testid={`sidebar-subitem-${subItem.href.replace(/[\/]/g, "-")}`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                {SubIcon && (
+                                  <SubIcon
+                                    className={cn(
+                                      "h-3.5 w-3.5 shrink-0 transition-colors",
+                                      isSubActive ? "text-[#3297A3]" : "text-[#96A4AB]"
+                                    )}
+                                  />
+                                )}
+                                <span className="truncate">{subItem.title}</span>
+                              </div>
+                              {subItem.badge && (
+                                <span className="rounded-full bg-[#3297A3]/15 px-1.5 py-0.2 text-[9px] font-semibold text-[#3297A3]">
+                                  {subItem.badge}
+                                </span>
+                              )}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </li>
+              );
+            }
 
             return (
               <li key={item.href}>
@@ -142,17 +250,17 @@ export function DashboardSidebar({
                   onClick={onNavigate}
                   className={cn(
                     "flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    isActive
+                    isRouteActive
                       ? "bg-[#3297A3]/10 text-[#3297A3] font-semibold shadow-2xs"
                       : "text-[#263238] hover:bg-[#EEF4F6] hover:text-[#18282A]"
                   )}
-                  aria-current={isActive ? "page" : undefined}
+                  aria-current={isRouteActive ? "page" : undefined}
                 >
                   <div className="flex items-center gap-3 truncate">
                     <Icon
                       className={cn(
                         "h-4 w-4 shrink-0 transition-colors",
-                        isActive ? "text-[#3297A3]" : "text-[#74818A]"
+                        isRouteActive ? "text-[#3297A3]" : "text-[#74818A]"
                       )}
                     />
                     <span className="truncate">{item.title}</span>

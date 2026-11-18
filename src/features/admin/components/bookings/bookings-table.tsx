@@ -28,6 +28,11 @@ export interface BookingsTableProps {
   onViewHistory?: (booking: OperationalBookingRecord) => void;
   onAssignStaff: (booking: OperationalBookingRecord) => void;
   onUpdateFulfillment: (booking: OperationalBookingRecord) => void;
+  onReviewBooking?: (booking: OperationalBookingRecord) => void;
+  onConfirmBooking?: (booking: OperationalBookingRecord) => void;
+  onCancelBooking?: (booking: OperationalBookingRecord) => void;
+  onViewRejectionReason?: (booking: OperationalBookingRecord) => void;
+  // Deprecated aliases kept for full backward compatibility
   onReviewPriceApproval?: (booking: OperationalBookingRecord) => void;
   onConfirmPending?: (booking: OperationalBookingRecord) => void;
   onRejectPending?: (booking: OperationalBookingRecord) => void;
@@ -57,6 +62,10 @@ export function BookingsTable({
   onViewHistory,
   onAssignStaff,
   onUpdateFulfillment,
+  onReviewBooking,
+  onConfirmBooking,
+  onCancelBooking,
+  onViewRejectionReason,
   onReviewPriceApproval,
   onConfirmPending,
   onRejectPending,
@@ -390,9 +399,10 @@ export function BookingsTable({
                     onViewHistory={onViewHistory}
                     onAssignStaff={onAssignStaff}
                     onUpdateFulfillment={onUpdateFulfillment}
-                    onReviewPriceApproval={onReviewPriceApproval}
-                    onConfirmPending={onConfirmPending}
-                    onRejectPending={onRejectPending}
+                    onReviewBooking={onReviewBooking || onReviewPriceApproval}
+                    onConfirmBooking={onConfirmBooking || onConfirmPending}
+                    onCancelBooking={onCancelBooking || onRejectPending}
+                    onViewRejectionReason={onViewRejectionReason}
                   />
                 </td>
               </tr>

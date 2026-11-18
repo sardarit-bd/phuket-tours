@@ -13,6 +13,8 @@ import {
   AlertCircle,
   Search,
   RotateCcw,
+  Tag,
+  ShieldCheck,
 } from "lucide-react";
 import {
   useGetAdminPendingReservationsQuery,
@@ -46,6 +48,9 @@ export function AdminPendingReservationsTab() {
   const [actionRejectReservation, setActionRejectReservation] =
     React.useState<PendingReservationRecord | null>(null);
   const [notes, setNotes] = React.useState<string>("");
+  const [rejectionReason, setRejectionReason] = React.useState<string>("");
+  const [isPartialApproval, setIsPartialApproval] = React.useState<boolean>(false);
+  const [approvedDiscountValue, setApprovedDiscountValue] = React.useState<string>("");
   const [actionError, setActionError] = React.useState<string | null>(null);
 
   // Queries & Mutations
@@ -72,17 +77,73 @@ export function AdminPendingReservationsTab() {
   const reservations = pendingData?.data?.items || [];
   const total = pendingData?.data?.total || 0;
 
+  // Active discount on confirmation reservation
+  const activeDiscount = actionConfirmReservation?.discountRequests?.[0];
+  const origPriceNum = actionConfirmReservation ? Number(actionConfirmReservation.basePrice) || 0 : 0;
+  const partialValNum = parseFloat(approvedDiscountValue) || 0;
+
+  const partialPreview = React.useMemo(() => {
+    if (!activeDiscount || !isPartialApproval) {
+      return {
+        discountAmount: activeDiscount ? Number(activeDiscount.discountAmount) || 0 : 0,
+        finalPrice: activeDiscount ? Number(activeDiscount.proposedFinalPrice) || 0 : origPriceNum,
+        isValid: true,
+      };
+    }
+
+    if (partialValNum <= 0) {
+      return {
+        discountAmount: 0,
+        finalPrice: origPriceNum,
+        isValid: false,
+        error: "Approved discount value must be greater than zero.",
+      };
+    }
+
+    const requestedVal = Number(activeDiscount.discountValue);
+    if (partialValNum > requestedVal) {
+      return {
+        discountAmount: 0,
+        finalPrice: origPriceNum,
+        isValid: false,
+        error: `Partial approval cannot exceed requested discount (${requestedVal}${
+          activeDiscount.discountType === "PERCENTAGE" ? "%" : ""
+        }).`,
+      };
+    }
+
+    if (activeDiscount.discountType === "PERCENTAGE") {
+      const amount = Math.round(origPriceNum * (partialValNum / 100) * 100) / 100;
+      const finalP = Math.max(0, Math.round((origPriceNum - amount) * 100) / 100);
+      return { discountAmount: amount, finalPrice: finalP, isValid: true };
+    } else {
+      const amount = Math.round(partialValNum * 100) / 100;
+      const finalP = Math.max(0, Math.round((origPriceNum - amount) * 100) / 100);
+      return { discountAmount: amount, finalPrice: finalP, isValid: true };
+    }
+  }, [activeDiscount, isPartialApproval, partialValNum, origPriceNum]);
+
   const handleConfirm = async () => {
     if (!actionConfirmReservation) return;
     setActionError(null);
+
+    if (activeDiscount && isPartialApproval && (!partialPreview.isValid || partialPreview.error)) {
+      setActionError(partialPreview.error || "Please enter a valid partial discount value.");
+      return;
+    }
+
     try {
       await reviewReservation({
         bookingId: actionConfirmReservation.id,
         action: "CONFIRM",
         notes: notes.trim() ? notes.trim() : undefined,
+        approvedDiscountValue:
+          activeDiscount && isPartialApproval ? partialValNum : undefined,
       }).unwrap();
       setActionConfirmReservation(null);
       setNotes("");
+      setIsPartialApproval(false);
+      setApprovedDiscountValue("");
       refetch();
     } catch (err: any) {
       setActionError(formatErrorMessage(err, "Failed to confirm reservation"));
@@ -92,14 +153,23 @@ export function AdminPendingReservationsTab() {
   const handleReject = async () => {
     if (!actionRejectReservation) return;
     setActionError(null);
+
+    const hasDiscount = Boolean(actionRejectReservation.discountRequests?.length);
+    if (hasDiscount && !rejectionReason.trim()) {
+      setActionError("A rejection reason is mandatory when declining a booking with discount request.");
+      return;
+    }
+
     try {
       await reviewReservation({
         bookingId: actionRejectReservation.id,
         action: "REJECT",
         notes: notes.trim() ? notes.trim() : undefined,
+        rejectionReason: rejectionReason.trim() ? rejectionReason.trim() : undefined,
       }).unwrap();
       setActionRejectReservation(null);
       setNotes("");
+      setRejectionReason("");
       refetch();
     } catch (err: any) {
       setActionError(formatErrorMessage(err, "Failed to reject reservation"));
@@ -196,7 +266,9 @@ export function AdminPendingReservationsTab() {
               <tbody className="divide-y divide-[#E5EAED]">
                 {reservations.map((booking) => {
                   const isPaid = booking.paymentStatus === "PAID";
-                  const canConfirm = !booking.requiresApproval && booking.status === "PENDING";
+                  const hasDiscount = Boolean(booking.discountRequests && booking.discountRequests.length > 0);
+                  const isAgentPriceApproval = Boolean(booking.priceApproval && booking.priceApproval.status === "PENDING");
+                  const canConfirm = !isAgentPriceApproval && (booking.status === "PENDING" || booking.status === "AWAITING_APPROVAL");
                   return (
                     <tr key={booking.id} className="hover:bg-[#FAFCFD] transition-colors">
                       {/* Ref & Date */}
@@ -227,7 +299,13 @@ export function AdminPendingReservationsTab() {
 
                       {/* Amount */}
                       <td className="py-3 px-4 font-semibold text-[#18282A]">
-                        {booking.currency} {Number(booking.finalPrice).toFixed(2)}
+                        <div>{booking.currency} {Number(booking.finalPrice).toFixed(2)}</div>
+                        {hasDiscount && (
+                          <div className="text-[10px] font-normal text-amber-700 flex items-center gap-1 mt-0.5">
+                            <Tag className="h-2.5 w-2.5" />
+                            <span>Req: {booking.currency} {Number(booking.discountRequests![0].proposedFinalPrice).toFixed(2)}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Payment Status */}
@@ -247,12 +325,14 @@ export function AdminPendingReservationsTab() {
                       <td className="py-3 px-4">
                         <span
                           className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                            booking.requiresApproval
+                            booking.requiresApproval || booking.status === "AWAITING_APPROVAL"
                               ? "bg-purple-50 text-purple-800 border border-purple-200"
                               : "bg-sky-50 text-sky-800 border border-sky-200"
                           }`}
                         >
-                          {booking.requiresApproval ? "AWAITING_APPROVAL" : booking.status}
+                          {booking.requiresApproval || booking.status === "AWAITING_APPROVAL"
+                            ? "AWAITING_APPROVAL"
+                            : booking.status}
                         </span>
                       </td>
 
@@ -275,14 +355,20 @@ export function AdminPendingReservationsTab() {
                               onClick={() => {
                                 setActionError(null);
                                 setNotes("");
+                                setIsPartialApproval(false);
+                                setApprovedDiscountValue(
+                                  booking.discountRequests?.[0]
+                                    ? String(booking.discountRequests[0].discountValue)
+                                    : ""
+                                );
                                 setActionConfirmReservation(booking);
                               }}
                               className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 cursor-pointer"
-                              title="Confirm Reservation"
+                              title={hasDiscount ? "Approve Booking & Discount" : "Confirm Reservation"}
                               data-testid={`confirm-pending-${booking.id}`}
                             >
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                              <span>Confirm</span>
+                              <span>{hasDiscount ? "Approve" : "Confirm"}</span>
                             </button>
                           )}
 
@@ -291,6 +377,7 @@ export function AdminPendingReservationsTab() {
                             onClick={() => {
                               setActionError(null);
                               setNotes("");
+                              setRejectionReason("");
                               setActionRejectReservation(booking);
                             }}
                             className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-100 cursor-pointer"
@@ -322,11 +409,13 @@ export function AdminPendingReservationsTab() {
         <Dialog
           isOpen={true}
           onClose={() => setActionConfirmReservation(null)}
-          title="Confirm Tour Reservation"
+          title={activeDiscount ? "Approve Booking & Discount" : "Confirm Tour Reservation"}
         >
-          <div className="space-y-4 p-4 text-xs font-outfit">
+          <div className="space-y-4 p-4 text-xs font-outfit max-h-[85vh] overflow-y-auto">
             <p className="text-[#556972] leading-relaxed">
-              Confirming this reservation will move it to the <strong className="text-[#18282A]">Operational Queue</strong> as <span className="text-emerald-700 font-semibold">Not Started</span>, making it eligible for staff dispatch and guide assignment.
+              {activeDiscount
+                ? "Review and approve this staff-created booking and its requested discount. Confirming finalizes the discount and moves the booking into the operational queue."
+                : "Confirming this reservation will move it to the Operational Queue as Not Started, making it eligible for staff dispatch and guide assignment."}
             </p>
 
             <div className="rounded-xl border border-[#E5EAED] bg-[#F5F8F9] p-3 space-y-1.5">
@@ -339,12 +428,112 @@ export function AdminPendingReservationsTab() {
                 <span className="font-semibold text-[#18282A]">{actionConfirmReservation.service.name}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-[#74818A]">Standard Price:</span>
+                <span className="font-semibold text-[#18282A]">
+                  {actionConfirmReservation.currency} {origPriceNum.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-[#74818A]">Payment Status:</span>
                 <span className={`font-semibold ${actionConfirmReservation.paymentStatus === "PAID" ? "text-emerald-700" : "text-amber-700"}`}>
                   {actionConfirmReservation.paymentStatus}
                 </span>
               </div>
             </div>
+
+            {/* Discount Details & Review Controls */}
+            {activeDiscount && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <Tag className="h-4 w-4 text-amber-700" />
+                  <span>Requested Discount Information</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-amber-800 block text-[11px]">Discount Type:</span>
+                    <span className="font-semibold text-[#18282A]">
+                      {activeDiscount.discountType === "PERCENTAGE" ? "Percentage (%)" : "Fixed Amount"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-amber-800 block text-[11px]">Requested Value:</span>
+                    <span className="font-semibold text-[#18282A]">
+                      {activeDiscount.discountValue}
+                      {activeDiscount.discountType === "PERCENTAGE" ? "%" : ` ${actionConfirmReservation.currency}`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-amber-800 block text-[11px]">Discount Amount:</span>
+                    <span className="font-semibold text-rose-600">
+                      -{actionConfirmReservation.currency} {Number(activeDiscount.discountAmount).toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-amber-800 block text-[11px]">Proposed Final Price:</span>
+                    <span className="font-bold text-emerald-800">
+                      {actionConfirmReservation.currency} {Number(activeDiscount.proposedFinalPrice).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white/80 rounded-xl p-2.5 border border-amber-200/60 text-xs">
+                  <span className="text-amber-900 font-semibold block mb-0.5">Staff Reason:</span>
+                  <p className="text-[#18282A] italic">&ldquo;{activeDiscount.reason}&rdquo;</p>
+                  {activeDiscount.requestedBy && (
+                    <span className="text-[10px] text-[#74818A] block mt-1">
+                      Requested by: {activeDiscount.requestedBy.name} ({activeDiscount.requestedBy.email})
+                    </span>
+                  )}
+                </div>
+
+                {/* Partial Approval Toggle */}
+                <div className="pt-2 border-t border-amber-200">
+                  <label className="flex items-center gap-2 cursor-pointer font-medium text-amber-950">
+                    <input
+                      type="checkbox"
+                      checked={isPartialApproval}
+                      onChange={(e) => setIsPartialApproval(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-amber-300 text-[#176779] focus:ring-[#176779]"
+                      data-testid="partial-approval-toggle"
+                    />
+                    <span>Approve lower partial discount instead of full request</span>
+                  </label>
+
+                  {isPartialApproval && (
+                    <div className="mt-2.5 space-y-2 bg-white/90 p-2.5 rounded-xl border border-amber-200">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[#18282A] mb-1">
+                          Approved Discount Value ({activeDiscount.discountType === "PERCENTAGE" ? "%" : actionConfirmReservation.currency})
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max={Number(activeDiscount.discountValue)}
+                          value={approvedDiscountValue}
+                          onChange={(e) => setApprovedDiscountValue(e.target.value)}
+                          className="w-full h-8 rounded-lg border border-[#E5EAED] p-2 text-xs focus:border-[#176779] focus:outline-none"
+                          data-testid="partial-discount-value-input"
+                        />
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs pt-1 border-t border-[#F0F3F4]">
+                        <span className="text-[#74818A]">Adjusted Final Price:</span>
+                        <span className="font-bold text-emerald-700" data-testid="partial-adjusted-price">
+                          {actionConfirmReservation.currency} {partialPreview.finalPrice.toFixed(2)}
+                        </span>
+                      </div>
+                      {partialPreview.error && (
+                        <p className="text-[11px] text-rose-600 font-medium">
+                          {partialPreview.error}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {actionError && (
               <div className="rounded-lg bg-rose-50 border border-rose-200 p-2.5 text-rose-700">
@@ -353,13 +542,20 @@ export function AdminPendingReservationsTab() {
             )}
 
             <div>
-              <label className="block font-medium text-[#18282A] mb-1">Internal Notes (Optional)</label>
+              <label className="block font-medium text-[#18282A] mb-1">
+                {activeDiscount ? "Admin Decision Notes (Optional)" : "Internal Notes (Optional)"}
+              </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g., Verified availability with boat operator"
+                placeholder={
+                  activeDiscount
+                    ? "e.g., Approved as authorized under standard VIP policy"
+                    : "e.g., Verified availability with boat operator"
+                }
                 className="w-full rounded-lg border border-[#E5EAED] p-2 text-xs focus:border-[#176779] focus:outline-none"
                 rows={2}
+                data-testid="confirm-dialog-notes"
               />
             </div>
 
@@ -375,7 +571,10 @@ export function AdminPendingReservationsTab() {
               <Button
                 size="sm"
                 onClick={handleConfirm}
-                disabled={isSubmittingAction}
+                disabled={
+                  isSubmittingAction ||
+                  (Boolean(activeDiscount) && isPartialApproval && !partialPreview.isValid)
+                }
                 className="bg-[#176779] hover:bg-[#135463] text-white"
                 data-testid="confirm-dialog-submit"
               >
@@ -383,6 +582,11 @@ export function AdminPendingReservationsTab() {
                   <>
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                     Confirming...
+                  </>
+                ) : activeDiscount ? (
+                  <>
+                    <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                    <span>Approve Booking &amp; Price</span>
                   </>
                 ) : (
                   "Confirm Reservation"
@@ -402,8 +606,20 @@ export function AdminPendingReservationsTab() {
         >
           <div className="space-y-4 p-4 text-xs font-outfit">
             <p className="text-[#556972] leading-relaxed">
-              Are you sure you want to cancel or reject this reservation? This transitions the booking to <strong className="text-rose-700">CANCELLED</strong>.
+              Are you sure you want to cancel or reject this reservation? This transitions the booking to <strong className="text-rose-700">CANCELLED</strong>
+              {actionRejectReservation.discountRequests?.length ? " and rejects the associated discount request." : "."}
             </p>
+
+            {actionRejectReservation.discountRequests?.[0] && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-3 space-y-1">
+                <span className="font-bold text-rose-900 block">Contains Pending Discount Request:</span>
+                <span className="text-rose-800">
+                  {actionRejectReservation.discountRequests[0].discountValue}
+                  {actionRejectReservation.discountRequests[0].discountType === "PERCENTAGE" ? "%" : ` ${actionRejectReservation.currency}`} discount (
+                  &ldquo;{actionRejectReservation.discountRequests[0].reason}&rdquo;)
+                </span>
+              </div>
+            )}
 
             {actionError && (
               <div className="rounded-lg bg-rose-50 border border-rose-200 p-2.5 text-rose-700">
@@ -412,13 +628,33 @@ export function AdminPendingReservationsTab() {
             )}
 
             <div>
-              <label className="block font-medium text-[#18282A] mb-1">Reason for Rejection / Cancellation</label>
+              <label className="block font-medium text-[#18282A] mb-1">
+                Rejection Reason{" "}
+                {actionRejectReservation.discountRequests?.length ? (
+                  <span className="text-rose-600">* Mandatory</span>
+                ) : (
+                  "(Optional)"
+                )}
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="e.g., Maximum allowable discount exceeded or operator capacity unavailable"
+                className="w-full rounded-lg border border-[#E5EAED] p-2 text-xs focus:border-[#176779] focus:outline-none"
+                rows={2}
+                data-testid="reject-dialog-reason"
+              />
+            </div>
+
+            <div>
+              <label className="block font-medium text-[#18282A] mb-1">Internal Notes (Optional)</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g., Operator fully booked or customer requested cancellation"
                 className="w-full rounded-lg border border-[#E5EAED] p-2 text-xs focus:border-[#176779] focus:outline-none"
                 rows={2}
+                data-testid="reject-dialog-notes"
               />
             </div>
 
@@ -434,7 +670,10 @@ export function AdminPendingReservationsTab() {
               <Button
                 size="sm"
                 onClick={handleReject}
-                disabled={isSubmittingAction}
+                disabled={
+                  isSubmittingAction ||
+                  (Boolean(actionRejectReservation.discountRequests?.length) && !rejectionReason.trim())
+                }
                 className="bg-rose-600 hover:bg-rose-700 text-white"
                 data-testid="reject-dialog-submit"
               >
@@ -474,7 +713,13 @@ export function AdminPendingReservationsTab() {
                 <span className="font-semibold text-[#18282A]">{selectedReservation.service.name}</span>
               </div>
               <div>
-                <span className="text-[#74818A] block">Amount</span>
+                <span className="text-[#74818A] block">Standard Price</span>
+                <span className="font-semibold text-[#18282A]">
+                  {selectedReservation.currency} {Number(selectedReservation.basePrice).toFixed(2)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[#74818A] block">Final Price</span>
                 <span className="font-semibold text-[#18282A]">
                   {selectedReservation.currency} {Number(selectedReservation.finalPrice).toFixed(2)}
                 </span>
@@ -488,6 +733,47 @@ export function AdminPendingReservationsTab() {
                 <span className="font-semibold text-[#18282A]">{selectedReservation.status}</span>
               </div>
             </div>
+
+            {/* Discount Details if Present */}
+            {selectedReservation.discountRequests?.[0] && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 space-y-1.5 text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                  <Tag className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Requested Discount</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-amber-800">Value:</span>{" "}
+                    <span className="font-semibold text-[#18282A]">
+                      {selectedReservation.discountRequests[0].discountValue}
+                      {selectedReservation.discountRequests[0].discountType === "PERCENTAGE" ? "%" : ` ${selectedReservation.currency}`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-amber-800">Discount Amount:</span>{" "}
+                    <span className="font-semibold text-rose-600">
+                      -{selectedReservation.currency} {Number(selectedReservation.discountRequests[0].discountAmount).toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-amber-800">Proposed Price:</span>{" "}
+                    <span className="font-semibold text-emerald-800">
+                      {selectedReservation.currency} {Number(selectedReservation.discountRequests[0].proposedFinalPrice).toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-amber-800">Status:</span>{" "}
+                    <span className="font-semibold text-amber-900">
+                      {selectedReservation.discountRequests[0].status}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[11px] pt-1 border-t border-amber-200/60">
+                  <span className="text-amber-900 font-semibold">Reason:</span>{" "}
+                  <span className="italic text-[#18282A]">&ldquo;{selectedReservation.discountRequests[0].reason}&rdquo;</span>
+                </div>
+              </div>
+            )}
 
             {selectedReservation.notes && (
               <div className="rounded-lg bg-[#F5F8F9] p-2.5 border border-[#E5EAED]">

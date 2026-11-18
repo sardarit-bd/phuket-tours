@@ -21,6 +21,7 @@ import { BookingHistoryDialog } from "./booking-history-dialog";
 import { AssignStaffDialog } from "./assign-staff-dialog";
 import { UpdateFulfillmentDialog } from "./update-fulfillment-dialog";
 import { PriceApprovalDialog } from "./price-approval-dialog";
+import { BookingReviewDialog } from "./admin-booking-review-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type {
@@ -35,14 +36,30 @@ interface ActionFeedback {
   message: string;
 }
 
-export function AdminBookingsView() {
-  // 1. Pagination & filter state
+export interface AdminBookingsViewProps {
+  sourceFilter?: "all" | "staff" | "agent" | "direct";
+}
+
+export function AdminBookingsView({ sourceFilter = "all" }: AdminBookingsViewProps) {
+  // 1. Navigation view tab state: 'all' | 'pending' | 'staff' | 'agent' | 'customer'
+  const [activeTab, setActiveTab] = React.useState<"all" | "pending" | "staff" | "agent" | "customer">(
+    sourceFilter === "staff"
+      ? "staff"
+      : sourceFilter === "agent"
+      ? "agent"
+      : sourceFilter === "direct"
+      ? "customer"
+      : "all"
+  );
+
+  // Pagination & filter state
   const [page, setPage] = React.useState<number>(1);
   const [limit, setLimit] = React.useState<number>(10);
   const [bookingStatus, setBookingStatus] = React.useState<string>("ALL");
   const [paymentStatus, setPaymentStatus] = React.useState<string>("ALL");
   const [fulfillmentStatus, setFulfillmentStatus] = React.useState<string>("ALL");
   const [assignedStaffId, setAssignedStaffId] = React.useState<string>("ALL");
+  const [createdById, setCreatedById] = React.useState<string>("ALL");
   const [selectedAgentId, setSelectedAgentId] = React.useState<string>("ALL");
   const [selectedSource, setSelectedSource] = React.useState<string>("ALL");
   const [travelDate, setTravelDate] = React.useState<string>("");
@@ -59,9 +76,13 @@ export function AdminBookingsView() {
     React.useState<OperationalBookingRecord | null>(null);
   const [bookingForPriceApproval, setBookingForPriceApproval] =
     React.useState<OperationalBookingRecord | null>(null);
+  const [bookingForReview, setBookingForReview] =
+    React.useState<OperationalBookingRecord | null>(null);
   const [bookingToConfirm, setBookingToConfirm] =
     React.useState<OperationalBookingRecord | null>(null);
   const [bookingToReject, setBookingToReject] =
+    React.useState<OperationalBookingRecord | null>(null);
+  const [bookingForRejectionReason, setBookingForRejectionReason] =
     React.useState<OperationalBookingRecord | null>(null);
   const [reviewNotes, setReviewNotes] = React.useState<string>("");
   const [reviewActionError, setReviewActionError] = React.useState<string | null>(null);
@@ -142,10 +163,17 @@ export function AdminBookingsView() {
       status: p.status,
       fulfillmentStatus: p.fulfillmentStatus || "NOT_STARTED",
       paymentStatus: p.paymentStatus,
+      source: p.source || (p.agent ? "AGENT" : "DIRECT"),
+      agentId: p.agent?.id || null,
+      createdById: p.createdById || p.createdBy?.id || null,
+      createdBy: p.createdBy || null,
+      agent: p.agent || null,
       assignedStaffId: p.assignedStaffId || null,
       currency: p.currency,
       finalPrice: p.finalPrice,
       basePrice: p.basePrice,
+      proposedPrice: p.proposedPrice,
+      requiresApproval: p.requiresApproval,
       notes: p.notes,
       internalNotes: p.internalNotes,
       createdAt: p.createdAt,
@@ -160,6 +188,8 @@ export function AdminBookingsView() {
       },
       assignedStaff: p.assignedStaff || null,
       payments: p.payments,
+      priceApproval: p.priceApproval,
+      discountRequests: p.discountRequests,
     }));
   }, [pendingData?.data?.items]);
 
@@ -208,6 +238,28 @@ export function AdminBookingsView() {
   // Filter bookings based on all active filters
   const filteredBookings = React.useMemo(() => {
     let list = allUnifiedBookings;
+
+    // Staff creator filter
+    if (createdById !== "ALL") {
+      list = list.filter((b) => b.createdById === createdById || b.createdBy?.id === createdById);
+    }
+
+    // Sub-navigation view tab filter
+    if (activeTab === "pending") {
+      list = list.filter((b) => {
+        const s = b.status as string;
+        return s === "PENDING" || s === "AWAITING_APPROVAL" || b.requiresApproval;
+      });
+    } else if (activeTab === "staff") {
+      list = list.filter((b) => {
+        const role = b.createdBy?.role?.toLowerCase();
+        return role === "staff" || (b.source === "DIRECT" && !b.agentId);
+      });
+    } else if (activeTab === "agent") {
+      list = list.filter((b) => Boolean(b.agentId || b.agent || b.source === "AGENT"));
+    } else if (activeTab === "customer") {
+      list = list.filter((b) => b.source === "CUSTOMER" || (b.createdBy?.role?.toLowerCase() === "customer"));
+    }
 
     // Booking Status filter
     if (bookingStatus !== "ALL") {
@@ -343,6 +395,11 @@ export function AdminBookingsView() {
     setPage(1);
   }, []);
 
+  const handleCreatedByIdChange = React.useCallback((creatorId: string) => {
+    setCreatedById(creatorId);
+    setPage(1);
+  }, []);
+
   const handleAgentIdChange = React.useCallback((agentId: string) => {
     setSelectedAgentId(agentId);
     setPage(1);
@@ -363,6 +420,7 @@ export function AdminBookingsView() {
     setPaymentStatus("ALL");
     setFulfillmentStatus("ALL");
     setAssignedStaffId("ALL");
+    setCreatedById("ALL");
     setSelectedAgentId("ALL");
     setSelectedSource("ALL");
     setTravelDate("");
@@ -375,6 +433,7 @@ export function AdminBookingsView() {
     paymentStatus !== "ALL" ||
     fulfillmentStatus !== "ALL" ||
     assignedStaffId !== "ALL" ||
+    createdById !== "ALL" ||
     selectedAgentId !== "ALL" ||
     selectedSource !== "ALL" ||
     Boolean(travelDate) ||
@@ -509,6 +568,24 @@ export function AdminBookingsView() {
       <BookingsHeader
         onRefresh={handleRefresh}
         isRefreshing={isFetching}
+        title={
+          sourceFilter === "staff"
+            ? "Staff Bookings Management"
+            : sourceFilter === "agent"
+            ? "Agent Bookings Management"
+            : sourceFilter === "direct"
+            ? "Direct & Customer Bookings"
+            : "Bookings Management"
+        }
+        description={
+          sourceFilter === "staff"
+            ? "Review staff-created client reservations, evaluate requested discounts, and approve or reject booking proposals."
+            : sourceFilter === "agent"
+            ? "Track agent-created partner bookings, review commission performance, and monitor operational fulfillment."
+            : sourceFilter === "direct"
+            ? "Manage direct reservations booked online by travelers and walk-in customers."
+            : "Review customer reservations, confirm new bookings, assign staff, and track tour fulfillment in one place."
+        }
       />
 
       {/* Unified Summary Cards */}
@@ -517,6 +594,48 @@ export function AdminBookingsView() {
         pendingCount={pendingRecords.length}
         isLoading={isReportLoading && isLoading}
       />
+
+      {/* Sub-Navigation View Tabs - Only shown in consolidated All Bookings view or when not fixed by source route */}
+      {sourceFilter === "all" && (
+        <div className="flex items-center gap-2 border-b border-[#E5EAED] pb-2 text-xs font-semibold" data-testid="admin-bookings-nav-tabs">
+          {[
+            { key: "all", label: "All Bookings" },
+            { key: "pending", label: "Pending Approval", count: pendingRecords.length },
+            { key: "staff", label: "Staff Bookings" },
+            { key: "agent", label: "Agent Bookings" },
+            { key: "customer", label: "Direct / Customer" },
+          ].map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.key as any);
+                  setPage(1);
+                }}
+                data-testid={`admin-nav-tab-${tab.key}`}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition-colors cursor-pointer ${
+                  isActive
+                    ? "bg-[#176779] text-white shadow-xs"
+                    : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900"
+                }`}
+              >
+                <span>{tab.label}</span>
+                {typeof tab.count === "number" && tab.count > 0 && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+                      isActive ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Unified Toolbar with Status Filters, Search, and Dropdowns */}
       <BookingsToolbar
@@ -530,6 +649,8 @@ export function AdminBookingsView() {
         onFulfillmentStatusChange={handleFulfillmentStatusChange}
         assignedStaffId={assignedStaffId}
         onAssignedStaffIdChange={handleAssignedStaffIdChange}
+        createdById={createdById}
+        onCreatedByIdChange={handleCreatedByIdChange}
         agentId={selectedAgentId}
         onAgentIdChange={handleAgentIdChange}
         source={selectedSource}
@@ -582,7 +703,19 @@ export function AdminBookingsView() {
             onViewHistory={(booking) => setActiveBookingForHistory(booking)}
             onAssignStaff={(booking) => setBookingForStaffAssign(booking)}
             onUpdateFulfillment={(booking) => setBookingForFulfillment(booking)}
-            onReviewPriceApproval={(booking) => setBookingForPriceApproval(booking)}
+            onReviewBooking={(booking) => setBookingForReview(booking)}
+            onConfirmBooking={(booking) => {
+              setReviewActionError(null);
+              setReviewNotes("");
+              setBookingToConfirm(booking);
+            }}
+            onCancelBooking={(booking) => {
+              setReviewActionError(null);
+              setReviewNotes("");
+              setBookingToReject(booking);
+            }}
+            onViewRejectionReason={(booking) => setBookingForRejectionReason(booking)}
+            onReviewPriceApproval={(booking) => setBookingForReview(booking)}
             onConfirmPending={(booking) => {
               setReviewActionError(null);
               setReviewNotes("");
@@ -654,6 +787,62 @@ export function AdminBookingsView() {
         booking={bookingForPriceApproval}
         onSuccess={handlePriceApprovalSuccess}
       />
+
+      {/* Consolidated Booking Review Modal */}
+      <BookingReviewDialog
+        isOpen={bookingForReview !== null}
+        onClose={() => setBookingForReview(null)}
+        booking={bookingForReview}
+        onSuccess={() => {
+          setBookingForReview(null);
+          setFeedback({
+            type: "success",
+            message: "Booking review decision submitted successfully.",
+          });
+          refetchPending();
+          refetchOperations();
+        }}
+      />
+
+      {/* View Rejection Reason Modal */}
+      {bookingForRejectionReason && (
+        <Dialog
+          isOpen={true}
+          onClose={() => setBookingForRejectionReason(null)}
+          title={`Rejection Reason — Booking #${bookingForRejectionReason.id.slice(0, 8)}`}
+          description="Administrative rejection details"
+        >
+          <div className="space-y-4 p-4 text-xs font-outfit" data-testid="rejection-reason-dialog">
+            <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-3.5 space-y-2">
+              <span className="font-semibold text-rose-950 block">Official Rejection Reason:</span>
+              <p className="text-rose-900 leading-relaxed italic">
+                &ldquo;
+                {bookingForRejectionReason.discountRequests?.[0]?.rejectionReason ||
+                  bookingForRejectionReason.discountRequests?.[0]?.adminNotes ||
+                  bookingForRejectionReason.internalNotes ||
+                  "Booking proposal rejected by administrator."}
+                &rdquo;
+              </p>
+            </div>
+            {bookingForRejectionReason.discountRequests?.[0]?.reason && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-[#74818A]">
+                <span className="font-medium text-[#18282A] block">Original Staff Request Justification:</span>
+                <p className="mt-0.5">{bookingForRejectionReason.discountRequests[0].reason}</p>
+              </div>
+            )}
+            <div className="flex justify-end pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBookingForRejectionReason(null)}
+                className="text-xs"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
 
       {/* Confirm Reservation Modal */}
       {bookingToConfirm && (
