@@ -7,6 +7,7 @@ import type {
   CreateCustomerBookingResponse,
   CreateGuestBookingInput,
   CreateGuestBookingResponse,
+  PublicGuestBookingResponse,
   CreateCustomerPaymentInput,
   CreateCustomerPaymentResponse,
   CustomerPaymentsListResponse,
@@ -42,6 +43,15 @@ export const customerApi = baseApi.injectEndpoints({
         url: "/bookings/guest",
         method: "POST",
         body,
+      }),
+    }),
+
+    getPublicGuestBooking: builder.query<
+      PublicGuestBookingResponse,
+      string
+    >({
+      query: (token) => ({
+        url: `/public/bookings/access/${token}`,
       }),
     }),
 
@@ -155,6 +165,7 @@ export { useUpdateProfileMutation };
 export const {
   useCreateCustomerBookingMutation,
   useCreateGuestBookingMutation,
+  useGetPublicGuestBookingQuery,
   useGetCustomerBookingsQuery,
   useGetCustomerBookingByIdQuery,
   useGetCustomerPaymentsQuery,
