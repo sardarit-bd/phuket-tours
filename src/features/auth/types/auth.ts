@@ -1,6 +1,6 @@
 import type { ApiResponse } from "@/types/common";
 
-export type UserRole = "customer" | "agent" | "staff" | "admin";
+export type UserRole = "customer" | "agent" | "staff" | "admin" | "affiliate";
 export type UserStatus = "active" | "deactivated";
 
 export interface AuthUser {

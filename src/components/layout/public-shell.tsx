@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { Header } from "./header";
 import { Footer } from "./footer";
+import { AffiliateRefTracker } from "@/features/affiliate/components/affiliate-ref-tracker";
 
 interface PublicShellProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export function PublicShell({ children }: PublicShellProps) {
 
   return (
     <>
+      <AffiliateRefTracker />
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
