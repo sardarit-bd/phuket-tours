@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -54,7 +55,16 @@ export default function SignUpPage() {
           </div>
 
           {/* Form */}
-          <SignUpForm />
+          <Suspense
+            fallback={
+              <div
+                className="h-48 w-full animate-pulse rounded-lg bg-muted/30"
+                aria-label="Loading sign up form..."
+              />
+            }
+          >
+            <SignUpForm />
+          </Suspense>
         </div>
       </Container>
     </main>

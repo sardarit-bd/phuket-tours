@@ -69,6 +69,7 @@ export const footerNav = {
     { title: "Safety & Quality", href: "/about#safety" },
     { title: "Sustainability", href: "/about#sustainability" },
     { title: "Reviews", href: "/about#reviews" },
+    { title: "Affiliate Program", href: "/affiliate" },
   ],
   support: [
     { title: "Help & FAQ", href: "/faq" },

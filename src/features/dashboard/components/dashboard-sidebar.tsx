@@ -15,6 +15,7 @@ import { useAppSelector } from "@/store/hooks";
 import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
 import { getInitials } from "@/features/auth/utils/avatar";
 import { usePermissions } from "@/features/admin/hooks/use-permissions";
+import { CustomerAffiliatePromoCard } from "@/features/affiliate/components/customer-affiliate-promo-card";
 
 interface DashboardSidebarProps {
   config: DashboardNavConfig;
@@ -134,7 +135,7 @@ export function DashboardSidebar({
 
       {/* Navigation List */}
       <nav
-        className="flex-1 overflow-y-auto px-3 py-4"
+        className="flex-1 flex flex-col overflow-y-auto px-3 py-4"
         aria-label="Dashboard Menu"
       >
         <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-[#74818A]">
@@ -282,6 +283,12 @@ export function DashboardSidebar({
             );
           })}
         </ul>
+
+        {config.role === "user" && (
+          <div className="mt-auto pt-4">
+            <CustomerAffiliatePromoCard onNavigate={onNavigate} />
+          </div>
+        )}
       </nav>
 
       {/* Bottom Utilities */}
