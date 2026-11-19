@@ -90,10 +90,15 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     !isStaffRoute &&
     !isAgentRoute;
 
+  const isAffiliateRoute =
+    pathname === "/dashboard/affiliate" ||
+    pathname.startsWith("/dashboard/affiliate/");
+
   const userRole = user?.role;
   const isUserAdmin = userRole === "admin";
   const isUserStaff = userRole === "staff";
   const isUserAgent = userRole === "agent";
+  const isUserAffiliate = userRole === "affiliate";
   // Admin may access the admin portal only. Staff may access the staff portal
   // only. They never cross into each other's portal.
   const adminAuthorizedPath = isUserAdmin && isAdminRoute;
@@ -166,8 +171,19 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     if (isUserAdmin) return isAdminRoute;
     if (isUserStaff) return isStaffRoute;
     if (isUserAgent) return isAgentRoute;
-    return isCustomerRoute;
-  }, [isUserAdmin, isUserStaff, isUserAgent, isAdminRoute, isStaffRoute, isAgentRoute, isCustomerRoute]);
+    if (isUserAffiliate) return isAffiliateRoute || isCustomerRoute;
+    return isCustomerRoute || isAffiliateRoute;
+  }, [
+    isUserAdmin,
+    isUserStaff,
+    isUserAgent,
+    isUserAffiliate,
+    isAdminRoute,
+    isStaffRoute,
+    isAgentRoute,
+    isAffiliateRoute,
+    isCustomerRoute,
+  ]);
 
   // Effect: Handle unauthenticated redirection to /sign-in with return path
   React.useEffect(() => {
@@ -198,11 +214,13 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
         router.replace("/dashboard/staff");
       } else if (isUserAgent) {
         router.replace("/dashboard/agent");
+      } else if (isUserAffiliate) {
+        router.replace("/dashboard/affiliate");
       } else {
         router.replace("/dashboard");
       }
     }
-  }, [isInitialized, isAuthenticated, isAuthorized, isUserAdmin, isUserStaff, isUserAgent, router]);
+  }, [isInitialized, isAuthenticated, isAuthorized, isUserAdmin, isUserStaff, isUserAgent, isUserAffiliate, router]);
 
   // Effect: When a Staff user lands on the Overview route without reports.view,
   // redirect to their first permitted module (or let the render check show

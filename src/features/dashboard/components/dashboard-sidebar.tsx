@@ -15,6 +15,7 @@ import { useAppSelector } from "@/store/hooks";
 import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
 import { getInitials } from "@/features/auth/utils/avatar";
 import { usePermissions } from "@/features/admin/hooks/use-permissions";
+import { CustomerAffiliatePromoCard } from "@/features/affiliate/components/customer-affiliate-promo-card";
 
 interface DashboardSidebarProps {
   config: DashboardNavConfig;
@@ -44,12 +45,15 @@ export function DashboardSidebar({
   const isViewAdmin = config.role === "admin";
   const isViewStaff = config.role === "staff";
   const isViewAgent = config.role === "agent";
+  const isViewAffiliate = config.role === "affiliate";
   const homeHref = isViewAdmin
     ? "/dashboard/admin"
     : isViewStaff
     ? "/dashboard/staff"
     : isViewAgent
     ? "/dashboard/agent"
+    : isViewAffiliate
+    ? "/dashboard/affiliate"
     : "/dashboard";
 
   const visibleItems = React.useMemo(() => {
@@ -106,7 +110,8 @@ export function DashboardSidebar({
             width={140}
             height={32}
             priority
-            className="h-8 w-auto object-contain"
+            style={{ width: "auto", height: "32px" }}
+            className="object-contain"
           />
         </Link>
         <span
@@ -118,6 +123,8 @@ export function DashboardSidebar({
               ? "bg-[#176779] text-white"
               : isViewAgent
               ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
+              : isViewAffiliate
+              ? "bg-[#3297A3]/15 text-[#1E727C] border border-[#3297A3]/30"
               : "bg-[#3297A3]/10 text-[#3297A3]"
           )}
           data-testid="sidebar-role-indicator"
@@ -128,13 +135,15 @@ export function DashboardSidebar({
             ? "Staff"
             : isViewAgent
             ? "Agent"
-            : "User"}
+            : isViewAffiliate
+            ? "Affiliate"
+            : "Customer"}
         </span>
       </div>
 
       {/* Navigation List */}
       <nav
-        className="flex-1 overflow-y-auto px-3 py-4"
+        className="flex-1 flex flex-col overflow-y-auto px-3 py-4"
         aria-label="Dashboard Menu"
       >
         <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[1.5px] text-[#74818A]">
@@ -282,6 +291,12 @@ export function DashboardSidebar({
             );
           })}
         </ul>
+
+        {config.role === "user" && (
+          <div className="mt-auto pt-4">
+            <CustomerAffiliatePromoCard onNavigate={onNavigate} />
+          </div>
+        )}
       </nav>
 
       {/* Bottom Utilities */}

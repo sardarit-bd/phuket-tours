@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer, { setCredentials, setInitialized } from "@/features/auth/slices/auth-slice";
+import { baseApi } from "@/lib/api/base-api";
 import CheckoutPage from "./page";
 
 // Mock next/navigation
@@ -57,7 +58,10 @@ function createMockStore(preloadedUser?: any, initialized: boolean = true) {
   const store = configureStore({
     reducer: {
       auth: authReducer,
+      [baseApi.reducerPath]: baseApi.reducer,
     },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(baseApi.middleware),
   });
 
   if (initialized) {
@@ -82,7 +86,7 @@ describe("CheckoutPage", () => {
     });
   });
 
-  it("redirects unauthenticated users to sign-in with return URL", async () => {
+  it("renders guest checkout badge and contact inputs for unauthenticated visitors", async () => {
     const store = createMockStore(null, true);
 
     render(
@@ -91,14 +95,12 @@ describe("CheckoutPage", () => {
       </Provider>
     );
 
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith(
-        expect.stringContaining("/sign-in?redirect=")
-      );
-    });
+    await screen.findByText("Phi Phi Island Luxury Day Tour");
 
-    const callArg = mockReplace.mock.calls[0][0];
-    expect(callArg).toContain(encodeURIComponent("/checkout?tourId=tour-123"));
+    expect(screen.getByText("Booking as a Guest — Fast, Easy & Secure")).toBeInTheDocument();
+    expect(screen.getByText(/2. Traveler Contact Details \(Guest Checkout\)/i)).toBeInTheDocument();
+    expect(screen.getByTestId("checkout-name-input")).toBeInTheDocument();
+    expect(screen.getByTestId("checkout-email-input")).toBeInTheDocument();
   });
 
   it("renders tour details and pricing breakdown for authenticated customers", async () => {

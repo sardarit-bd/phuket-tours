@@ -17,6 +17,11 @@ import {
   Briefcase,
   Globe,
   Layers,
+  Link2,
+  MousePointerClick,
+  Wallet,
+  FileBarChart,
+  Share2,
 } from "lucide-react";
 
 import type { PermissionId } from "@/features/admin/types/admin-permissions";
@@ -47,7 +52,7 @@ export interface DashboardNavItem {
 }
 
 export interface DashboardNavConfig {
-  role: "user" | "admin" | "staff" | "agent";
+  role: "user" | "admin" | "staff" | "agent" | "affiliate";
   roleLabel: string;
   portalTitle: string;
   items: DashboardNavItem[];
@@ -174,6 +179,55 @@ export const adminNavConfig: DashboardNavConfig = {
       adminOnly: true,
     },
     {
+      title: "Affiliate Management",
+      href: "/dashboard/admin/affiliates",
+      icon: Share2,
+      adminOnly: true,
+      children: [
+        {
+          title: "Affiliate Overview",
+          href: "/dashboard/admin/affiliates",
+          icon: LayoutDashboard,
+          exact: true,
+        },
+        {
+          title: "Applications",
+          href: "/dashboard/admin/affiliates/applications",
+          icon: UserCheck,
+        },
+        {
+          title: "All Affiliates",
+          href: "/dashboard/admin/affiliates/all",
+          icon: Users,
+        },
+        {
+          title: "Commission Settings",
+          href: "/dashboard/admin/affiliates/settings",
+          icon: Percent,
+        },
+        {
+          title: "Affiliate Bookings",
+          href: "/dashboard/admin/affiliates/bookings",
+          icon: ClipboardList,
+        },
+        {
+          title: "Commission Ledger",
+          href: "/dashboard/admin/affiliates/commissions",
+          icon: Layers,
+        },
+        {
+          title: "Payout Requests",
+          href: "/dashboard/admin/affiliates/payouts",
+          icon: Wallet,
+        },
+        {
+          title: "Affiliate Reports",
+          href: "/dashboard/admin/affiliates/reports",
+          icon: FileBarChart,
+        },
+      ],
+    },
+    {
       title: "Users Management",
       href: "/dashboard/admin/users",
       icon: Users,
@@ -235,6 +289,61 @@ export const staffNavConfig: DashboardNavConfig = {
       href: "/dashboard/staff/settings",
       icon: Sliders,
       permissions: SETTINGS_ACCESS_PERMISSIONS,
+    },
+  ],
+};
+
+export const affiliateNavConfig: DashboardNavConfig = {
+  role: "affiliate",
+  roleLabel: "Affiliate Portal",
+  portalTitle: "PhuketTours Affiliate Portal",
+  items: [
+    {
+      title: "Overview",
+      href: "/dashboard/affiliate",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      title: "My Affiliate Links",
+      href: "/dashboard/affiliate/links",
+      icon: Link2,
+    },
+    {
+      title: "Click Analytics",
+      href: "/dashboard/affiliate/clicks",
+      icon: MousePointerClick,
+    },
+    {
+      title: "Referred Bookings",
+      href: "/dashboard/affiliate/bookings",
+      icon: CalendarCheck,
+    },
+    {
+      title: "Commission History",
+      href: "/dashboard/affiliate/commissions",
+      icon: Percent,
+    },
+    {
+      title: "Payout Requests",
+      href: "/dashboard/affiliate/payouts",
+      icon: Wallet,
+    },
+    {
+      title: "Payment Details",
+      href: "/dashboard/affiliate/payment-details",
+      icon: CreditCard,
+    },
+    {
+      title: "Profile & Settings",
+      href: "/dashboard/affiliate/profile",
+      icon: Settings,
+    },
+    {
+      title: "Customer Dashboard",
+      href: "/dashboard",
+      icon: Compass,
+      exact: true,
     },
   ],
 };

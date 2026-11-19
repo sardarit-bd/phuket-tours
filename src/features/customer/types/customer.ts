@@ -98,6 +98,38 @@ export interface CreateCustomerBookingData {
 
 export type CreateCustomerBookingResponse = ApiResponse<CreateCustomerBookingData>;
 
+export interface CreateGuestBookingInput {
+  customer: {
+    name: string;
+    email: string;
+    phone?: string | null;
+  };
+  serviceId: string;
+  availabilityId?: string;
+  travelDate?: string;
+  adults?: number;
+  children?: number;
+  infants?: number;
+  notes?: string;
+  referralCode?: string;
+}
+
+export interface GuestBookingResultData {
+  booking: CreateCustomerBookingData;
+  guestSnapshot: {
+    guestName: string;
+    guestEmail: string;
+    guestPhone: string | null;
+  };
+  accessToken: string;
+  paymentLink: {
+    token: string;
+    paymentUrl: string;
+  };
+}
+
+export type CreateGuestBookingResponse = ApiResponse<GuestBookingResultData>;
+
 export interface CreateCustomerPaymentInput {
   bookingId: string;
   method: CustomerPaymentMethod;
@@ -203,3 +235,59 @@ export interface CustomerPaymentsListResponse {
 }
 
 export type CustomerPaymentDetailResponse = ApiResponse<CustomerPaymentRecord>;
+
+/* ── Public Guest Booking Itinerary ────────────────────────────────── */
+
+export interface PublicGuestBookingDetails {
+  bookingReference: string;
+  status:
+    | "PENDING"
+    | "CONFIRMED"
+    | "CANCELLED"
+    | "AWAITING_APPROVAL"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "FAILED";
+  paymentStatus: "UNPAID" | "PARTIALLY_PAID" | "PAID";
+  fulfillmentStatus: "NOT_STARTED" | "IN_PROGRESS" | "FULFILLED";
+  currency: string;
+  pricing: {
+    basePrice: number;
+    finalPrice: number;
+    totalPaid: number;
+    remainingBalance: number;
+  };
+  guest: {
+    name: string;
+    email: string;
+    phone: string | null;
+    party: {
+      adults: number;
+      children: number;
+      infants: number;
+    };
+  };
+  service: {
+    id: string;
+    name: string;
+    type: string;
+    description: string | null;
+    providerName?: string | null;
+    metadata?: any;
+  };
+  travelDate: string | null;
+  createdAt: string;
+  paymentAction: {
+    isPayable: boolean;
+    expiresAt?: string;
+    paymentUrl?: string;
+    remainingBalance?: number;
+  };
+  cancellationPolicy: {
+    allowed: boolean;
+    notice: string;
+    supportEmail: string;
+  };
+}
+
+export type PublicGuestBookingResponse = ApiResponse<PublicGuestBookingDetails>;

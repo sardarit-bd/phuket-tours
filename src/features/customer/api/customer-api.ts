@@ -1,9 +1,13 @@
 import { baseApi } from "@/lib/api/base-api";
+import { useUpdateProfileMutation } from "@/features/auth/api/auth-api";
 import type {
   CustomerBookingsListResponse,
   CustomerBookingDetailResponse,
   CreateCustomerBookingInput,
   CreateCustomerBookingResponse,
+  CreateGuestBookingInput,
+  CreateGuestBookingResponse,
+  PublicGuestBookingResponse,
   CreateCustomerPaymentInput,
   CreateCustomerPaymentResponse,
   CustomerPaymentsListResponse,
@@ -29,6 +33,26 @@ export const customerApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: ["CustomerBookings"],
+    }),
+
+    createGuestBooking: builder.mutation<
+      CreateGuestBookingResponse,
+      CreateGuestBookingInput
+    >({
+      query: (body) => ({
+        url: "/bookings/guest",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getPublicGuestBooking: builder.query<
+      PublicGuestBookingResponse,
+      string
+    >({
+      query: (token) => ({
+        url: `/public/bookings/access/${token}`,
+      }),
     }),
 
     getCustomerBookings: builder.query<
@@ -133,25 +157,15 @@ export const customerApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["CustomerBookings", "CustomerPayments"],
     }),
-
-    /* ── Profile ──────────────────────────────────────────────── */
-
-    updateProfile: builder.mutation<
-      UserProfileResponse,
-      { name?: string; phone?: string | null }
-    >({
-      query: (body) => ({
-        url: "/users/me",
-        method: "PATCH",
-        body,
-      }),
-      invalidatesTags: ["User"],
-    }),
   }),
 });
 
+export { useUpdateProfileMutation };
+
 export const {
   useCreateCustomerBookingMutation,
+  useCreateGuestBookingMutation,
+  useGetPublicGuestBookingQuery,
   useGetCustomerBookingsQuery,
   useGetCustomerBookingByIdQuery,
   useGetCustomerPaymentsQuery,
@@ -159,5 +173,4 @@ export const {
   useCreateCustomerPaymentMutation,
   useCreateStripeSessionMutation,
   useReconcileCustomerPaymentMutation,
-  useUpdateProfileMutation,
 } = customerApi;

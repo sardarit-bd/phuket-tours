@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ interface FormErrors {
 
 export function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const [registerUser, { isLoading: isMutationLoading }] = useRegisterMutation();
 
@@ -83,7 +84,17 @@ export function SignUpForm() {
       dispatch(setCredentials(response.data));
       setSuccessMessage("Account created successfully! Redirecting...");
 
-      router.push("/dashboard");
+      const redirectParam =
+        searchParams?.get("redirect") || searchParams?.get("next");
+      const isSafeRedirect =
+        redirectParam &&
+        redirectParam.startsWith("/") &&
+        !redirectParam.startsWith("//") &&
+        !redirectParam.startsWith("/dashboard/admin") &&
+        !redirectParam.startsWith("/dashboard/staff") &&
+        !redirectParam.startsWith("/dashboard/agent");
+
+      router.push(isSafeRedirect ? redirectParam : "/dashboard");
     } catch (err: unknown) {
       setErrors({
         general: getAuthErrorMessage(err),

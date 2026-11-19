@@ -83,6 +83,8 @@ export function SignInForm() {
         targetRoute = "/dashboard/staff";
       } else if (role === "agent") {
         targetRoute = "/dashboard/agent";
+      } else if (role === "affiliate") {
+        targetRoute = "/dashboard/affiliate";
       } else {
         targetRoute = "/dashboard";
       }
@@ -103,12 +105,16 @@ export function SignInForm() {
             ? "/dashboard/staff"
             : role === "agent"
             ? "/dashboard/agent"
+            : role === "affiliate"
+            ? "/dashboard/affiliate"
             : null;
 
         if (portalPrefix) {
-          targetRoute = redirectParam.startsWith(portalPrefix)
-            ? redirectParam
-            : `${portalPrefix}`;
+          targetRoute =
+            redirectParam.startsWith(portalPrefix) ||
+            (role === "affiliate" && redirectParam === "/affiliate")
+              ? redirectParam
+              : `${portalPrefix}`;
         } else {
           // Customer: redirect to the param unless it points at another role's portal.
           if (
