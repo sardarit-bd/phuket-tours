@@ -52,7 +52,7 @@ export interface DashboardNavItem {
 }
 
 export interface DashboardNavConfig {
-  role: "user" | "admin" | "staff" | "agent";
+  role: "user" | "admin" | "staff" | "agent" | "affiliate";
   roleLabel: string;
   portalTitle: string;
   items: DashboardNavItem[];
@@ -294,7 +294,7 @@ export const staffNavConfig: DashboardNavConfig = {
 };
 
 export const affiliateNavConfig: DashboardNavConfig = {
-  role: "agent",
+  role: "affiliate",
   roleLabel: "Affiliate Portal",
   portalTitle: "PhuketTours Affiliate Portal",
   items: [
@@ -338,6 +338,12 @@ export const affiliateNavConfig: DashboardNavConfig = {
       title: "Profile & Settings",
       href: "/dashboard/affiliate/profile",
       icon: Settings,
+    },
+    {
+      title: "Customer Dashboard",
+      href: "/dashboard",
+      icon: Compass,
+      exact: true,
     },
   ],
 };

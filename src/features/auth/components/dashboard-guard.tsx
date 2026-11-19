@@ -171,7 +171,7 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     if (isUserAdmin) return isAdminRoute;
     if (isUserStaff) return isStaffRoute;
     if (isUserAgent) return isAgentRoute;
-    if (isUserAffiliate) return isAffiliateRoute;
+    if (isUserAffiliate) return isAffiliateRoute || isCustomerRoute;
     return isCustomerRoute || isAffiliateRoute;
   }, [
     isUserAdmin,

@@ -42,12 +42,12 @@ export function DashboardShell({
     if (role === "staff") return staffNavConfig;
     if (role === "admin") return adminNavConfig;
     if (role === "agent") return agentNavConfig;
-    if (role === "affiliate") return affiliateNavConfig;
+    if (pathname.startsWith("/dashboard/affiliate")) return affiliateNavConfig;
+    if (role === "affiliate") return userNavConfig;
     if (navConfig) return navConfig;
     if (pathname.startsWith("/dashboard/admin")) return adminNavConfig;
     if (pathname.startsWith("/dashboard/staff")) return staffNavConfig;
     if (pathname.startsWith("/dashboard/agent")) return agentNavConfig;
-    if (pathname.startsWith("/dashboard/affiliate")) return affiliateNavConfig;
     return userNavConfig;
   }, [navConfig, pathname, user?.role]);
 

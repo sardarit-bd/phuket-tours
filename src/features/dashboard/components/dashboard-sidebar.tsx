@@ -45,12 +45,15 @@ export function DashboardSidebar({
   const isViewAdmin = config.role === "admin";
   const isViewStaff = config.role === "staff";
   const isViewAgent = config.role === "agent";
+  const isViewAffiliate = config.role === "affiliate";
   const homeHref = isViewAdmin
     ? "/dashboard/admin"
     : isViewStaff
     ? "/dashboard/staff"
     : isViewAgent
     ? "/dashboard/agent"
+    : isViewAffiliate
+    ? "/dashboard/affiliate"
     : "/dashboard";
 
   const visibleItems = React.useMemo(() => {
@@ -119,6 +122,8 @@ export function DashboardSidebar({
               ? "bg-[#176779] text-white"
               : isViewAgent
               ? "bg-emerald-50 text-emerald-800 border border-emerald-300"
+              : isViewAffiliate
+              ? "bg-[#3297A3]/15 text-[#1E727C] border border-[#3297A3]/30"
               : "bg-[#3297A3]/10 text-[#3297A3]"
           )}
           data-testid="sidebar-role-indicator"
@@ -129,7 +134,9 @@ export function DashboardSidebar({
             ? "Staff"
             : isViewAgent
             ? "Agent"
-            : "User"}
+            : isViewAffiliate
+            ? "Affiliate"
+            : "Customer"}
         </span>
       </div>
 

@@ -1,52 +1,85 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { AffiliateProgramLanding } from "./affiliate-program-landing";
+import { render, screen, fireEvent } from "@testing-library/react";
+import {
+  AffiliateProgramLanding,
+  getDashboardHomeForRole,
+} from "./affiliate-program-landing";
 
 vi.mock("@/store/hooks", () => ({
   useAppSelector: vi.fn(),
 }));
 
+const mockApplyUnwrap = vi.fn();
+const mockApplyMutation = vi.fn(() => ({ unwrap: mockApplyUnwrap }));
+
 vi.mock("../api/affiliate-api", () => ({
   useGetMyAffiliateProfileQuery: vi.fn(),
-  useApplyAsAffiliateMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useApplyAsAffiliateMutation: vi.fn(() => [mockApplyMutation, { isLoading: false }]),
 }));
 
 import { useAppSelector } from "@/store/hooks";
 import * as affiliateApiHooks from "../api/affiliate-api";
 
-describe("AffiliateProgramLanding registration & status flow", () => {
+describe("AffiliateProgramLanding registration, navigation & status flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(affiliateApiHooks.useApplyAsAffiliateMutation).mockReturnValue([
+      mockApplyMutation,
+      { isLoading: false },
+    ] as any);
   });
 
-  it("shows Sign Up and Sign In CTAs preserving /affiliate redirect for unauthenticated visitors", () => {
+  it("maps role-aware Back to Dashboard destinations accurately", () => {
+    expect(getDashboardHomeForRole("customer")).toBe("/dashboard");
+    expect(getDashboardHomeForRole("affiliate")).toBe("/dashboard/affiliate");
+    expect(getDashboardHomeForRole("agent")).toBe("/dashboard/agent");
+    expect(getDashboardHomeForRole("staff")).toBe("/dashboard/staff");
+    expect(getDashboardHomeForRole("admin")).toBe("/dashboard/admin");
+  });
+
+  it("shows Back to Home and Sign Up/Sign In CTAs preserving /affiliate redirect for unauthenticated visitors", () => {
     vi.mocked(useAppSelector)
-      .mockReturnValueOnce(false) // isAuthenticated
-      .mockReturnValueOnce(null); // user
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(null);
     vi.mocked(affiliateApiHooks.useGetMyAffiliateProfileQuery).mockReturnValue({
       data: undefined,
       isLoading: false,
     } as any);
 
     render(<AffiliateProgramLanding />);
-    const signUpLink = screen.getByRole("link", { name: /Create Account & Apply/i });
-    const signInLink = screen.getByRole("link", { name: /Sign In to Apply/i });
-    expect(signUpLink).toHaveAttribute("href", "/sign-up?redirect=%2Faffiliate");
-    expect(signInLink).toHaveAttribute("href", "/sign-in?redirect=%2Faffiliate");
+    expect(screen.getByRole("link", { name: /Back to Home/i })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /Create Account & Apply/i })).toHaveAttribute(
+      "href",
+      "/sign-up?redirect=%2Faffiliate"
+    );
+    expect(screen.getByRole("link", { name: /Sign In to Apply/i })).toHaveAttribute(
+      "href",
+      "/sign-in?redirect=%2Faffiliate"
+    );
   });
 
-  it("shows application form for authenticated customer without affiliate profile", () => {
-    vi.mocked(useAppSelector)
-      .mockReturnValueOnce(true)
-      .mockReturnValueOnce({ id: "u1", name: "Alice", role: "customer" });
+  it("shows Back to Dashboard and validates required promotionChannels before submitting", () => {
+    let call = 0;
+    vi.mocked(useAppSelector).mockImplementation(() =>
+      call++ % 2 === 0 ? true : { id: "u1", name: "Alice", role: "customer" }
+    );
     vi.mocked(affiliateApiHooks.useGetMyAffiliateProfileQuery).mockReturnValue({
       data: { data: null },
       isLoading: false,
     } as any);
 
     render(<AffiliateProgramLanding />);
-    expect(screen.getByText(/Apply to Become an Affiliate/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Apply Now/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Back to Dashboard/i })).toHaveAttribute(
+      "href",
+      "/dashboard"
+    );
+
+    const submitBtn = screen.getByRole("button", { name: /Submit Affiliate Application/i });
+    fireEvent.click(submitBtn);
+    expect(
+      screen.getByText(/Please describe your promotion channels \(at least 10 characters\)/i)
+    ).toBeInTheDocument();
+    expect(mockApplyMutation).not.toHaveBeenCalled();
   });
 
   it("shows pending review notice for PENDING applicants", () => {
@@ -63,7 +96,7 @@ describe("AffiliateProgramLanding registration & status flow", () => {
     expect(screen.getByText("AFF1234")).toBeInTheDocument();
   });
 
-  it("shows dashboard CTA for APPROVED affiliates", () => {
+  it("shows Open Affiliate Dashboard CTA and affiliate Back to Dashboard link for APPROVED affiliates", () => {
     vi.mocked(useAppSelector)
       .mockReturnValueOnce(true)
       .mockReturnValueOnce({ id: "u1", name: "Alice", role: "affiliate" });
@@ -73,8 +106,14 @@ describe("AffiliateProgramLanding registration & status flow", () => {
     } as any);
 
     render(<AffiliateProgramLanding />);
-    const dashLink = screen.getByRole("link", { name: /Go to Affiliate Dashboard/i });
-    expect(dashLink).toHaveAttribute("href", "/dashboard/affiliate");
+    expect(screen.getByRole("link", { name: /Back to Dashboard/i })).toHaveAttribute(
+      "href",
+      "/dashboard/affiliate"
+    );
+    expect(screen.getByRole("link", { name: /Open Affiliate Dashboard/i })).toHaveAttribute(
+      "href",
+      "/dashboard/affiliate"
+    );
   });
 
   it("shows rejection reason and re-apply form for REJECTED applicants", () => {
@@ -88,7 +127,27 @@ describe("AffiliateProgramLanding registration & status flow", () => {
 
     render(<AffiliateProgramLanding />);
     expect(screen.getByText(/Incomplete website details/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Apply Now/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Submit Affiliate Application/i })).toBeInTheDocument();
+  });
+
+  it("hides application form and shows eligibility notice for Agent, Staff, and Admin users", () => {
+    for (const role of ["agent", "staff", "admin"] as const) {
+      let call = 0;
+      vi.mocked(useAppSelector).mockImplementation(() =>
+        call++ % 2 === 0 ? true : { id: "u1", name: "User", role }
+      );
+      vi.mocked(affiliateApiHooks.useGetMyAffiliateProfileQuery).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      } as any);
+
+      const { unmount } = render(<AffiliateProgramLanding />);
+      expect(screen.getByText(/Affiliate Program Eligibility/i)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Submit Affiliate Application/i })
+      ).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it("shows suspended notice for SUSPENDED affiliates", () => {
