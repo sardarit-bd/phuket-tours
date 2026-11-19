@@ -346,7 +346,7 @@ describe("AdminBookingsView component", () => {
     const menuTrigger = screen.getByTestId("booking-actions-trigger-bkg-101-uuid");
     fireEvent.click(menuTrigger);
 
-    const assignBtn = screen.getByText("Assign Staff");
+    const assignBtn = screen.getByText("Manage Staff Assignment");
     fireEvent.click(assignBtn);
 
     expect(screen.getByText("Assign Responsible Staff")).toBeInTheDocument();

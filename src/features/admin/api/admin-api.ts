@@ -1,5 +1,11 @@
 import { baseApi } from "@/lib/api/base-api";
 import type {
+  CreateStaffBookingInput,
+  StaffBookingResult,
+  GenerateStaffPaymentLinkInput,
+  StaffPaymentLinkResult,
+} from "@/features/staff/types/staff-booking";
+import type {
   AdminApiResponse,
   AdminRevenueReportData,
   AdminBookingsReportData,
@@ -62,6 +68,12 @@ import type {
   CreateCommissionPolicyInput,
   UpdateCommissionPolicyInput,
   AdminCommissionsReportData,
+  CreateStaffDiscountRequestInput,
+  ReviewStaffDiscountRequestInput,
+  ListStaffDiscountRequestsQuery,
+  StaffDiscountRequestRecord,
+  StaffDiscountListResponse,
+  StaffDiscountSummaryResponse,
 } from "../types/admin";
 import type {
   SystemSettingsOverview,
@@ -427,6 +439,45 @@ export const adminApi = baseApi.injectEndpoints({
     }),
 
     // Staff Portal Operations Endpoints
+    getStaffCreatedBookings: builder.query<
+      AdminApiResponse<StaffBookingsListResponse>,
+      GetStaffBookingsParams | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.status && params.status !== "ALL") {
+          queryParams.status = params.status;
+        }
+        if (params?.paymentStatus && params.paymentStatus !== "ALL") {
+          queryParams.paymentStatus = params.paymentStatus;
+        }
+        if (params?.fulfillmentStatus && params.fulfillmentStatus !== "ALL") {
+          queryParams.fulfillmentStatus = params.fulfillmentStatus;
+        }
+        if (params?.search) {
+          queryParams.search = params.search;
+        }
+
+        return {
+          url: "/staff/created-bookings",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((b) => ({
+                type: "Booking" as const,
+                id: b.id,
+              })),
+              { type: "Booking", id: "STAFF_CREATED_LIST" },
+            ]
+          : [{ type: "Booking", id: "STAFF_CREATED_LIST" }],
+    }),
+
     getStaffOperationsBookings: builder.query<
       AdminApiResponse<StaffBookingsListResponse>,
       GetStaffBookingsParams | void
@@ -487,6 +538,39 @@ export const adminApi = baseApi.injectEndpoints({
       ],
     }),
 
+    createStaffBooking: builder.mutation<
+      AdminApiResponse<StaffBookingResult>,
+      CreateStaffBookingInput
+    >({
+      query: (body) => ({
+        url: "/staff/bookings",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
+        { type: "Booking", id: "STAFF_CREATED_LIST" },
+        "AdminReport",
+      ],
+    }),
+
+    generateStaffPaymentLink: builder.mutation<
+      AdminApiResponse<StaffPaymentLinkResult>,
+      GenerateStaffPaymentLinkInput
+    >({
+      query: ({ bookingId, expiresInDays }) => ({
+        url: `/staff/bookings/${bookingId}/payment-link`,
+        method: "POST",
+        body: expiresInDays ? { expiresInDays } : {},
+      }),
+      invalidatesTags: (_result, _error, { bookingId }) => [
+        { type: "Booking", id: bookingId },
+        { type: "Booking", id: "STAFF_LIST" },
+        { type: "Booking", id: "STAFF_CREATED_LIST" },
+      ],
+    }),
+
     reviewBookingPriceApproval: builder.mutation<
       AdminApiResponse<OperationalBookingRecord>,
       ReviewBookingPriceApprovalInput
@@ -540,15 +624,23 @@ export const adminApi = baseApi.injectEndpoints({
       AdminApiResponse<PendingReservationRecord>,
       ReviewPendingReservationInput
     >({
-      query: ({ bookingId, action, notes }) => ({
+      query: ({ bookingId, action, notes, approvedDiscountValue, rejectionReason }) => ({
         url: `/admin/bookings/pending/${bookingId}/review`,
         method: "POST",
-        body: { action, notes },
+        body: {
+          action,
+          notes,
+          approvedDiscountValue,
+          rejectionReason,
+        },
       }),
       invalidatesTags: (_result, _error, { bookingId }) => [
         { type: "Booking", id: bookingId },
         { type: "Booking", id: "LIST" },
+        { type: "Booking", id: "STAFF_LIST" },
+        { type: "Booking", id: "STAFF_CREATED_LIST" },
         "AdminReport",
+        "AdminDiscount",
       ],
     }),
 
@@ -593,6 +685,34 @@ export const adminApi = baseApi.injectEndpoints({
     }),
 
     // Users Management Endpoints
+    getStaffCustomers: builder.query<
+      AdminApiResponse<AdminUserListResponse>,
+      { page?: number; limit?: number; search?: string } | void
+    >({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        if (params?.page !== undefined) queryParams.page = params.page;
+        if (params?.limit !== undefined) queryParams.limit = params.limit;
+        if (params?.search && params.search.trim()) queryParams.search = params.search.trim();
+
+        return {
+          url: "/staff/customers",
+          method: "GET",
+          params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+        };
+      },
+      providesTags: (result) =>
+        result?.data?.items
+          ? [
+              ...result.data.items.map((user) => ({
+                type: "User" as const,
+                id: user.id,
+              })),
+              { type: "User" as const, id: "STAFF_CUSTOMERS_LIST" },
+            ]
+          : [{ type: "User" as const, id: "STAFF_CUSTOMERS_LIST" }],
+    }),
+
     getAdminUsers: builder.query<
       AdminApiResponse<AdminUserListResponse>,
       GetAdminUsersParams | void
@@ -1242,6 +1362,54 @@ export const adminApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["AdminSetting"],
     }),
+
+    // Staff Discount & Admin Approval Endpoints
+    createStaffDiscountRequest: builder.mutation<
+      AdminApiResponse<StaffDiscountRequestRecord>,
+      CreateStaffDiscountRequestInput
+    >({
+      query: ({ bookingId, ...body }) => ({
+        url: `/staff/bookings/${bookingId}/discount-requests`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AdminDiscount", "Booking"],
+    }),
+
+    getAdminDiscounts: builder.query<
+      AdminApiResponse<StaffDiscountListResponse>,
+      ListStaffDiscountRequestsQuery | void
+    >({
+      query: (params) => ({
+        url: "/admin/discounts",
+        method: "GET",
+        params: params || undefined,
+      }),
+      providesTags: ["AdminDiscount"],
+    }),
+
+    getAdminDiscountsSummary: builder.query<
+      AdminApiResponse<StaffDiscountSummaryResponse>,
+      void
+    >({
+      query: () => ({
+        url: "/admin/discounts/summary",
+        method: "GET",
+      }),
+      providesTags: ["AdminDiscount"],
+    }),
+
+    reviewAdminDiscount: builder.mutation<
+      AdminApiResponse<StaffDiscountRequestRecord>,
+      ReviewStaffDiscountRequestInput
+    >({
+      query: ({ requestId, ...body }) => ({
+        url: `/admin/discounts/${requestId}/review`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AdminDiscount", "Booking"],
+    }),
   }),
 });
 
@@ -1282,11 +1450,15 @@ export const {
   useGetAdminBookingHistoryQuery,
   useLazyGetAdminBookingHistoryQuery,
   // Staff Portal Hooks
+  useGetStaffCreatedBookingsQuery,
+  useLazyGetStaffCreatedBookingsQuery,
   useGetStaffOperationsBookingsQuery,
   useLazyGetStaffOperationsBookingsQuery,
   useGetStaffOperationsBookingByIdQuery,
   useLazyGetStaffOperationsBookingByIdQuery,
   useUpdateStaffBookingFulfillmentStatusMutation,
+  useCreateStaffBookingMutation,
+  useGenerateStaffPaymentLinkMutation,
   useGetStaffBookingHistoryQuery,
   useLazyGetStaffBookingHistoryQuery,
   // User Management Hooks
@@ -1352,6 +1524,16 @@ export const {
   useUpdateAdminSmtpSettingsMutation,
   useTestAdminSmtpConnectionMutation,
   useSendAdminTestEmailMutation,
+  // Staff Customers Hooks
+  useGetStaffCustomersQuery,
+  useLazyGetStaffCustomersQuery,
+  // Discount Management Hooks
+  useCreateStaffDiscountRequestMutation,
+  useGetAdminDiscountsQuery,
+  useLazyGetAdminDiscountsQuery,
+  useGetAdminDiscountsSummaryQuery,
+  useLazyGetAdminDiscountsSummaryQuery,
+  useReviewAdminDiscountMutation,
 } = adminApi;
 
 export * from "../types/admin";

@@ -7,10 +7,13 @@ import {
   Eye,
   UserCheck,
   Activity,
-  CheckCircle,
   CheckCircle2,
   XCircle,
   History,
+  FileQuestion,
+  AlertCircle,
+  ShieldCheck,
+  Ban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OperationalBookingRecord } from "../../types/admin-bookings";
@@ -21,9 +24,10 @@ export interface BookingActionsMenuProps {
   onViewHistory?: (booking: OperationalBookingRecord) => void;
   onAssignStaff?: (booking: OperationalBookingRecord) => void;
   onUpdateFulfillment?: (booking: OperationalBookingRecord) => void;
-  onReviewPriceApproval?: (booking: OperationalBookingRecord) => void;
-  onConfirmPending?: (booking: OperationalBookingRecord) => void;
-  onRejectPending?: (booking: OperationalBookingRecord) => void;
+  onReviewBooking?: (booking: OperationalBookingRecord) => void;
+  onConfirmBooking?: (booking: OperationalBookingRecord) => void;
+  onCancelBooking?: (booking: OperationalBookingRecord) => void;
+  onViewRejectionReason?: (booking: OperationalBookingRecord) => void;
 }
 
 const emptySubscribe = () => () => {};
@@ -34,9 +38,10 @@ export function BookingActionsMenu({
   onViewHistory,
   onAssignStaff,
   onUpdateFulfillment,
-  onReviewPriceApproval,
-  onConfirmPending,
-  onRejectPending,
+  onReviewBooking,
+  onConfirmBooking,
+  onCancelBooking,
+  onViewRejectionReason,
 }: BookingActionsMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const isClient = React.useSyncExternalStore(emptySubscribe, () => true, () => false);
@@ -48,16 +53,35 @@ export function BookingActionsMenu({
   const menuRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
 
-  const status = booking.status as string;
-  const isPending = status === "PENDING" || status === "AWAITING_APPROVAL";
+  const status = (booking.status || "").toUpperCase();
+  const requiresApproval = Boolean(booking.requiresApproval);
+  const hasPendingDiscount = Boolean(
+    booking.discountRequests?.some((dr) => dr.status === "PENDING")
+  );
+
+  // Clear lifecycle classification
+  const isAwaitingApproval =
+    status === "AWAITING_APPROVAL" ||
+    (status === "PENDING" && (requiresApproval || hasPendingDiscount));
+
+  const isPendingDirect = status === "PENDING" && !isAwaitingApproval;
   const isConfirmed = status === "CONFIRMED";
   const isInProgress = status === "IN_PROGRESS";
   const isCompleted = status === "COMPLETED";
+  const isCancelled = status === "CANCELLED";
+
+  // Check if booking was rejected (has rejection reason or history)
+  const isRejected =
+    isCancelled &&
+    Boolean(
+      booking.discountRequests?.some((dr) => dr.status === "REJECTED" || dr.rejectionReason) ||
+      booking.internalNotes?.toLowerCase().includes("reject")
+    );
 
   const updatePosition = React.useCallback(() => {
     if (!buttonRef.current || typeof window === "undefined") return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const menuHeight = isPending ? 180 : 140;
+    const menuHeight = 175;
     const menuWidth = 192; // 12rem = 192px
 
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -74,11 +98,10 @@ export function BookingActionsMenu({
     );
 
     setMenuPosition({ top, left });
-  }, [isPending]);
+  }, []);
 
   React.useEffect(() => {
     if (!isOpen) return;
-
     updatePosition();
 
     function handleScrollOrResize() {
@@ -149,104 +172,304 @@ export function BookingActionsMenu({
         zIndex: 9999,
       }}
       className={cn(
-        "rounded-xl border border-[#E5EAED] bg-white p-1.5 shadow-xl transition-all duration-150 animate-in fade-in zoom-in-95"
+        "rounded-xl border border-[#E5EAED] bg-white p-1.5 shadow-xl transition-all duration-150 animate-in fade-in zoom-in-95 text-xs font-outfit"
       )}
       data-testid={`booking-actions-menu-${booking.id}`}
     >
-      {/* 1. View Details (All statuses) */}
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => handleAction(() => onViewDetails(booking))}
-        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
-        data-testid={`action-view-details-${booking.id}`}
-      >
-        <Eye className="h-4 w-4 text-[#74818A]" />
-        <span>View Details</span>
-      </button>
+      {/* =========================================================================
+          LIFECYCLE 1: AWAITING APPROVAL
+          Actions: Review Booking (Primary), View Booking Details, View Activity & History
+         ========================================================================= */}
+      {isAwaitingApproval && (
+        <>
+          {onReviewBooking && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onReviewBooking(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-[#176779] bg-[#E8F8F5] hover:bg-[#D5F2ED] transition-colors cursor-pointer mb-1 shadow-2xs"
+              data-testid={`action-review-booking-${booking.id}`}
+            >
+              <ShieldCheck className="h-4 w-4 text-[#176779]" />
+              <span>Review Booking</span>
+            </button>
+          )}
 
-      {/* PENDING: Confirm Booking */}
-      {isPending && onConfirmPending && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => handleAction(() => onConfirmPending(booking))}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-          data-testid={`action-confirm-booking-${booking.id}`}
-        >
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <span>Confirm Booking</span>
-        </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleAction(() => onViewDetails(booking))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+            data-testid={`action-view-details-${booking.id}`}
+          >
+            <Eye className="h-4 w-4 text-[#74818A]" />
+            <span>View Booking Details</span>
+          </button>
+
+          {onViewHistory && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onViewHistory(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-view-history-${booking.id}`}
+            >
+              <History className="h-4 w-4 text-[#74818A]" />
+              <span>View Activity & History</span>
+            </button>
+          )}
+        </>
       )}
 
-      {/* PENDING: Reject Booking */}
-      {isPending && onRejectPending && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => handleAction(() => onRejectPending(booking))}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
-          data-testid={`action-reject-booking-${booking.id}`}
-        >
-          <XCircle className="h-4 w-4 text-rose-600" />
-          <span>Reject / Cancel</span>
-        </button>
+      {/* =========================================================================
+          LIFECYCLE 2: APPROVED / PENDING (Direct customer reservations without approval block)
+          Actions: View Booking Details, Confirm Booking, Cancel Booking, View Activity & History
+         ========================================================================= */}
+      {isPendingDirect && (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleAction(() => onViewDetails(booking))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+            data-testid={`action-view-details-${booking.id}`}
+          >
+            <Eye className="h-4 w-4 text-[#74818A]" />
+            <span>View Booking Details</span>
+          </button>
+
+          {onConfirmBooking && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onConfirmBooking(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer"
+              data-testid={`action-confirm-booking-${booking.id}`}
+            >
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <span>Confirm Booking</span>
+            </button>
+          )}
+
+          {onCancelBooking && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onCancelBooking(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+              data-testid={`action-cancel-booking-${booking.id}`}
+            >
+              <Ban className="h-4 w-4 text-rose-600" />
+              <span>Cancel Booking</span>
+            </button>
+          )}
+
+          {onViewHistory && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onViewHistory(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-view-history-${booking.id}`}
+            >
+              <History className="h-4 w-4 text-[#74818A]" />
+              <span>View Activity & History</span>
+            </button>
+          )}
+        </>
       )}
 
-      {/* CONFIRMED: Assign Staff */}
-      {isConfirmed && onAssignStaff && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => handleAction(() => onAssignStaff(booking))}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
-          data-testid={`action-assign-staff-${booking.id}`}
-        >
-          <UserCheck className="h-4 w-4 text-[#74818A]" />
-          <span>Assign Staff</span>
-        </button>
+      {/* =========================================================================
+          LIFECYCLE 3: CONFIRMED
+          Actions: View Booking Details, Manage Staff Assignment, Cancel Booking, View Activity & History
+         ========================================================================= */}
+      {isConfirmed && (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleAction(() => onViewDetails(booking))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+            data-testid={`action-view-details-${booking.id}`}
+          >
+            <Eye className="h-4 w-4 text-[#74818A]" />
+            <span>View Booking Details</span>
+          </button>
+
+          {onAssignStaff && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onAssignStaff(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-assign-staff-${booking.id}`}
+            >
+              <UserCheck className="h-4 w-4 text-[#176779]" />
+              <span>Manage Staff Assignment</span>
+            </button>
+          )}
+
+          {onUpdateFulfillment && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onUpdateFulfillment(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-update-fulfillment-${booking.id}`}
+            >
+              <Activity className="h-4 w-4 text-[#74818A]" />
+              <span>Update Fulfillment</span>
+            </button>
+          )}
+
+          {onCancelBooking && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onCancelBooking(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+              data-testid={`action-cancel-booking-${booking.id}`}
+            >
+              <Ban className="h-4 w-4 text-rose-600" />
+              <span>Cancel Booking</span>
+            </button>
+          )}
+
+          {onViewHistory && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onViewHistory(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-view-history-${booking.id}`}
+            >
+              <History className="h-4 w-4 text-[#74818A]" />
+              <span>View Activity & History</span>
+            </button>
+          )}
+        </>
       )}
 
-      {/* CONFIRMED & IN_PROGRESS: Update Fulfillment */}
-      {(isConfirmed || isInProgress) && onUpdateFulfillment && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => handleAction(() => onUpdateFulfillment(booking))}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
-          data-testid={`action-update-fulfillment-${booking.id}`}
-        >
-          <Activity className="h-4 w-4 text-[#74818A]" />
-          <span>Update Fulfillment</span>
-        </button>
+      {/* =========================================================================
+          LIFECYCLE 4: IN PROGRESS
+          Actions: View Booking Details, Update Fulfillment, View Activity & History
+         ========================================================================= */}
+      {isInProgress && (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleAction(() => onViewDetails(booking))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+            data-testid={`action-view-details-${booking.id}`}
+          >
+            <Eye className="h-4 w-4 text-[#74818A]" />
+            <span>View Booking Details</span>
+          </button>
+
+          {onUpdateFulfillment && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onUpdateFulfillment(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-semibold text-[#176779] bg-[#E8F8F5] hover:bg-[#D5F2ED] transition-colors cursor-pointer"
+              data-testid={`action-update-fulfillment-${booking.id}`}
+            >
+              <Activity className="h-4 w-4 text-[#176779]" />
+              <span>Update Fulfillment</span>
+            </button>
+          )}
+
+          {onViewHistory && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onViewHistory(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-view-history-${booking.id}`}
+            >
+              <History className="h-4 w-4 text-[#74818A]" />
+              <span>View Activity & History</span>
+            </button>
+          )}
+        </>
       )}
 
-      {/* View History (All statuses) */}
-      {onViewHistory && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => handleAction(() => onViewHistory(booking))}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
-          data-testid={`action-view-history-${booking.id}`}
-        >
-          <History className="h-4 w-4 text-[#74818A]" />
-          <span>View History</span>
-        </button>
+      {/* =========================================================================
+          LIFECYCLE 5: COMPLETED
+          Actions: View Booking Details, View Activity & History
+         ========================================================================= */}
+      {isCompleted && (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleAction(() => onViewDetails(booking))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+            data-testid={`action-view-details-${booking.id}`}
+          >
+            <Eye className="h-4 w-4 text-[#74818A]" />
+            <span>View Booking Details</span>
+          </button>
+
+          {onViewHistory && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onViewHistory(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-view-history-${booking.id}`}
+            >
+              <History className="h-4 w-4 text-[#74818A]" />
+              <span>View Activity & History</span>
+            </button>
+          )}
+        </>
       )}
 
-      {/* Price Approval (only if AWAITING_APPROVAL) */}
-      {status === "AWAITING_APPROVAL" && onReviewPriceApproval && (
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => handleAction(() => onReviewPriceApproval(booking))}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer border-t border-[#E5EAED] mt-1 pt-2"
-          data-testid={`action-review-price-${booking.id}`}
-        >
-          <CheckCircle className="h-4 w-4 text-purple-600" />
-          <span>Review Approval</span>
-        </button>
+      {/* =========================================================================
+          LIFECYCLE 6: REJECTED / CANCELLED
+          Actions: View Booking Details, View Rejection Reason (if rejected), View Activity & History
+         ========================================================================= */}
+      {isCancelled && (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => handleAction(() => onViewDetails(booking))}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+            data-testid={`action-view-details-${booking.id}`}
+          >
+            <Eye className="h-4 w-4 text-[#74818A]" />
+            <span>View Booking Details</span>
+          </button>
+
+          {isRejected && onViewRejectionReason && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onViewRejectionReason(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+              data-testid={`action-view-rejection-${booking.id}`}
+            >
+              <FileQuestion className="h-4 w-4 text-rose-600" />
+              <span>View Rejection Reason</span>
+            </button>
+          )}
+
+          {onViewHistory && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => handleAction(() => onViewHistory(booking))}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#18282A] hover:bg-[#F5F8F9] transition-colors cursor-pointer"
+              data-testid={`action-view-history-${booking.id}`}
+            >
+              <History className="h-4 w-4 text-[#74818A]" />
+              <span>View Activity & History</span>
+            </button>
+          )}
+        </>
       )}
     </div>
   ) : null;

@@ -12,9 +12,24 @@ import {
   Percent,
   Building2,
   CreditCard,
+  Tag,
+  UserCheck,
+  Briefcase,
+  Globe,
+  Layers,
 } from "lucide-react";
 
 import type { PermissionId } from "@/features/admin/types/admin-permissions";
+
+export interface DashboardNavSubItem {
+  title: string;
+  href: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  badge?: string;
+  exact?: boolean;
+  permission?: PermissionId | PermissionId[];
+  adminOnly?: boolean;
+}
 
 export interface DashboardNavItem {
   title: string;
@@ -27,6 +42,8 @@ export interface DashboardNavItem {
   /** Every one of these permissions is required for visibility (admin always bypasses). */
   permissions?: PermissionId[];
   adminOnly?: boolean;
+  /** Collapsible child routes */
+  children?: DashboardNavSubItem[];
 }
 
 export interface DashboardNavConfig {
@@ -120,6 +137,29 @@ export const adminNavConfig: DashboardNavConfig = {
       href: "/dashboard/admin/bookings",
       icon: ClipboardList,
       permission: "bookings.view",
+      children: [
+        {
+          title: "All Bookings",
+          href: "/dashboard/admin/bookings",
+          icon: Layers,
+          exact: true,
+        },
+        {
+          title: "Staff Bookings",
+          href: "/dashboard/admin/bookings/staff",
+          icon: UserCheck,
+        },
+        {
+          title: "Agent Bookings",
+          href: "/dashboard/admin/bookings/agents",
+          icon: Briefcase,
+        },
+        {
+          title: "Direct Bookings",
+          href: "/dashboard/admin/bookings/direct",
+          icon: Globe,
+        },
+      ],
     },
     {
       title: "Payments Management",
@@ -233,7 +273,7 @@ export const agentNavConfig: DashboardNavConfig = {
  * If item.exact is true, requires an exact match to avoid marking root overviews
  * active when navigating to nested subpages.
  */
-export function isNavItemActive(pathname: string, item: DashboardNavItem): boolean {
+export function isNavItemActive(pathname: string, item: DashboardNavItem | DashboardNavSubItem): boolean {
   if (item.exact) {
     return pathname === item.href;
   }

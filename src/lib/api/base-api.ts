@@ -219,6 +219,7 @@ export const baseApi = createApi({
     "AdminSetting",
     "CustomerBookings",
     "CustomerPayments",
+    "AdminDiscount",
   ],
   endpoints: () => ({}),
 });

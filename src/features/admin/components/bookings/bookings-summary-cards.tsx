@@ -10,16 +10,28 @@ import {
 } from "lucide-react";
 import type { AdminBookingsReportData } from "../../types/admin";
 
+export interface SummaryCardItem {
+  title: string;
+  value: number;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+  color: string;
+  bg: string;
+  testId: string;
+}
+
 export interface BookingsSummaryCardsProps {
   reportData?: AdminBookingsReportData | null;
   pendingCount?: number;
   isLoading?: boolean;
+  customCards?: SummaryCardItem[];
 }
 
 export function BookingsSummaryCards({
   reportData,
   pendingCount = 0,
   isLoading = false,
+  customCards,
 }: BookingsSummaryCardsProps) {
   const byStatusMap = React.useMemo(() => {
     const map = new Map<string, number>();
@@ -41,7 +53,7 @@ export function BookingsSummaryCards({
   const inProgressValue = byStatusMap.get("IN_PROGRESS") || 0;
   const completedValue = byStatusMap.get("COMPLETED") || 0;
 
-  const cards = [
+  const defaultCards: SummaryCardItem[] = [
     {
       title: "Total Bookings",
       value: totalBookings,
@@ -88,6 +100,8 @@ export function BookingsSummaryCards({
       testId: "summary-completed",
     },
   ];
+
+  const cards = customCards || defaultCards;
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">

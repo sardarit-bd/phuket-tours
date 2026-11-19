@@ -7,11 +7,15 @@ import { Button } from "@/components/ui/button";
 export interface BookingsHeaderProps {
   onRefresh: () => void;
   isRefreshing?: boolean;
+  title?: string;
+  description?: string;
 }
 
 export function BookingsHeader({
   onRefresh,
   isRefreshing = false,
+  title = "Bookings Management",
+  description = "Review customer reservations, confirm new bookings, assign staff, and track tour fulfillment in one place.",
 }: BookingsHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -21,11 +25,11 @@ export function BookingsHeader({
             <ClipboardList className="h-5 w-5" aria-hidden="true" />
           </div>
           <h1 className="font-outfit text-2xl font-bold tracking-tight text-[#18282A] sm:text-3xl">
-            Bookings Management
+            {title}
           </h1>
         </div>
         <p className="text-xs text-[#74818A] sm:text-sm">
-          Review customer reservations, confirm new bookings, assign staff, and track tour fulfillment in one place.
+          {description}
         </p>
       </div>
 

@@ -57,8 +57,8 @@ export function DashboardShell({
   return (
     <DashboardGuard>
       <div className="relative min-h-screen w-full bg-[#F8FAFB] overflow-x-hidden">
-        {/* 1. Desktop Fixed Sidebar: 248px */}
-        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[248px]">
+        {/* 1. Desktop Fixed Sidebar: 270px */}
+        <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[270px]">
           <DashboardSidebar config={activeConfig} />
         </div>
 
@@ -69,17 +69,20 @@ export function DashboardShell({
           config={activeConfig}
         />
 
-        {/* 3. Main Workspace Container (pl-[248px] on desktop) */}
-        <div className="flex min-h-screen w-full flex-col lg:pl-[248px]">
+        {/* 3. Main Workspace Container (pl-[270px] on desktop) */}
+        <div className="flex min-h-screen w-full flex-col lg:pl-[270px]">
           {/* Topbar: 64px sticky */}
           <DashboardTopbar
             config={activeConfig}
             onOpenMobileNav={() => setIsMobileNavOpen(true)}
           />
 
-          {/* Main Content Area */}
-          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-[1400px]">
+          {/* Main Content Area: full available workspace width with consistent 24px desktop padding */}
+          <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-6">
+            <div
+              className="w-full max-w-none"
+              data-testid="dashboard-content-container"
+            >
               {children}
             </div>
           </main>

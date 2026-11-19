@@ -9,8 +9,10 @@ import {
   PaymentStatusBadge,
   BookingSourceBadge,
 } from "./booking-status-badges";
-import type { OperationalBookingRecord } from "../../types/admin-bookings";
-import { formatReportMoney } from "../../utils/format";
+import { DiscountApprovalStatusBadge } from "@/features/staff/components/bookings/discount-approval-status-badge";
+import { useGetAdminBookingHistoryQuery } from "../../api/admin-api";
+import type { OperationalBookingRecord, BookingHistoryRecord } from "../../types/admin-bookings";
+import { formatReportMoney, formatDate } from "../../utils/format";
 import {
   Calendar,
   User,
@@ -25,6 +27,9 @@ import {
   DollarSign,
   AlertCircle,
   Briefcase,
+  History,
+  Tag,
+  CheckCircle2,
 } from "lucide-react";
 
 export interface BookingDetailsDialogProps {
@@ -124,6 +129,11 @@ export function BookingDetailsDialog({
   onClose,
   booking,
 }: BookingDetailsDialogProps) {
+  const { data: historyResponse } = useGetAdminBookingHistoryQuery(
+    { bookingId: booking?.id || "" },
+    { skip: !isOpen || !booking?.id }
+  );
+
   if (!booking) return null;
 
   const parsedNotes = parseStructuredNotes(booking.notes);
@@ -150,28 +160,37 @@ export function BookingDetailsDialog({
     }
   );
 
-  const rawPrice = booking.finalPrice ?? booking.basePrice;
-  const amountNum =
-    rawPrice !== null && rawPrice !== undefined && rawPrice !== ""
-      ? Number(rawPrice)
+  const rawFinalPrice = booking.finalPrice ?? booking.basePrice;
+  const finalPriceNum =
+    rawFinalPrice !== null && rawFinalPrice !== undefined && rawFinalPrice !== ""
+      ? Number(rawFinalPrice)
       : null;
-  const formattedAmount = formatReportMoney(amountNum, booking.currency);
+  const formattedFinalPrice = formatReportMoney(finalPriceNum, booking.currency);
+
+  const basePriceNum =
+    booking.basePrice !== null && booking.basePrice !== undefined && booking.basePrice !== ""
+      ? Number(booking.basePrice)
+      : null;
+  const formattedBasePrice = formatReportMoney(basePriceNum, booking.currency);
 
   const totalGuests =
     parsedNotes.guests.adults +
     parsedNotes.guests.children +
     parsedNotes.guests.infants;
 
+  const discountReq = booking.discountRequests?.[0];
+  const auditTimeline = historyResponse?.data?.items || [];
+
   return (
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Booking Details"
+      title="Unified Booking Details"
       description={`Reference #${booking.id}`}
       size="lg"
     >
-      <div className="space-y-5" data-testid="booking-details-dialog">
-        {/* Status Highlights */}
+      <div className="space-y-6" data-testid="booking-details-dialog">
+        {/* SECTION 1: Booking Overview & Status Highlights */}
         <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-[#FAFCFC] p-4 sm:grid-cols-4">
           <div className="space-y-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#74818A]">
@@ -201,63 +220,20 @@ export function BookingDetailsDialog({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#74818A]">
               Booking Source
             </span>
-            <div>
+            <div className="flex flex-col gap-1 items-start">
               <BookingSourceBadge source={booking.source || (booking.agentId ? "AGENT" : "DIRECT")} />
-            </div>
-          </div>
-        </div>
-
-        {/* Commercial & Operational Attribution (Agent vs Staff vs Creator) */}
-        <div className="space-y-2.5">
-          <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
-            <Briefcase className="h-4 w-4 text-[#176779]" />
-            Commercial & Operational Attribution
-          </h4>
-          <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-white p-3.5 sm:grid-cols-3 text-xs">
-            <div>
-              <span className="text-[#74818A] block">Originating Agent:</span>
-              {booking.agent ? (
-                <div className="mt-0.5">
-                  <p className="font-semibold text-[#18282A]">{booking.agent.name}</p>
-                  <p className="text-[11px] text-purple-700 font-medium">
-                    {booking.agent.agentProfile?.agencyName || "Independent Agent"}
-                  </p>
-                  <p className="text-[11px] text-[#74818A] truncate">{booking.agent.email}</p>
-                </div>
-              ) : (
-                <p className="font-medium text-[#96A4AB] italic mt-0.5">No Agent (Direct / Admin)</p>
+              {booking.requiresApproval && (
+                <DiscountApprovalStatusBadge status="PENDING" />
               )}
             </div>
-            <div>
-              <span className="text-[#74818A] block">Booking Creator:</span>
-              <div className="mt-0.5">
-                <p className="font-semibold text-[#18282A]">
-                  {booking.createdBy?.name || (booking.source === "CUSTOMER" ? (booking.customer?.name || "Customer") : "System / Direct")}
-                </p>
-                {booking.createdBy?.role && (
-                  <span className="inline-block text-[10px] uppercase font-semibold text-[#176779] bg-[#E8F8F5] px-1.5 py-0.2 rounded mt-0.5">
-                    {booking.createdBy.role}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div>
-              <span className="text-[#74818A] block">Assigned Operational Staff:</span>
-              <div className="mt-0.5 flex items-center gap-1.5">
-                <UserCheck className="h-3.5 w-3.5 text-[#176779]" />
-                <span className="font-medium text-[#18282A]">
-                  {booking.assignedStaff?.name || "Unassigned"}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Section 1: Customer Information */}
+        {/* SECTION 2: Customer Information */}
         <div className="space-y-2.5">
           <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
             <User className="h-4 w-4 text-[#176779]" />
-            Customer Information
+            1. Customer Information
           </h4>
           <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-white p-3.5 sm:grid-cols-3 text-xs">
             <div>
@@ -267,14 +243,14 @@ export function BookingDetailsDialog({
               </p>
             </div>
             <div>
-              <span className="text-[#74818A] block">Email:</span>
+              <span className="text-[#74818A] block">Email Address:</span>
               <p className="font-medium text-[#18282A] mt-0.5 flex items-center gap-1.5 truncate">
                 <Mail className="h-3.5 w-3.5 text-[#74818A] shrink-0" />
                 <span>{booking.customer?.email || parsedNotes.contact.email || "Not provided"}</span>
               </p>
             </div>
             <div>
-              <span className="text-[#74818A] block">Phone:</span>
+              <span className="text-[#74818A] block">Phone Number:</span>
               <p className="font-medium text-[#18282A] mt-0.5 flex items-center gap-1.5">
                 <Phone className="h-3.5 w-3.5 text-[#74818A] shrink-0" />
                 <span>{booking.customer?.phone || parsedNotes.contact.phone || "Not provided"}</span>
@@ -283,18 +259,21 @@ export function BookingDetailsDialog({
           </div>
         </div>
 
-        {/* Section 2: Tour & Schedule */}
+        {/* SECTION 3: Tour & Schedule Details */}
         <div className="space-y-2.5">
           <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
             <Compass className="h-4 w-4 text-[#176779]" />
-            Tour & Schedule
+            2. Tour & Schedule
           </h4>
           <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-white p-3.5 sm:grid-cols-2 text-xs">
             <div>
-              <span className="text-[#74818A] block">Tour Name:</span>
+              <span className="text-[#74818A] block">Tour Service:</span>
               <p className="font-semibold text-[#18282A] mt-0.5">
                 {booking.service?.name}
               </p>
+              <span className="text-[10px] text-[#96A4AB] uppercase font-bold">
+                {booking.service?.type || "TOUR"}
+              </span>
             </div>
             <div>
               <span className="text-[#74818A] block">Travel Date:</span>
@@ -303,65 +282,225 @@ export function BookingDetailsDialog({
                 {travelDateFormatted}
               </p>
             </div>
-            <div>
-              <span className="text-[#74818A] block">Tour Type:</span>
-              <p className="font-medium text-[#18282A] mt-0.5 uppercase tracking-wider">
-                {booking.service?.type || "TOUR"}
-              </p>
-            </div>
-            <div>
-              <span className="text-[#74818A] block">Booking Created:</span>
-              <p className="font-medium text-[#18282A] mt-0.5 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-[#74818A]" />
-                {createdAtFormatted}
-              </p>
-            </div>
           </div>
         </div>
 
-        {/* Section 3: Guest Quantities & Pricing */}
+        {/* SECTION 4: Guest Manifest */}
         <div className="space-y-2.5">
           <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
             <Users className="h-4 w-4 text-[#176779]" />
-            Guest Quantities & Payment
+            3. Guest Manifest & Headcount
+          </h4>
+          <div className="rounded-xl border border-[#E5EAED] bg-white p-3.5 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span className="text-[#74818A] block">Total Guests:</span>
+                <p className="font-bold text-sm text-[#18282A] mt-0.5">
+                  {totalGuests} Guest{totalGuests > 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 text-slate-700">
+                  <span className="font-semibold">{parsedNotes.guests.adults}</span> Adults
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 text-slate-700">
+                  <span className="font-semibold">{parsedNotes.guests.children}</span> Children
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 text-slate-700">
+                  <span className="font-semibold">{parsedNotes.guests.infants}</span> Infants
+                </span>
+              </div>
+            </div>
+            {parsedNotes.guests.rawText && (
+              <p className="text-[11px] text-[#74818A] mt-2 border-t border-[#E5EAED] pt-2">
+                Manifest text: {parsedNotes.guests.rawText}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 5: Pricing, Discount & Approval Breakdown */}
+        <div className="space-y-2.5">
+          <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
+            <DollarSign className="h-4 w-4 text-[#176779]" />
+            4. Pricing & Discount Breakdown
+          </h4>
+          <div className="rounded-xl border border-[#E5EAED] bg-white p-3.5 text-xs space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <span className="text-[#74818A] block">Standard Base Price:</span>
+                <p className="font-semibold text-[#18282A] mt-0.5" data-testid="admin-detail-standard-price">
+                  {formattedBasePrice}
+                </p>
+              </div>
+
+              {/* Requested Discount */}
+              <div>
+                <span className="text-[#74818A] block">Requested Discount:</span>
+                {discountReq ? (
+                  <div className="mt-0.5">
+                    <p className="font-semibold text-amber-800" data-testid="admin-detail-requested-discount">
+                      {discountReq.discountType === "PERCENTAGE"
+                        ? `${discountReq.discountValue}% (${formatReportMoney(Number(discountReq.discountAmount), booking.currency)})`
+                        : formatReportMoney(Number(discountReq.discountAmount), booking.currency)}
+                    </p>
+                    <span className="text-[10px] text-[#74818A]">Status: {discountReq.status}</span>
+                  </div>
+                ) : (
+                  <p className="font-medium text-[#96A4AB] mt-0.5">None</p>
+                )}
+              </div>
+
+              {/* Approved Discount */}
+              <div>
+                <span className="text-[#74818A] block">Approved Discount:</span>
+                {discountReq && discountReq.status === "APPROVED" ? (
+                  <div className="mt-0.5">
+                    <p className="font-bold text-emerald-700" data-testid="admin-detail-approved-discount">
+                      {(() => {
+                        const approvedAmount =
+                          discountReq.approvedDiscountAmount !== null && discountReq.approvedDiscountAmount !== undefined
+                            ? Number(discountReq.approvedDiscountAmount)
+                            : Number(discountReq.discountAmount);
+                        const basePriceVal = Number(booking.basePrice) || 0;
+                        if (discountReq.discountType === "PERCENTAGE" && basePriceVal > 0) {
+                          const computedPct = Math.round((approvedAmount / basePriceVal) * 10000) / 100;
+                          return `${computedPct}% (${formatReportMoney(approvedAmount, booking.currency)})`;
+                        }
+                        return formatReportMoney(approvedAmount, booking.currency);
+                      })()}
+                    </p>
+                    <span className="text-[10px] font-semibold text-emerald-700">APPROVED</span>
+                  </div>
+                ) : discountReq && discountReq.status === "REJECTED" ? (
+                  <div className="mt-0.5">
+                    <p className="font-semibold text-rose-600">0.00 (Declined)</p>
+                    <span className="text-[10px] text-rose-600 font-medium">REJECTED</span>
+                  </div>
+                ) : discountReq ? (
+                  <div className="mt-0.5">
+                    <p className="font-medium text-amber-700 italic">Pending Review</p>
+                  </div>
+                ) : (
+                  <p className="font-medium text-[#96A4AB] mt-0.5">None (Standard Rate)</p>
+                )}
+              </div>
+
+              {/* Final Payable Amount */}
+              <div>
+                <span className="text-[#74818A] block font-semibold">Final Payable Amount:</span>
+                <p className="font-bold text-sm text-[#18282A] mt-0.5" data-testid="admin-detail-final-price">
+                  {formattedFinalPrice}
+                </p>
+              </div>
+            </div>
+
+            {discountReq?.reason && (
+              <div className="rounded-lg bg-amber-50/70 border border-amber-200 p-2.5 text-[11px]">
+                <span className="font-semibold text-amber-900 block">Staff Justification / Reason:</span>
+                <p className="text-amber-800 mt-0.5 whitespace-pre-wrap">{discountReq.reason}</p>
+                {discountReq.adminNotes && (
+                  <div className="mt-2 border-t border-amber-200/60 pt-1.5">
+                    <span className="font-semibold text-amber-900">Admin Review Notes:</span>
+                    <p className="text-amber-800 mt-0.5">{discountReq.adminNotes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 6: Creator & Assignment Attribution */}
+        <div className="space-y-2.5">
+          <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
+            <Briefcase className="h-4 w-4 text-[#176779]" />
+            5. Creator & Assignment Attribution
           </h4>
           <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5EAED] bg-white p-3.5 sm:grid-cols-3 text-xs">
             <div>
-              <span className="text-[#74818A] block">Guests:</span>
-              <p className="font-semibold text-[#18282A] mt-0.5">
-                {parsedNotes.guests.rawText || `${totalGuests} Guest${totalGuests > 1 ? "s" : ""}`}
-              </p>
-              <p className="text-[11px] text-[#74818A] mt-0.5">
-                {parsedNotes.guests.adults} Adults, {parsedNotes.guests.children} Children, {parsedNotes.guests.infants} Infants
-              </p>
+              <span className="text-[#74818A] block">Booking Creator:</span>
+              <div className="mt-0.5">
+                <p className="font-semibold text-[#18282A]">
+                  {booking.createdBy?.name ||
+                    (booking.source === "CUSTOMER"
+                      ? booking.customer?.name || "Customer"
+                      : "System / Direct")}
+                </p>
+                {booking.createdBy?.role && (
+                  <span className="inline-block text-[10px] uppercase font-bold text-[#176779] bg-[#E8F8F5] px-1.5 py-0.2 rounded mt-0.5">
+                    {booking.createdBy.role}
+                  </span>
+                )}
+              </div>
             </div>
             <div>
-              <span className="text-[#74818A] block">Total Amount:</span>
-              <p className="font-bold text-[#18282A] text-sm mt-0.5">
-                {formattedAmount}
-              </p>
+              <span className="text-[#74818A] block">Originating Agent:</span>
+              {booking.agent ? (
+                <div className="mt-0.5">
+                  <p className="font-semibold text-[#18282A]">{booking.agent.name}</p>
+                  <p className="text-[11px] text-purple-700 font-medium">
+                    {booking.agent.agentProfile?.agencyName || "Independent Agent"}
+                  </p>
+                </div>
+              ) : (
+                <p className="font-medium text-[#96A4AB] italic mt-0.5">No Agent (Direct)</p>
+              )}
             </div>
             <div>
-              <span className="text-[#74818A] block">Staff Assignment:</span>
-              <p className="font-medium text-[#18282A] mt-0.5 flex items-center gap-1.5">
+              <span className="text-[#74818A] block">Assigned Operational Staff:</span>
+              <div className="mt-0.5 flex items-center gap-1.5">
                 <UserCheck className="h-3.5 w-3.5 text-[#176779]" />
-                {booking.assignedStaff?.name || "Unassigned"}
-              </p>
+                <span className="font-semibold text-[#18282A]">
+                  {booking.assignedStaff?.name || "Unassigned"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Section 4: Special Requests & Staff Notes */}
+        {/* SECTION 7: Payment & Invoice History */}
+        <div className="space-y-2.5">
+          <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
+            <CreditCard className="h-4 w-4 text-[#176779]" />
+            6. Payment Records & Invoicing
+          </h4>
+          <div className="rounded-xl border border-[#E5EAED] bg-white p-3.5 text-xs">
+            {booking.payments && booking.payments.length > 0 ? (
+              <div className="divide-y divide-[#E5EAED]">
+                {booking.payments.map((p) => (
+                  <div key={p.id} className="py-2 first:pt-0 last:pb-0 flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-[#18282A]">{p.method} Payment</span>
+                      {p.reference && (
+                        <p className="text-[11px] font-mono text-[#74818A]">Ref: {p.reference}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-[#18282A]">
+                        {formatReportMoney(Number(p.amount), p.currency)}
+                      </span>
+                      <p className="text-[10px] text-emerald-700 font-semibold">{p.status}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[#74818A] italic">No payment transactions recorded yet.</p>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION 8: Special Requests & Staff Notes */}
         {(parsedNotes.specialRequests || booking.internalNotes || booking.notes) && (
           <div className="space-y-2.5">
             <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
               <FileText className="h-4 w-4 text-[#176779]" />
-              Special Requests & Notes
+              7. Special Requests & Notes
             </h4>
             <div className="space-y-2 rounded-xl border border-[#E5EAED] bg-[#FAFCFC] p-3.5 text-xs">
               {parsedNotes.specialRequests && (
                 <div>
-                  <span className="font-semibold text-[#18282A]">Special Requests:</span>
+                  <span className="font-semibold text-[#18282A]">Client Special Requests:</span>
                   <p className="mt-0.5 text-[#556972] whitespace-pre-wrap">
                     {parsedNotes.specialRequests}
                   </p>
@@ -377,7 +516,7 @@ export function BookingDetailsDialog({
               )}
               {booking.internalNotes && (
                 <div className="border-t border-[#E5EAED] pt-2">
-                  <span className="font-semibold text-[#18282A]">Internal Staff Notes:</span>
+                  <span className="font-semibold text-[#18282A]">Internal Operational Notes:</span>
                   <p className="mt-0.5 text-[#556972] whitespace-pre-wrap">
                     {booking.internalNotes}
                   </p>
@@ -386,6 +525,40 @@ export function BookingDetailsDialog({
             </div>
           </div>
         )}
+
+        {/* SECTION 9: Booking Audit Timeline */}
+        <div className="space-y-2.5">
+          <h4 className="flex items-center gap-2 font-outfit text-xs font-bold uppercase tracking-wider text-[#18282A]">
+            <History className="h-4 w-4 text-[#176779]" />
+            8. Audit & Activity Timeline
+          </h4>
+          <div className="rounded-xl border border-[#E5EAED] bg-white p-3.5 text-xs max-h-48 overflow-y-auto">
+            {auditTimeline.length > 0 ? (
+              <div className="space-y-2.5">
+                {auditTimeline.map((item: BookingHistoryRecord) => (
+                  <div key={item.id} className="flex items-start gap-2.5 text-[11px]">
+                    <div className="mt-0.5 h-2 w-2 rounded-full bg-[#176779] shrink-0" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-[#18282A]">{item.action}</span>
+                        <span className="text-[#96A4AB]">{formatDate(item.createdAt)}</span>
+                      </div>
+                      <p className="text-[#74818A]">
+                        By: <span className="font-medium text-[#18282A]">{item.actorName || "System"}</span> (
+                        {item.actorRole})
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-3 text-[#96A4AB]">
+                <Clock className="h-4 w-4 mx-auto mb-1 opacity-70" />
+                <span>No audit events logged yet.</span>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Footer Actions */}
         <div className="flex justify-end border-t border-[#E5EAED] pt-4">

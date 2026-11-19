@@ -335,4 +335,91 @@ describe("DashboardShell Component", () => {
     const signOutBtn = screen.getByRole("menuitem", { name: /sign out/i });
     expect(signOutBtn).toBeInTheDocument();
   });
+
+  it("standardizes desktop content container padding and full-width layout with 270px sidebar offset", () => {
+    mockPathname.mockReturnValue("/dashboard/admin");
+
+    renderWithStore(
+      <DashboardShell>
+        <div data-testid="child-page">Standardized Content</div>
+      </DashboardShell>,
+      "admin"
+    );
+
+    const container = screen.getByTestId("dashboard-content-container");
+    expect(container).toBeInTheDocument();
+    expect(container).toHaveClass("w-full", "max-w-none");
+
+    // Verify main element responsive padding: 24px (p-6) on desktop
+    const main = container.closest("main");
+    expect(main).toHaveClass("p-4", "sm:p-6", "lg:p-6");
+
+    // Verify 270px sidebar offset on desktop workspace container
+    const workspaceContainer = main?.parentElement;
+    expect(workspaceContainer).toHaveClass("lg:pl-[270px]");
+  });
+
+  it("handles sidebar expandable parent menu click: toggles submenu on clicking row or label with proper a11y", () => {
+    mockPathname.mockReturnValue("/dashboard/admin");
+
+    renderWithStore(
+      <DashboardShell>
+        <div>Admin Overview</div>
+      </DashboardShell>,
+      "admin"
+    );
+
+    // Parent row button for Bookings Management
+    const parentBtn = screen.getByTestId("sidebar-parent-btn--dashboard-admin-bookings");
+    expect(parentBtn).toBeInTheDocument();
+    expect(parentBtn).toHaveAttribute("aria-controls", "sidebar-submenu--dashboard-admin-bookings");
+
+    // Initially on /dashboard/admin, Bookings Management is not active so it starts collapsed
+    expect(parentBtn).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("sidebar-submenu--dashboard-admin-bookings")).not.toBeInTheDocument();
+
+    // 1. Click anywhere on the parent row button to expand
+    fireEvent.click(parentBtn);
+    expect(parentBtn).toHaveAttribute("aria-expanded", "true");
+    const submenu = screen.getByTestId("sidebar-submenu--dashboard-admin-bookings");
+    expect(submenu).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-subitem--dashboard-admin-bookings-staff")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-subitem--dashboard-admin-bookings-agents")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-subitem--dashboard-admin-bookings-direct")).toBeInTheDocument();
+
+    // 2. Click the parent row again to collapse
+    fireEvent.click(parentBtn);
+    expect(parentBtn).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("sidebar-submenu--dashboard-admin-bookings")).not.toBeInTheDocument();
+
+    // 3. Click the chevron toggle specifically (which bubbles to parent button)
+    const chevronToggle = screen.getByTestId("sidebar-submenu-toggle--dashboard-admin-bookings");
+    fireEvent.click(chevronToggle);
+    expect(parentBtn).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("sidebar-submenu--dashboard-admin-bookings")).toBeInTheDocument();
+  });
+
+  it("automatically expands parent menu and highlights active child on direct route access", () => {
+    mockPathname.mockReturnValue("/dashboard/admin/bookings/staff");
+
+    renderWithStore(
+      <DashboardShell>
+        <div>Staff Bookings Content</div>
+      </DashboardShell>,
+      "admin"
+    );
+
+    const parentBtn = screen.getByTestId("sidebar-parent-btn--dashboard-admin-bookings");
+    expect(parentBtn).toBeInTheDocument();
+    // Auto-expanded because current route is a child item
+    expect(parentBtn).toHaveAttribute("aria-expanded", "true");
+
+    const submenu = screen.getByTestId("sidebar-submenu--dashboard-admin-bookings");
+    expect(submenu).toBeInTheDocument();
+
+    // Staff bookings child item is marked active
+    const staffSubItem = screen.getByTestId("sidebar-subitem--dashboard-admin-bookings-staff");
+    expect(staffSubItem).toBeInTheDocument();
+    expect(staffSubItem).toHaveAttribute("aria-current", "page");
+  });
 });

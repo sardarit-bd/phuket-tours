@@ -16,6 +16,7 @@ export const SUPPORTED_PERMISSION_IDS = [
   "tours.edit",
   // Bookings
   "bookings.view",
+  "bookings.create",
   "bookings.assign",
   "bookings.update_status",
   "bookings.approve_price",
