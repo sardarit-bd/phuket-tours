@@ -5,6 +5,8 @@ import type {
   CustomerBookingDetailResponse,
   CreateCustomerBookingInput,
   CreateCustomerBookingResponse,
+  CreateGuestBookingInput,
+  CreateGuestBookingResponse,
   CreateCustomerPaymentInput,
   CreateCustomerPaymentResponse,
   CustomerPaymentsListResponse,
@@ -30,6 +32,17 @@ export const customerApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: ["CustomerBookings"],
+    }),
+
+    createGuestBooking: builder.mutation<
+      CreateGuestBookingResponse,
+      CreateGuestBookingInput
+    >({
+      query: (body) => ({
+        url: "/bookings/guest",
+        method: "POST",
+        body,
+      }),
     }),
 
     getCustomerBookings: builder.query<
@@ -141,6 +154,7 @@ export { useUpdateProfileMutation };
 
 export const {
   useCreateCustomerBookingMutation,
+  useCreateGuestBookingMutation,
   useGetCustomerBookingsQuery,
   useGetCustomerBookingByIdQuery,
   useGetCustomerPaymentsQuery,

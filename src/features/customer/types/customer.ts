@@ -98,6 +98,38 @@ export interface CreateCustomerBookingData {
 
 export type CreateCustomerBookingResponse = ApiResponse<CreateCustomerBookingData>;
 
+export interface CreateGuestBookingInput {
+  customer: {
+    name: string;
+    email: string;
+    phone?: string | null;
+  };
+  serviceId: string;
+  availabilityId?: string;
+  travelDate?: string;
+  adults?: number;
+  children?: number;
+  infants?: number;
+  notes?: string;
+  referralCode?: string;
+}
+
+export interface GuestBookingResultData {
+  booking: CreateCustomerBookingData;
+  guestSnapshot: {
+    guestName: string;
+    guestEmail: string;
+    guestPhone: string | null;
+  };
+  accessToken: string;
+  paymentLink: {
+    token: string;
+    paymentUrl: string;
+  };
+}
+
+export type CreateGuestBookingResponse = ApiResponse<GuestBookingResultData>;
+
 export interface CreateCustomerPaymentInput {
   bookingId: string;
   method: CustomerPaymentMethod;

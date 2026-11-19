@@ -39,6 +39,7 @@ import {
 import { useGetTourByIdQuery } from "@/features/tours/api/tours-api";
 import {
   useCreateCustomerBookingMutation,
+  useCreateGuestBookingMutation,
   useCreateCustomerPaymentMutation,
   useCreateStripeSessionMutation,
 } from "@/features/customer/api/customer-api";
@@ -78,6 +79,8 @@ function CheckoutContent() {
   // Customer Booking & payment mutations
   const [createCustomerBooking, { isLoading: isCustomerBookingLoading }] =
     useCreateCustomerBookingMutation();
+  const [createGuestBooking, { isLoading: isGuestBookingLoading }] =
+    useCreateGuestBookingMutation();
   const [createCustomerStripeSession, { isLoading: isCustomerStripeLoading }] =
     useCreateStripeSessionMutation();
   const [createCustomerManualPayment, { isLoading: isCustomerManualPaymentLoading }] =
@@ -142,14 +145,6 @@ function CheckoutContent() {
     }
   }, [currentUser, fullName, email, isAgent]);
 
-  // Auth redirection check
-  React.useEffect(() => {
-    if (isAuthInitialized && !isAuthenticated) {
-      const returnUrl = `/checkout${tourId ? `?tourId=${encodeURIComponent(tourId)}` : ""}`;
-      router.replace(`/sign-in?redirect=${encodeURIComponent(returnUrl)}`);
-    }
-  }, [isAuthInitialized, isAuthenticated, tourId, router]);
-
   // Unit pricing calculations
   const currency = tour?.price?.currency || "USD";
   const unitAdultPrice = tour?.price?.amount ?? 0;
@@ -204,6 +199,7 @@ function CheckoutContent() {
   const isBusy =
     isSubmitting ||
     isCustomerBookingLoading ||
+    isGuestBookingLoading ||
     isCustomerStripeLoading ||
     isCustomerManualPaymentLoading ||
     isCreatingAgentCustomer ||
@@ -324,8 +320,55 @@ function CheckoutContent() {
 
           setManualSuccessBookingId(createdBookingId);
         }
+      } else if (!isAuthenticated) {
+        // Anonymous Guest Booking Flow
+        const guestRes = await createGuestBooking({
+          customer: {
+            name: fullName.trim(),
+            email: email.trim(),
+            phone: phone.trim() || null,
+          },
+          serviceId: tour!.id,
+          travelDate,
+          adults,
+          children,
+          infants,
+          notes: combinedNotes,
+        }).unwrap();
+
+        const guestData = guestRes.data;
+        createdBookingId = guestData?.booking?.id;
+        const paymentToken = guestData?.paymentLink?.token;
+
+        if (!createdBookingId || !paymentToken) {
+          throw new Error("Failed to receive guest reservation from server.");
+        }
+
+        if (paymentMethod === "STRIPE") {
+          const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
+          const successUrl = `${origin}/checkout/success?bookingId=${createdBookingId}&session_id={CHECKOUT_SESSION_ID}`;
+          const cancelUrl = `${origin}/checkout/cancel?bookingId=${createdBookingId}`;
+
+          const stripeResponse = await fetch(`${apiBaseUrl}/public/payment-links/${paymentToken}/stripe-session`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ successUrl, cancelUrl }),
+          });
+
+          const stripeJson = await stripeResponse.json();
+          if (stripeJson.data?.sessionUrl) {
+            window.location.href = stripeJson.data.sessionUrl;
+            return;
+          } else {
+            throw new Error(stripeJson.message || "Unable to initialize Stripe payment session for guest reservation.");
+          }
+        } else {
+          // Manual bank transfer / cash for guest reservation via public payment link
+          window.location.href = `${origin}/pay/${paymentToken}`;
+          return;
+        }
       } else {
-        // Customer Booking Flow
+        // Authenticated Customer Booking Flow
         const bookingRes = await createCustomerBooking({
           customerId: currentUser!.id,
           serviceId: tour!.id,
@@ -616,14 +659,41 @@ function CheckoutContent() {
 
             {/* Contact Information Card */}
             <div className="rounded-2xl border border-[#E5EAED] bg-white p-6 shadow-2xs">
-              <h2 className="font-outfit text-base font-bold text-[#18282A] flex items-center gap-2">
-                <Users className="h-4 w-4 text-[#176779]" />
-                <span>
-                  {isAgent
-                    ? "2. Customer / Lead Traveler Details (Agency Client)"
-                    : "2. Lead Traveler Contact Details"}
-                </span>
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <h2 className="font-outfit text-base font-bold text-[#18282A] flex items-center gap-2">
+                  <Users className="h-4 w-4 text-[#176779]" />
+                  <span>
+                    {isAgent
+                      ? "2. Customer / Lead Traveler Details (Agency Client)"
+                      : !isAuthenticated
+                      ? "2. Traveler Contact Details (Guest Checkout)"
+                      : "2. Lead Traveler Contact Details"}
+                  </span>
+                </h2>
+                {!isAuthenticated && (
+                  <div className="text-xs text-[#74818A]">
+                    Already have an account?{" "}
+                    <Link
+                      href={`/sign-in?redirect=${encodeURIComponent(`/checkout?tourId=${tourId}`)}`}
+                      className="font-semibold text-[#176779] hover:underline"
+                    >
+                      Sign In
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {!isAuthenticated && (
+                <div className="mt-3 rounded-xl bg-[#EBF7F5] border border-[#BCE8E0] p-3 text-xs text-[#135664]">
+                  <p className="font-semibold flex items-center gap-1.5">
+                    <ShieldCheck className="h-4 w-4 text-[#176779]" />
+                    <span>Booking as a Guest — Fast, Easy &amp; Secure</span>
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#4A6468]">
+                    No password required. You will receive booking confirmation and ticket vouchers directly to your email.
+                  </p>
+                </div>
+              )}
 
               {isAgent && (
                 <p className="mt-1 text-xs text-[#74818A]">
