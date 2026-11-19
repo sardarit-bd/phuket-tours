@@ -5,12 +5,22 @@ import { AffiliateLinksView } from "./affiliate-links-view";
 import { AffiliatePayoutsView } from "./affiliate-payouts-view";
 import { AdminAffiliateOverviewView } from "@/features/admin/components/affiliates/admin-affiliate-views";
 
+vi.mock("@/features/tours/api/tours-api", () => ({
+  useGetToursQuery: vi.fn(() => ({
+    data: { data: [], total: 0, page: 1, limit: 50, totalPages: 1 },
+    isLoading: false,
+    isError: false,
+  })),
+}));
+
 vi.mock("../api/affiliate-api", () => ({
   useGetMyAffiliateProfileQuery: vi.fn(),
   useGetMyAffiliateDashboardQuery: vi.fn(),
   useApplyAsAffiliateMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetMyAffiliateLinksQuery: vi.fn(),
   useCreateMyAffiliateLinkMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateMyAffiliateLinkMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDeleteMyAffiliateLinkMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetMyAffiliatePayoutsQuery: vi.fn(),
   useRequestAffiliatePayoutMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetAdminAffiliateOverviewQuery: vi.fn(),
@@ -109,8 +119,8 @@ describe("Affiliate & Admin Affiliate Views", () => {
     } as any);
 
     render(<AffiliateLinksView />);
-    expect(screen.getByText("Phi Phi Promo")).toBeInTheDocument();
-    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getAllByText("Phi Phi Promo")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("42")[0]).toBeInTheDocument();
   });
 
   it("renders affiliate payout request form and history", () => {

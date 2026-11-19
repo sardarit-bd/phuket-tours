@@ -94,6 +94,29 @@ export const affiliateApi = baseApi.injectEndpoints({
       invalidatesTags: ["AffiliateLinks"],
     }),
 
+    updateMyAffiliateLink: builder.mutation<
+      ApiResponse<AffiliateLinkItem>,
+      { id: string; label?: string; isActive?: boolean }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/affiliate/links/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["AffiliateLinks"],
+    }),
+
+    deleteMyAffiliateLink: builder.mutation<
+      ApiResponse<{ id: string; deleted?: boolean; isActive?: boolean }>,
+      string
+    >({
+      query: (id) => ({
+        url: `/affiliate/links/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AffiliateLinks"],
+    }),
+
     getMyAffiliateClicks: builder.query<
       ApiResponse<PaginatedAffiliateData<AffiliateClickItem>>,
       { page?: number; limit?: number } | void
@@ -338,6 +361,8 @@ export const {
   useGetMyAffiliateDashboardQuery,
   useGetMyAffiliateLinksQuery,
   useCreateMyAffiliateLinkMutation,
+  useUpdateMyAffiliateLinkMutation,
+  useDeleteMyAffiliateLinkMutation,
   useGetMyAffiliateClicksQuery,
   useGetMyAffiliateBookingsQuery,
   useGetMyAffiliateCommissionsQuery,
