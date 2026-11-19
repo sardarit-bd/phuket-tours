@@ -1,4 +1,5 @@
 import { baseApi } from "@/lib/api/base-api";
+import { useUpdateProfileMutation } from "@/features/auth/api/auth-api";
 import type {
   CustomerBookingsListResponse,
   CustomerBookingDetailResponse,
@@ -133,22 +134,10 @@ export const customerApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["CustomerBookings", "CustomerPayments"],
     }),
-
-    /* ── Profile ──────────────────────────────────────────────── */
-
-    updateProfile: builder.mutation<
-      UserProfileResponse,
-      { name?: string; phone?: string | null }
-    >({
-      query: (body) => ({
-        url: "/users/me",
-        method: "PATCH",
-        body,
-      }),
-      invalidatesTags: ["User"],
-    }),
   }),
 });
+
+export { useUpdateProfileMutation };
 
 export const {
   useCreateCustomerBookingMutation,
@@ -159,5 +148,4 @@ export const {
   useCreateCustomerPaymentMutation,
   useCreateStripeSessionMutation,
   useReconcileCustomerPaymentMutation,
-  useUpdateProfileMutation,
 } = customerApi;
