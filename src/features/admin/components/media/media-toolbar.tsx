@@ -21,6 +21,8 @@ export interface MediaToolbarProps {
   isAllSelected?: boolean;
   onClearSelection?: () => void;
   onBulkDelete?: () => void;
+  onBulkAttach?: () => void;
+  onBulkDetach?: () => void;
 }
 
 export function MediaToolbar({
@@ -40,6 +42,8 @@ export function MediaToolbar({
   isAllSelected = false,
   onClearSelection,
   onBulkDelete,
+  onBulkAttach,
+  onBulkDetach,
 }: MediaToolbarProps) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-[#E5EAED] bg-white p-4 shadow-xs">
@@ -193,7 +197,27 @@ export function MediaToolbar({
           </div>
 
           {selectedCount > 0 && onClearSelection && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {onBulkAttach && (
+                <button
+                  type="button"
+                  onClick={onBulkAttach}
+                  data-testid="media-bulk-attach-btn"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#176779] hover:text-[#125261] cursor-pointer"
+                >
+                  Attach to Tour ({selectedCount})
+                </button>
+              )}
+              {onBulkDetach && (
+                <button
+                  type="button"
+                  onClick={onBulkDetach}
+                  data-testid="media-bulk-detach-btn"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#74818A] hover:text-[#18282A] cursor-pointer"
+                >
+                  Detach ({selectedCount})
+                </button>
+              )}
               {onBulkDelete && (
                 <button
                   type="button"

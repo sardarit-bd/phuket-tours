@@ -11,6 +11,7 @@ import { MediaGalleryManager } from "./media-gallery-manager";
 import {
   useGetAdminMediaQuery,
   useBulkDeleteAdminMediaMutation,
+  useBulkAttachDetachAdminMediaMutation,
 } from "../../api/admin-media-api";
 import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type { MediaItem, GalleryImage } from "../../types/admin-media";
@@ -30,12 +31,17 @@ export function AdminMediaView() {
   const [previewItem, setPreviewItem] = React.useState<MediaItem | null>(null);
   const [isGalleryOpen, setIsGalleryOpen] = React.useState(false);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = React.useState(false);
+  const [isBulkAttachModalOpen, setIsBulkAttachModalOpen] = React.useState(false);
+  const [attachServiceId, setAttachServiceId] = React.useState("");
+  const [bulkAttachFeedback, setBulkAttachFeedback] = React.useState<string | null>(null);
   const [bulkDeleteResult, setBulkDeleteResult] = React.useState<{
     deleted: Array<{ id: string; publicId: string }>;
     blocked: Array<{ id: string; publicId?: string; reason: string }>;
+    failed?: Array<{ id: string; publicId?: string; reason: string }>;
   } | null>(null);
 
   const [bulkDeleteAdminMedia, { isLoading: isBulkDeleting }] = useBulkDeleteAdminMediaMutation();
+  const [bulkAttachDetachAdminMedia, { isLoading: isBulkAttaching }] = useBulkAttachDetachAdminMediaMutation();
 
   // Gallery workspace demo state
   const [galleryImages, setGalleryImages] = React.useState<GalleryImage[]>([]);
@@ -178,6 +184,43 @@ export function AdminMediaView() {
     }
   };
 
+  const handleExecuteBulkAttach = async () => {
+    if (selectedIds.size === 0 || !attachServiceId.trim()) return;
+    setBulkAttachFeedback(null);
+    try {
+      const res = await bulkAttachDetachAdminMedia({
+        mediaIds: Array.from(selectedIds),
+        action: "attach",
+        serviceId: attachServiceId.trim(),
+      }).unwrap();
+      if (res.data) {
+        setBulkAttachFeedback(`Successfully attached ${res.data.updatedCount} asset(s) to tour.`);
+        setSelectedIds(new Set());
+        refetch();
+      }
+    } catch (err: unknown) {
+      setBulkAttachFeedback(
+        formatErrorMessage(err, "Failed to attach media assets to tour.")
+      );
+    }
+  };
+
+  const handleExecuteBulkDetach = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const res = await bulkAttachDetachAdminMedia({
+        mediaIds: Array.from(selectedIds),
+        action: "detach",
+      }).unwrap();
+      if (res.data) {
+        setSelectedIds(new Set());
+        refetch();
+      }
+    } catch (err) {
+      // Handled via alert
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* 1. Header */}
@@ -206,6 +249,8 @@ export function AdminMediaView() {
         isAllSelected={isAllSelected}
         onClearSelection={handleClearSelection}
         onBulkDelete={() => setIsBulkDeleteModalOpen(true)}
+        onBulkAttach={() => setIsBulkAttachModalOpen(true)}
+        onBulkDetach={handleExecuteBulkDetach}
       />
 
       {/* 3. Media Grid */}
@@ -268,6 +313,9 @@ export function AdminMediaView() {
         onClose={() => setPreviewItem(null)}
         onDeleted={() => {
           setPreviewItem(null);
+          refetch();
+        }}
+        onUpdated={() => {
           refetch();
         }}
       />
@@ -342,6 +390,18 @@ export function AdminMediaView() {
                   </ul>
                 </div>
               )}
+              {bulkDeleteResult.failed && bulkDeleteResult.failed.length > 0 && (
+                <div className="rounded-xl bg-[#FFF8E6] p-3 text-xs text-[#B7791F] space-y-1">
+                  <p className="font-semibold">
+                    Failed {bulkDeleteResult.failed.length} asset(s):
+                  </p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {bulkDeleteResult.failed.map((f) => (
+                      <li key={f.id}>{f.reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="flex justify-end pt-2">
                 <button
                   type="button"
@@ -356,6 +416,73 @@ export function AdminMediaView() {
               </div>
             </div>
           )}
+        </div>
+      </Dialog>
+
+      {/* 9. Bulk Attach Modal */}
+      <Dialog
+        isOpen={isBulkAttachModalOpen}
+        onClose={() => {
+          setIsBulkAttachModalOpen(false);
+          setBulkAttachFeedback(null);
+        }}
+        size="md"
+        title="Attach Media to Tour"
+        description="Link the selected media assets directly to a specific Tour/Service ID."
+      >
+        <div className="space-y-4">
+          <p className="text-xs sm:text-sm text-[#74818A]">
+            Attach <strong className="text-[#18282A]">{selectedIds.size}</strong> selected asset(s) to a tour.
+          </p>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[#18282A]">
+              Tour / Service UUID
+            </label>
+            <input
+              type="text"
+              value={attachServiceId}
+              onChange={(e) => setAttachServiceId(e.target.value)}
+              placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
+              data-testid="bulk-attach-service-id-input"
+              className="w-full rounded-xl border border-[#E5EAED] bg-[#F8FAFB] px-3.5 py-2 text-xs sm:text-sm text-[#18282A] focus:border-[#176779] focus:bg-white focus:outline-none"
+            />
+          </div>
+
+          {bulkAttachFeedback && (
+            <div
+              data-testid="bulk-attach-feedback"
+              className={`rounded-xl p-3 text-xs ${
+                bulkAttachFeedback.includes("Successfully")
+                  ? "bg-[#E8F8F5] text-[#176779]"
+                  : "bg-[#FDF0EE] text-[#C0392B]"
+              }`}
+            >
+              {bulkAttachFeedback}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsBulkAttachModalOpen(false);
+                setBulkAttachFeedback(null);
+              }}
+              className="rounded-xl border border-[#E5EAED] bg-white px-3.5 py-2 text-xs font-semibold text-[#18282A] hover:bg-[#F8FAFB]"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={handleExecuteBulkAttach}
+              disabled={isBulkAttaching || !attachServiceId.trim()}
+              data-testid="confirm-bulk-attach-btn"
+              className="rounded-xl bg-[#176779] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#125261] disabled:opacity-50"
+            >
+              {isBulkAttaching ? "Attaching..." : "Confirm Attach"}
+            </button>
+          </div>
         </div>
       </Dialog>
     </div>

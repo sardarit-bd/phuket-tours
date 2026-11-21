@@ -9,6 +9,8 @@ vi.mock("../../api/admin-media-api", () => {
     useGetAdminMediaQuery: vi.fn(),
     useDeleteAdminMediaMutation: vi.fn(),
     useBulkDeleteAdminMediaMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+    useBulkAttachDetachAdminMediaMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+    useSyncAdminMediaAssetMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
     useCreateUploadSignatureMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
     useConfirmUploadedMediaMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   };
