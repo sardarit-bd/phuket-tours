@@ -417,4 +417,90 @@ describe("AdminBookingsView component", () => {
     expect(screen.getByText("Staff Member Assigned")).toBeInTheDocument();
     expect(screen.getByText("Assigned to morning boat")).toBeInTheDocument();
   });
+
+  it("opens PriceApprovalDialog with agent pricing breakdown when clicking Review Booking for agent price approval", async () => {
+    const mockAgentBooking: any = {
+      id: "bkg-agent-001",
+      status: "AWAITING_APPROVAL",
+      fulfillmentStatus: "NOT_STARTED",
+      paymentStatus: "UNPAID",
+      currency: "THB",
+      basePrice: 9680,
+      proposedPrice: 9000,
+      finalPrice: 9000,
+      requiresApproval: true,
+      agentId: "agent-123",
+      agent: {
+        id: "agent-123",
+        name: "nijone",
+        email: "nijone@agency.com",
+        agentProfile: {
+          agencyName: "Nijone Travels",
+        },
+      },
+      priceApproval: {
+        id: "pa-001",
+        requestedPrice: 9000,
+        approvedPrice: null,
+        status: "PENDING",
+      },
+      service: {
+        id: "srv-rok",
+        name: "Rok Islands One Day Tour",
+        type: "TOUR",
+      },
+      customer: {
+        id: "cust-agent",
+        name: "Alice Client",
+        email: "alice@client.com",
+        phone: "+66 81 234 5678",
+      },
+      createdAt: "2026-11-20T10:00:00.000Z",
+      updatedAt: "2026-11-20T10:00:00.000Z",
+    };
+
+    vi.mocked(adminApiModule.useGetAdminPendingReservationsQuery).mockReturnValue({
+      data: {
+        success: true,
+        data: {
+          items: [mockAgentBooking],
+          page: 1,
+          limit: 100,
+          total: 1,
+        },
+      },
+      isLoading: false,
+      isFetching: false,
+      refetch: mockRefetchPending,
+    } as any);
+
+    render(<AdminBookingsView />);
+
+    // Open action menu for agent booking
+    const menuTrigger = screen.getByTestId("booking-actions-trigger-bkg-agent-001");
+    fireEvent.click(menuTrigger);
+
+    const reviewBtn = screen.getByTestId("action-review-booking-bkg-agent-001");
+    fireEvent.click(reviewBtn);
+
+    // Should open PriceApprovalDialog, NOT BookingReviewDialog with misleading staff text
+    expect(screen.getByTestId("price-approval-dialog")).toBeInTheDocument();
+    expect(screen.getByText("Review Negotiated Price")).toBeInTheDocument();
+    expect(screen.getByTestId("review-standard-price")).toHaveTextContent("THB 9,680.00");
+    expect(screen.getByTestId("review-agent-submitted-price")).toHaveTextContent("THB 9,000.00");
+    expect(screen.getAllByText(/Nijone Travels/i).length).toBeGreaterThanOrEqual(1);
+
+    // Submit approval
+    const submitBtn = screen.getByTestId("submit-price-approval-btn");
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockReviewApproval).toHaveBeenCalledWith({
+        bookingId: "bkg-agent-001",
+        status: "APPROVED",
+        approvedPrice: 9000,
+        notes: undefined,
+      });
+    });
+  });
 });

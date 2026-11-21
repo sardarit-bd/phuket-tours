@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Trash2,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,13 +15,18 @@ import { ErrorAlert } from "@/components/ui/alert";
 import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type { MediaItem } from "../../types/admin-media";
 import { formatBytes } from "../../utils/cloudinary-upload";
-import { useDeleteAdminMediaMutation } from "../../api/admin-media-api";
+import { getMediaPreviewUrl } from "../../utils/cloudinary-url";
+import {
+  useDeleteAdminMediaMutation,
+  useSyncAdminMediaAssetMutation,
+} from "../../api/admin-media-api";
 
 export interface MediaDetailDialogProps {
   item: MediaItem | null;
   isOpen: boolean;
   onClose: () => void;
   onDeleted?: (mediaId: string) => void;
+  onUpdated?: () => void;
 }
 
 export function MediaDetailDialog({
@@ -28,16 +34,20 @@ export function MediaDetailDialog({
   isOpen,
   onClose,
   onDeleted,
+  onUpdated,
 }: MediaDetailDialogProps) {
   const [deleteMedia, { isLoading: isDeleting }] = useDeleteAdminMediaMutation();
+  const [syncAsset, { isLoading: isSyncing }] = useSyncAdminMediaAssetMutation();
   const [copied, setCopied] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [syncSuccessMsg, setSyncSuccessMsg] = React.useState<string | null>(null);
 
   const handleClose = () => {
     setCopied(false);
     setConfirmDelete(false);
     setErrorMessage(null);
+    setSyncSuccessMsg(null);
     onClose();
   };
 
@@ -48,6 +58,27 @@ export function MediaDetailDialog({
       navigator.clipboard.writeText(item.secureUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleSyncMetadata = async () => {
+    setErrorMessage(null);
+    setSyncSuccessMsg(null);
+    try {
+      const res = await syncAsset(item.id).unwrap();
+      if (res.data?.status === "missing_on_cloudinary") {
+        setErrorMessage("Asset no longer exists on Cloudinary CDN storage.");
+      } else {
+        setSyncSuccessMsg("Metadata successfully synchronized with Cloudinary.");
+        if (onUpdated) onUpdated();
+      }
+    } catch (err: unknown) {
+      setErrorMessage(
+        formatErrorMessage(err, {
+          context: "admin",
+          fallback: "Failed to synchronize metadata with Cloudinary.",
+        })
+      );
     }
   };
 
@@ -96,9 +127,10 @@ export function MediaDetailDialog({
         <div className="flex flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#E5EAED] bg-[#F8FAFB] p-4">
           <div className="relative flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-xl">
             <img
-              src={item.secureUrl}
+              src={getMediaPreviewUrl(item.secureUrl)}
               alt={displayName}
               className="max-h-[360px] w-auto max-w-full rounded-lg object-contain shadow-xs"
+              loading="lazy"
             />
           </div>
 
@@ -207,17 +239,39 @@ export function MediaDetailDialog({
               </div>
             </div>
 
-            {/* Error Message if deletion was blocked (e.g. 409 conflict) */}
+            {/* Error Message if deletion was blocked (e.g. 409 conflict) or sync failed */}
             {errorMessage && (
               <ErrorAlert
                 data-testid="media-delete-error"
                 description={errorMessage}
               />
             )}
+
+            {syncSuccessMsg && (
+              <div
+                data-testid="media-sync-success"
+                className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+              >
+                {syncSuccessMsg}
+              </div>
+            )}
           </div>
 
-          {/* Delete actions */}
-          <div className="mt-6 border-t border-[#E5EAED] pt-4">
+          {/* Action buttons: Sync and Delete */}
+          <div className="mt-6 flex flex-col gap-2 border-t border-[#E5EAED] pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSyncing || isDeleting}
+              onClick={handleSyncMetadata}
+              data-testid="media-sync-metadata-btn"
+              className="w-full rounded-xl border-[#E5EAED] bg-white text-xs font-semibold text-[#176779] hover:bg-[#F8FAFB] cursor-pointer"
+            >
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              <span>{isSyncing ? "Syncing with Cloudinary..." : "Sync Metadata from CDN"}</span>
+            </Button>
+
             {!confirmDelete ? (
               <Button
                 type="button"

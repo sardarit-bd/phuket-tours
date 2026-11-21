@@ -5,9 +5,10 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useReviewBookingPriceApprovalMutation } from "../../api/admin-api";
 import type { OperationalBookingRecord } from "../../types/admin-bookings";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Tag, Calendar, UserCheck, AlertTriangle } from "lucide-react";
 import { ErrorAlert, SuccessAlert } from "@/components/ui/alert";
 import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
+import { formatReportMoney, formatDate } from "../../utils/format";
 
 export interface PriceApprovalDialogProps {
   isOpen: boolean;
@@ -28,10 +29,24 @@ function PriceApprovalForm({
   onSuccess,
 }: PriceApprovalFormProps) {
   const [decision, setDecision] = React.useState<"APPROVED" | "REJECTED">("APPROVED");
-  const [approvedPrice, setApprovedPrice] = React.useState<string>("");
   const [notes, setNotes] = React.useState<string>("");
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [isSuccess, setIsSuccess] = React.useState(false);
+
+  const standardRetailPrice = Number(booking.basePrice) || 0;
+  const requestedAgentPrice =
+    booking.priceApproval?.requestedPrice !== undefined && booking.priceApproval?.requestedPrice !== null
+      ? Number(booking.priceApproval.requestedPrice)
+      : booking.proposedPrice !== undefined && booking.proposedPrice !== null
+      ? Number(booking.proposedPrice)
+      : Number(booking.finalPrice) || 0;
+
+  const [approvedPrice, setApprovedPrice] = React.useState<string>(
+    requestedAgentPrice > 0 ? String(requestedAgentPrice) : ""
+  );
+
+  const priceDifference = standardRetailPrice - requestedAgentPrice;
+  const discountPct = standardRetailPrice > 0 ? Math.round((priceDifference / standardRetailPrice) * 10000) / 100 : 0;
 
   const [reviewPriceApproval, { isLoading }] = useReviewBookingPriceApprovalMutation();
 
@@ -83,6 +98,73 @@ function PriceApprovalForm({
           description={`Price proposal ${decision.toLowerCase()} successfully!`}
         />
       )}
+
+      {/* Booking Overview & Originating Agent */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl border border-[#E5EAED] bg-[#FAFCFC] p-3 text-xs">
+        <div>
+          <span className="text-[#74818A] block">Lead Customer:</span>
+          <p className="font-semibold text-[#18282A] text-sm mt-0.5">
+            {booking.customer?.name || "Guest Customer"}
+          </p>
+          <p className="text-[11px] text-[#74818A]">{booking.customer?.email || "No email"}</p>
+        </div>
+        <div>
+          <span className="text-[#74818A] block">Originating Agent / Agency:</span>
+          <p className="font-semibold text-[#176779] text-sm mt-0.5 flex items-center gap-1.5">
+            <UserCheck className="h-4 w-4" />
+            <span>{booking.agent?.name || "Agent"}</span>
+          </p>
+          <p className="text-[11px] text-[#74818A]">
+            {booking.agent?.agentProfile?.agencyName || "Registered Partner Agency"}
+          </p>
+        </div>
+      </div>
+
+      {/* Pricing Comparison Card */}
+      <div className="rounded-xl border border-[#E5EAED] bg-white p-3.5 space-y-3">
+        <div className="flex items-center justify-between border-b border-[#E5EAED] pb-2">
+          <div className="flex items-center gap-1.5 font-bold text-[#18282A] text-xs">
+            <Tag className="h-4 w-4 text-[#176779]" />
+            <span>Agent Pricing Breakdown</span>
+          </div>
+          <span className="rounded-full bg-purple-50 text-purple-800 border border-purple-200 px-2 py-0.5 text-[10px] font-bold">
+            Approval Required
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          <div>
+            <span className="text-[#74818A] block text-[11px]">Standard Retail Price:</span>
+            <span className="font-bold text-[#18282A]" data-testid="review-standard-price">
+              {formatReportMoney(standardRetailPrice, booking.currency)}
+            </span>
+          </div>
+          <div>
+            <span className="text-[#74818A] block text-[11px]">Agent Submitted Price:</span>
+            <span className="font-bold text-[#176779]" data-testid="review-agent-submitted-price">
+              {formatReportMoney(requestedAgentPrice, booking.currency)}
+            </span>
+          </div>
+          <div>
+            <span className="text-[#74818A] block text-[11px]">Requested Adjustment:</span>
+            <span className={`font-bold ${priceDifference > 0 ? "text-rose-700" : "text-[#18282A]"}`}>
+              {priceDifference > 0
+                ? `-${formatReportMoney(priceDifference, booking.currency)} (${discountPct}%)`
+                : formatReportMoney(priceDifference, booking.currency)}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-lg bg-purple-50/60 border border-purple-100 p-2.5 text-[11px] text-purple-950 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-purple-600 shrink-0 mt-0.5" />
+          <span>
+            <strong>Reason for Price Approval:</strong> The agent submitted a custom proposed rate of{" "}
+            <strong>{formatReportMoney(requestedAgentPrice, booking.currency)}</strong>, which exceeds the agent's
+            pre-approved automatic discount threshold compared to the standard retail rate of{" "}
+            <strong>{formatReportMoney(standardRetailPrice, booking.currency)}</strong>.
+          </span>
+        </div>
+      </div>
 
       {/* Decision Toggle */}
       <div className="space-y-1.5">

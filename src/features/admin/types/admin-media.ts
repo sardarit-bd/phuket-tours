@@ -50,6 +50,30 @@ export interface GetAdminMediaParams {
   serviceId?: string;
   unattached?: "true" | "false";
   search?: string;
+  format?: string;
+  folder?: string;
+  sortBy?: "newest" | "oldest" | "name";
+}
+
+export interface BulkDeleteMediaRequest {
+  mediaIds: string[];
+}
+
+export interface BulkDeleteMediaResponseData {
+  deleted: Array<{ id: string; publicId: string }>;
+  blocked: Array<{ id: string; publicId?: string; reason: string }>;
+  failed?: Array<{ id: string; publicId?: string; reason: string }>;
+}
+
+export interface BulkAttachDetachRequest {
+  mediaIds: string[];
+  action: "attach" | "detach";
+  serviceId?: string | null;
+}
+
+export interface SyncAssetResponseData {
+  media: MediaItem | null;
+  status: "synced" | "missing_on_cloudinary";
 }
 
 export interface UploadSignatureRequest {

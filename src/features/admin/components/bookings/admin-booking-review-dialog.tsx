@@ -151,8 +151,8 @@ export function BookingReviewDialog({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title={`Review Staff Booking #${booking.id.slice(0, 8)}`}
-      description="Consolidated Booking Review & Discount Approval"
+      title={`Review Booking #${booking.id.slice(0, 8)}`}
+      description="Consolidated Booking Review & Pricing Approval"
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4 p-1 text-xs font-outfit" data-testid="booking-review-dialog">
@@ -192,13 +192,17 @@ export function BookingReviewDialog({
           <div className="flex items-center justify-between border-b border-[#E5EAED] pb-2">
             <div className="flex items-center gap-1.5">
               <UserCheck className="h-4 w-4 text-[#176779]" />
-              <span className="font-semibold text-[#18282A]">Staff Creator:</span>
-              <span className="text-[#176779] font-bold">
-                {booking.createdBy?.name || "Staff Member"}
+              <span className="font-semibold text-[#18282A]">
+                {booking.agent ? "Originating Agent:" : "Staff Creator:"}
               </span>
-              {booking.createdBy?.role && (
+              <span className="text-[#176779] font-bold">
+                {booking.agent
+                  ? booking.agent.name
+                  : booking.createdBy?.name || "Staff Member"}
+              </span>
+              {(booking.agent?.agentProfile?.agencyName || booking.createdBy?.role) && (
                 <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
-                  {booking.createdBy.role}
+                  {booking.agent?.agentProfile?.agencyName || booking.createdBy?.role}
                 </span>
               )}
             </div>
@@ -299,9 +303,48 @@ export function BookingReviewDialog({
                 </div>
               )}
             </div>
+          ) : booking.priceApproval ? (
+            <div className="rounded-xl border border-purple-200 bg-purple-50/80 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-bold text-purple-900">
+                  <Tag className="h-4 w-4 text-purple-700" />
+                  <span>Agent Negotiated Price Proposal</span>
+                </div>
+                <span className="rounded-full bg-purple-200/80 px-2 py-0.5 text-[10px] font-bold text-purple-900">
+                  Status: {booking.priceApproval.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs pt-1">
+                <div>
+                  <span className="text-purple-800 block text-[11px]">Standard Retail Price:</span>
+                  <span className="font-bold text-[#18282A]">
+                    {formatReportMoney(origPriceNum, booking.currency)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-purple-800 block text-[11px]">Submitted Agent Price:</span>
+                  <span className="font-bold text-[#176779]">
+                    {formatReportMoney(Number(booking.priceApproval.requestedPrice), booking.currency)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-purple-800 block text-[11px]">Price Adjustment:</span>
+                  <span className="font-bold text-rose-700">
+                    -{formatReportMoney(Math.max(0, origPriceNum - Number(booking.priceApproval.requestedPrice)), booking.currency)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-purple-200/70 text-[11px] text-purple-950">
+                <span>
+                  Booking requires price review because the agent submitted a custom proposed rate below the automatic approval limit.
+                </span>
+              </div>
+            </div>
           ) : (
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-[#74818A]">
-              <span>No discount was requested by staff. Standard retail pricing applies.</span>
+              <span>No discount was requested. Standard retail pricing applies.</span>
             </div>
           )}
         </div>

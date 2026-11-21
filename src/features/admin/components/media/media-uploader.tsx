@@ -256,9 +256,23 @@ export function MediaUploader({
     const queuedItems = queue.filter(
       (item) => item.status === "queued" || item.status === "error"
     );
+
+    // Limit concurrency to 3 simultaneous uploads
+    const CONCURRENCY_LIMIT = 3;
+    const executing: Promise<void>[] = [];
+
     for (const item of queuedItems) {
-      await processUploadItem(item);
+      const p = processUploadItem(item).then(() => {
+        executing.splice(executing.indexOf(p), 1);
+      });
+      executing.push(p);
+
+      if (executing.length >= CONCURRENCY_LIMIT) {
+        await Promise.race(executing);
+      }
     }
+
+    await Promise.all(executing);
   };
 
   const queuedCount = queue.filter((i) => i.status === "queued").length;

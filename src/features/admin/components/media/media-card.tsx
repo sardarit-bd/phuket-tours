@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, Copy, Trash2, Eye, Image as ImageIcon } from "lucide-react";
 import type { MediaItem } from "../../types/admin-media";
 import { formatBytes } from "../../utils/cloudinary-upload";
+import { getMediaThumbnailUrl } from "../../utils/cloudinary-url";
 
 export interface MediaCardProps {
   item: MediaItem;
@@ -75,11 +76,14 @@ export function MediaCard({
       <div className="relative aspect-square w-full overflow-hidden bg-[#F0F4F6]">
         {!imgError ? (
           <img
-            src={item.secureUrl}
+            src={getMediaThumbnailUrl(item.secureUrl)}
             alt={displayName}
             onError={() => setImgError(true)}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
+            width={item.width || 400}
+            height={item.height || 400}
           />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center p-3 text-[#74818A]">
