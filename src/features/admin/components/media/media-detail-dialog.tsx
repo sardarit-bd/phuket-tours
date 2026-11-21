@@ -14,6 +14,7 @@ import { ErrorAlert } from "@/components/ui/alert";
 import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type { MediaItem } from "../../types/admin-media";
 import { formatBytes } from "../../utils/cloudinary-upload";
+import { getMediaPreviewUrl } from "../../utils/cloudinary-url";
 import { useDeleteAdminMediaMutation } from "../../api/admin-media-api";
 
 export interface MediaDetailDialogProps {
@@ -96,9 +97,10 @@ export function MediaDetailDialog({
         <div className="flex flex-1 flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#E5EAED] bg-[#F8FAFB] p-4">
           <div className="relative flex max-h-[380px] w-full items-center justify-center overflow-hidden rounded-xl">
             <img
-              src={item.secureUrl}
+              src={getMediaPreviewUrl(item.secureUrl)}
               alt={displayName}
               className="max-h-[360px] w-auto max-w-full rounded-lg object-contain shadow-xs"
+              loading="lazy"
             />
           </div>
 

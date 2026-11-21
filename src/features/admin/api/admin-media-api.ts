@@ -7,6 +7,10 @@ import type {
   UploadSignatureResponseData,
   ConfirmMediaRequest,
   MediaItem,
+  BulkDeleteMediaRequest,
+  BulkDeleteMediaResponseData,
+  BulkAttachDetachRequest,
+  SyncAssetResponseData,
 } from "../types/admin-media";
 
 export const adminMediaApi = baseApi.injectEndpoints({
@@ -22,6 +26,9 @@ export const adminMediaApi = baseApi.injectEndpoints({
         if (params?.serviceId) queryParams.serviceId = params.serviceId;
         if (params?.unattached) queryParams.unattached = params.unattached;
         if (params?.search && params.search.trim()) queryParams.search = params.search.trim();
+        if (params?.format) queryParams.format = params.format;
+        if (params?.folder) queryParams.folder = params.folder;
+        if (params?.sortBy) queryParams.sortBy = params.sortBy;
 
         return {
           url: "/admin/media",
@@ -77,6 +84,44 @@ export const adminMediaApi = baseApi.injectEndpoints({
         { type: "AdminMedia", id: "LIST" },
       ],
     }),
+
+    bulkDeleteAdminMedia: builder.mutation<
+      AdminApiResponse<BulkDeleteMediaResponseData>,
+      BulkDeleteMediaRequest
+    >({
+      query: (body) => ({
+        url: "/admin/media/bulk-delete",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "AdminMedia", id: "LIST" }],
+    }),
+
+    bulkAttachDetachAdminMedia: builder.mutation<
+      AdminApiResponse<{ updatedCount: number; items: MediaItem[] }>,
+      BulkAttachDetachRequest
+    >({
+      query: (body) => ({
+        url: "/admin/media/bulk-attach",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "AdminMedia", id: "LIST" }],
+    }),
+
+    syncAdminMediaAsset: builder.mutation<
+      AdminApiResponse<SyncAssetResponseData>,
+      string
+    >({
+      query: (mediaId) => ({
+        url: `/admin/media/${mediaId}/sync`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, mediaId) => [
+        { type: "AdminMedia", id: mediaId },
+        { type: "AdminMedia", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -86,6 +131,9 @@ export const {
   useCreateUploadSignatureMutation,
   useConfirmUploadedMediaMutation,
   useDeleteAdminMediaMutation,
+  useBulkDeleteAdminMediaMutation,
+  useBulkAttachDetachAdminMediaMutation,
+  useSyncAdminMediaAssetMutation,
 } = adminMediaApi;
 
 export * from "../types/admin-media";

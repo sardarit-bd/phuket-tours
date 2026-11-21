@@ -9,6 +9,10 @@ export interface MediaToolbarProps {
   onSearchChange: (value: string) => void;
   filterUnattached?: "true" | "false" | "all";
   onFilterChange: (value: "true" | "false" | "all") => void;
+  filterFormat?: string;
+  onFormatChange?: (value: string) => void;
+  sortBy?: "newest" | "oldest" | "name";
+  onSortChange?: (value: "newest" | "oldest" | "name") => void;
   onRefresh: () => void;
   isFetching?: boolean;
   selectedCount?: number;
@@ -16,6 +20,7 @@ export interface MediaToolbarProps {
   onToggleSelectAll?: () => void;
   isAllSelected?: boolean;
   onClearSelection?: () => void;
+  onBulkDelete?: () => void;
 }
 
 export function MediaToolbar({
@@ -23,6 +28,10 @@ export function MediaToolbar({
   onSearchChange,
   filterUnattached = "all",
   onFilterChange,
+  filterFormat = "all",
+  onFormatChange,
+  sortBy = "newest",
+  onSortChange,
   onRefresh,
   isFetching = false,
   selectedCount = 0,
@@ -30,6 +39,7 @@ export function MediaToolbar({
   onToggleSelectAll,
   isAllSelected = false,
   onClearSelection,
+  onBulkDelete,
 }: MediaToolbarProps) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-[#E5EAED] bg-white p-4 shadow-xs">
@@ -102,6 +112,38 @@ export function MediaToolbar({
             </button>
           </div>
 
+          {/* Format Filter Dropdown */}
+          {onFormatChange && (
+            <select
+              value={filterFormat}
+              onChange={(e) => onFormatChange(e.target.value)}
+              data-testid="media-format-filter"
+              aria-label="Filter by image format"
+              className="h-8.5 rounded-xl border border-[#E5EAED] bg-[#F8FAFB] px-2.5 text-xs font-medium text-[#18282A] transition-colors focus:border-[#176779] focus:bg-white focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Formats</option>
+              <option value="jpg">JPG / JPEG</option>
+              <option value="png">PNG</option>
+              <option value="webp">WebP</option>
+              <option value="avif">AVIF</option>
+            </select>
+          )}
+
+          {/* Sort By Dropdown */}
+          {onSortChange && (
+            <select
+              value={sortBy}
+              onChange={(e) => onSortChange(e.target.value as "newest" | "oldest" | "name")}
+              data-testid="media-sort-by"
+              aria-label="Sort media assets"
+              className="h-8.5 rounded-xl border border-[#E5EAED] bg-[#F8FAFB] px-2.5 text-xs font-medium text-[#18282A] transition-colors focus:border-[#176779] focus:bg-white focus:outline-none cursor-pointer"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name">Filename (A-Z)</option>
+            </select>
+          )}
+
           {/* Refresh button */}
           <Button
             type="button"
@@ -151,14 +193,26 @@ export function MediaToolbar({
           </div>
 
           {selectedCount > 0 && onClearSelection && (
-            <button
-              type="button"
-              onClick={onClearSelection}
-              data-testid="media-clear-selection-btn"
-              className="text-xs font-medium text-[#C0392B] hover:underline cursor-pointer"
-            >
-              Clear selection
-            </button>
+            <div className="flex items-center gap-3">
+              {onBulkDelete && (
+                <button
+                  type="button"
+                  onClick={onBulkDelete}
+                  data-testid="media-bulk-delete-btn"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#C0392B] hover:text-[#962D22] cursor-pointer"
+                >
+                  Delete Selected ({selectedCount})
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClearSelection}
+                data-testid="media-clear-selection-btn"
+                className="text-xs font-medium text-[#74818A] hover:underline cursor-pointer"
+              >
+                Clear selection
+              </button>
+            </div>
           )}
         </div>
       )}

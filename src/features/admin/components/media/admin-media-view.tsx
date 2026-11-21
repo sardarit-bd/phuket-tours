@@ -10,6 +10,7 @@ import { MediaDetailDialog } from "./media-detail-dialog";
 import { MediaGalleryManager } from "./media-gallery-manager";
 import {
   useGetAdminMediaQuery,
+  useBulkDeleteAdminMediaMutation,
 } from "../../api/admin-media-api";
 import { formatErrorMessage } from "@/features/auth/utils/error-mapper";
 import type { MediaItem, GalleryImage } from "../../types/admin-media";
@@ -17,15 +18,24 @@ import { Pagination } from "@/components/shared/pagination";
 
 export function AdminMediaView() {
   const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(12);
+  const [limit, setLimit] = React.useState(24);
   const [searchInput, setSearchInput] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [filterUnattached, setFilterUnattached] = React.useState<"all" | "true" | "false">("all");
+  const [filterFormat, setFilterFormat] = React.useState("all");
+  const [sortBy, setSortBy] = React.useState<"newest" | "oldest" | "name">("newest");
 
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [previewItem, setPreviewItem] = React.useState<MediaItem | null>(null);
   const [isGalleryOpen, setIsGalleryOpen] = React.useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = React.useState(false);
+  const [bulkDeleteResult, setBulkDeleteResult] = React.useState<{
+    deleted: Array<{ id: string; publicId: string }>;
+    blocked: Array<{ id: string; publicId?: string; reason: string }>;
+  } | null>(null);
+
+  const [bulkDeleteAdminMedia, { isLoading: isBulkDeleting }] = useBulkDeleteAdminMediaMutation();
 
   // Gallery workspace demo state
   const [galleryImages, setGalleryImages] = React.useState<GalleryImage[]>([]);
@@ -39,9 +49,24 @@ export function AdminMediaView() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Reset selection when page or filters change
+  React.useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, limit, filterUnattached, filterFormat, sortBy]);
+
   // Reset to page 1 when filter changes
   const handleFilterChange = (val: "all" | "true" | "false") => {
     setFilterUnattached(val);
+    setPage(1);
+  };
+
+  const handleFormatChange = (val: string) => {
+    setFilterFormat(val);
+    setPage(1);
+  };
+
+  const handleSortChange = (val: "newest" | "oldest" | "name") => {
+    setSortBy(val);
     setPage(1);
   };
 
@@ -51,6 +76,8 @@ export function AdminMediaView() {
       limit: number;
       search?: string;
       unattached?: "true" | "false";
+      format?: string;
+      sortBy?: "newest" | "oldest" | "name";
     } = { page, limit };
 
     if (debouncedSearch) {
@@ -59,8 +86,14 @@ export function AdminMediaView() {
     if (filterUnattached !== "all") {
       params.unattached = filterUnattached;
     }
+    if (filterFormat !== "all") {
+      params.format = filterFormat;
+    }
+    if (sortBy !== "newest") {
+      params.sortBy = sortBy;
+    }
     return params;
-  }, [page, limit, debouncedSearch, filterUnattached]);
+  }, [page, limit, debouncedSearch, filterUnattached, filterFormat, sortBy]);
 
   const {
     data: mediaResponse,
@@ -74,7 +107,7 @@ export function AdminMediaView() {
   const items = mediaResponse?.data?.items || [];
   const pagination = mediaResponse?.data?.pagination || {
     page: 1,
-    limit: 12,
+    limit: 24,
     total: 0,
     totalPages: 1,
   };
@@ -118,7 +151,31 @@ export function AdminMediaView() {
     setSearchInput("");
     setDebouncedSearch("");
     setFilterUnattached("all");
+    setFilterFormat("all");
+    setSortBy("newest");
     setPage(1);
+  };
+
+  const handleExecuteBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const res = await bulkDeleteAdminMedia({
+        mediaIds: Array.from(selectedIds),
+      }).unwrap();
+      if (res.data) {
+        setBulkDeleteResult(res.data);
+        // Remove successfully deleted from selectedIds
+        const deletedIds = new Set(res.data.deleted.map((d) => d.id));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          deletedIds.forEach((id) => next.delete(id));
+          return next;
+        });
+        refetch();
+      }
+    } catch (err) {
+      // Handled via alert / toast
+    }
   };
 
   return (
@@ -137,6 +194,10 @@ export function AdminMediaView() {
         onSearchChange={setSearchInput}
         filterUnattached={filterUnattached}
         onFilterChange={handleFilterChange}
+        filterFormat={filterFormat}
+        onFormatChange={handleFormatChange}
+        sortBy={sortBy}
+        onSortChange={handleSortChange}
         onRefresh={() => refetch()}
         isFetching={isFetching}
         selectedCount={selectedIds.size}
@@ -144,6 +205,7 @@ export function AdminMediaView() {
         onToggleSelectAll={handleToggleSelectAll}
         isAllSelected={isAllSelected}
         onClearSelection={handleClearSelection}
+        onBulkDelete={() => setIsBulkDeleteModalOpen(true)}
       />
 
       {/* 3. Media Grid */}
@@ -174,7 +236,7 @@ export function AdminMediaView() {
             setLimit(newLimit);
             setPage(1);
           }}
-          pageSizeOptions={[12, 24, 48]}
+          pageSizeOptions={[24, 36, 48]}
           pageSizeLabel="Per page:"
           itemLabel="assets"
           isFetching={isFetching}
@@ -223,6 +285,78 @@ export function AdminMediaView() {
           onChange={setGalleryImages}
           availableMedia={items}
         />
+      </Dialog>
+
+      {/* 8. Bulk Deletion Confirmation Modal */}
+      <Dialog
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => {
+          setIsBulkDeleteModalOpen(false);
+          setBulkDeleteResult(null);
+        }}
+        size="md"
+        title="Confirm Bulk Asset Deletion"
+        description="Verify the media assets you want to permanently delete from Cloudinary storage and database."
+      >
+        <div className="space-y-4">
+          {!bulkDeleteResult ? (
+            <>
+              <p className="text-xs sm:text-sm text-[#74818A]">
+                You have selected <strong className="text-[#18282A]">{selectedIds.size}</strong> asset(s) for deletion.
+                Assets currently attached to or referenced by active tours will be protected and preserved.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkDeleteModalOpen(false)}
+                  disabled={isBulkDeleting}
+                  className="rounded-xl border border-[#E5EAED] bg-white px-3.5 py-2 text-xs font-semibold text-[#18282A] hover:bg-[#F8FAFB]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteBulkDelete}
+                  disabled={isBulkDeleting}
+                  data-testid="confirm-bulk-delete-btn"
+                  className="rounded-xl bg-[#C0392B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#962D22] disabled:opacity-50"
+                >
+                  {isBulkDeleting ? "Deleting..." : `Delete ${selectedIds.size} Assets`}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-[#E8F8F5] p-3 text-xs text-[#176779]">
+                ✓ Successfully deleted <strong>{bulkDeleteResult.deleted.length}</strong> unattached asset(s).
+              </div>
+              {bulkDeleteResult.blocked.length > 0 && (
+                <div className="rounded-xl bg-[#FDF0EE] p-3 text-xs text-[#C0392B] space-y-1">
+                  <p className="font-semibold">
+                    Protected {bulkDeleteResult.blocked.length} asset(s) referenced by active tours:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {bulkDeleteResult.blocked.map((b) => (
+                      <li key={b.id}>{b.reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBulkDeleteModalOpen(false);
+                    setBulkDeleteResult(null);
+                  }}
+                  className="rounded-xl bg-[#176779] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#125261]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </Dialog>
     </div>
   );

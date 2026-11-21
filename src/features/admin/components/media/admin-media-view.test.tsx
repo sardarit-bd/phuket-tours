@@ -8,6 +8,7 @@ vi.mock("../../api/admin-media-api", () => {
   return {
     useGetAdminMediaQuery: vi.fn(),
     useDeleteAdminMediaMutation: vi.fn(),
+    useBulkDeleteAdminMediaMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
     useCreateUploadSignatureMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
     useConfirmUploadedMediaMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   };
@@ -125,7 +126,7 @@ describe("AdminMediaView component", () => {
     render(<AdminMediaView />);
 
     expect(screen.getByTestId("media-error-state")).toBeInTheDocument();
-    expect(screen.getByText("Internal server error")).toBeInTheDocument();
+    expect(screen.getByText("Failed to load media assets")).toBeInTheDocument();
 
     const retryBtn = screen.getByTestId("media-retry-btn");
     fireEvent.click(retryBtn);
@@ -306,14 +307,14 @@ describe("AdminMediaView component", () => {
 
     render(<AdminMediaView />);
 
-    // Initial query should be called with page: 1, limit: 12
+    // Initial query should be called with page: 1, limit: 24
     expect(mediaApiModule.useGetAdminMediaQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 12 })
+      expect.objectContaining({ page: 1, limit: 24 })
     );
 
     // Verify pagination is rendered
     expect(screen.getByTestId("media-pagination")).toBeInTheDocument();
-    expect(screen.getByText("1–12")).toBeInTheDocument();
+    expect(screen.getByText("1–24")).toBeInTheDocument();
     expect(screen.getByText("36")).toBeInTheDocument();
 
     // Click Next page button
@@ -322,19 +323,19 @@ describe("AdminMediaView component", () => {
 
     // Next render should query page 2
     expect(mediaApiModule.useGetAdminMediaQuery).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 2, limit: 12 })
+      expect.objectContaining({ page: 2, limit: 24 })
     );
 
-    // Open CustomSelect and pick 24 per page
+    // Open CustomSelect and pick 36 per page
     const sizeCombobox = screen.getByTestId("media-pagination-size-select").querySelector("button");
     if (sizeCombobox) {
       fireEvent.click(sizeCombobox);
-      const option24 = screen.getByRole("option", { name: "24" });
-      fireEvent.click(option24);
+      const option36 = screen.getByRole("option", { name: "36" });
+      fireEvent.click(option36);
 
-      // Should query with limit: 24 and reset to page: 1
+      // Should query with limit: 36 and reset to page: 1
       expect(mediaApiModule.useGetAdminMediaQuery).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 1, limit: 24 })
+        expect.objectContaining({ page: 1, limit: 36 })
       );
     }
   });

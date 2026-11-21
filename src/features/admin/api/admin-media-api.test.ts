@@ -232,4 +232,37 @@ describe("adminMediaApi RTK Query endpoints", () => {
       expect(capturedRequest?.url).toContain("/admin/media/media-to-del");
     });
   });
+
+  describe("bulkDeleteAdminMedia mutation", () => {
+    it("dispatches POST /api/v1/admin/media/bulk-delete with mediaIds array", async () => {
+      const mockResponse: AdminApiResponse<{
+        deleted: Array<{ id: string; publicId: string }>;
+        blocked: Array<{ id: string; publicId?: string; reason: string }>;
+      }> = {
+        success: true,
+        message: "Bulk deletion processed",
+        data: {
+          deleted: [{ id: "m-1", publicId: "phukettours/tours/m1" }],
+          blocked: [],
+        },
+      };
+
+      setupMockFetch(200, mockResponse);
+      const store = makeStore();
+
+      const result = await store.dispatch(
+        adminMediaApi.endpoints.bulkDeleteAdminMedia.initiate({
+          mediaIds: ["m-1"],
+        })
+      );
+
+      expect(result.data).toEqual(mockResponse);
+      expect(capturedRequest).not.toBeNull();
+      expect(capturedRequest?.method).toBe("POST");
+      expect(capturedRequest?.url).toContain("/admin/media/bulk-delete");
+      expect(JSON.parse(capturedRequest?.body || "{}")).toEqual({
+        mediaIds: ["m-1"],
+      });
+    });
+  });
 });

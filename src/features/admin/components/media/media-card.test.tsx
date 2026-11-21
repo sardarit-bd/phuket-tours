@@ -39,6 +39,14 @@ describe("MediaCard component", () => {
     expect(screen.getByText("1 MB")).toBeInTheDocument();
     expect(screen.getByText("jpg")).toBeInTheDocument();
     expect(screen.getByText("Attached")).toBeInTheDocument();
+
+    const img = screen.getByRole("img", { name: "emerald-pool.jpg" });
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute(
+      "src",
+      "https://res.cloudinary.com/demo/image/upload/c_fill,w_400,h_400,f_auto,q_auto,g_auto/v1/emerald.jpg"
+    );
+    expect(img).toHaveAttribute("loading", "lazy");
   });
 
   it("triggers selection toggle when clicking the checkbox", () => {
