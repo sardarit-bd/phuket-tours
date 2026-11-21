@@ -17,6 +17,7 @@ import { DashboardGuard } from "@/features/auth/components/dashboard-guard";
 
 import { useAppSelector } from "@/store/hooks";
 import { selectCurrentUser } from "@/features/auth/slices/auth-slice";
+import { DashboardEventsListener } from "@/lib/sse/use-dashboard-events";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -59,6 +60,7 @@ export function DashboardShell({
 
   return (
     <DashboardGuard>
+      <DashboardEventsListener />
       <div className="relative min-h-screen w-full bg-[#F8FAFB] overflow-x-hidden">
         {/* 1. Desktop Fixed Sidebar: 270px */}
         <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[270px]">
