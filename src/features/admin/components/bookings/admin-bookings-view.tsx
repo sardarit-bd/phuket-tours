@@ -703,7 +703,13 @@ export function AdminBookingsView({ sourceFilter = "all" }: AdminBookingsViewPro
             onViewHistory={(booking) => setActiveBookingForHistory(booking)}
             onAssignStaff={(booking) => setBookingForStaffAssign(booking)}
             onUpdateFulfillment={(booking) => setBookingForFulfillment(booking)}
-            onReviewBooking={(booking) => setBookingForReview(booking)}
+            onReviewBooking={(booking) => {
+              if (booking.priceApproval && booking.priceApproval.status === "PENDING") {
+                setBookingForPriceApproval(booking);
+              } else {
+                setBookingForReview(booking);
+              }
+            }}
             onConfirmBooking={(booking) => {
               setReviewActionError(null);
               setReviewNotes("");
@@ -715,7 +721,7 @@ export function AdminBookingsView({ sourceFilter = "all" }: AdminBookingsViewPro
               setBookingToReject(booking);
             }}
             onViewRejectionReason={(booking) => setBookingForRejectionReason(booking)}
-            onReviewPriceApproval={(booking) => setBookingForReview(booking)}
+            onReviewPriceApproval={(booking) => setBookingForPriceApproval(booking)}
             onConfirmPending={(booking) => {
               setReviewActionError(null);
               setReviewNotes("");
