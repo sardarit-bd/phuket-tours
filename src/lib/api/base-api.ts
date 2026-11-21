@@ -219,6 +219,8 @@ export const baseApi = createApi({
     "AdminAffiliates",
     "AdminAffiliateSettings",
     "AdminAffiliatePayouts",
+    "Notification",
+    "NotificationPreference",
   ],
   endpoints: () => ({}),
 });

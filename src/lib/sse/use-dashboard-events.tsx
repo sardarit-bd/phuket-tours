@@ -47,7 +47,9 @@ type TagType =
   | "AffiliatePayouts"
   | "AdminAffiliates"
   | "AdminAffiliateSettings"
-  | "AdminAffiliatePayouts";
+  | "AdminAffiliatePayouts"
+  | "Notification"
+  | "NotificationPreference";
 
 type InvalidationTag = TagType | { type: TagType; id?: string | number };
 
@@ -120,6 +122,13 @@ export function getTagsForEvent(event: DashboardEvent): InvalidationTag[] {
       );
       break;
     }
+
+    case "notification.created":
+      tags.push(
+        { type: "Notification", id: "LIST" },
+        { type: "Notification", id: "UNREAD_COUNT" }
+      );
+      break;
 
     default:
       // Unknown or generic event, refresh booking lists

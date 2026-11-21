@@ -20,6 +20,7 @@ import { useLogoutMutation } from "@/features/auth/api/auth-api";
 import { baseApi } from "@/lib/api/base-api";
 import { getInitials } from "@/features/auth/utils/avatar";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/features/notifications/components/notification-bell";
 
 interface DashboardTopbarProps {
   config: DashboardNavConfig;
@@ -135,8 +136,10 @@ export function DashboardTopbar({
         </nav>
       </div>
 
-      {/* Right: Account Dropdown */}
-      <div className="relative" ref={accountDropdownRef}>
+      {/* Right: Notifications & Account Dropdown */}
+      <div className="flex items-center gap-3">
+        <NotificationBell />
+        <div className="relative" ref={accountDropdownRef}>
         <button
           type="button"
           onClick={() => setAccountDropdownOpen((prev) => !prev)}
@@ -215,6 +218,7 @@ export function DashboardTopbar({
             </div>
           </div>
         )}
+        </div>
       </div>
     </header>
   );
