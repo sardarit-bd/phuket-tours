@@ -9,59 +9,48 @@ import { env } from "@/config/env";
 import type { AuthUserResponse } from "@/features/auth/types/auth";
 
 /**
- * Single-flight in-memory mutex for coordinating concurrent 401s within the current tab.
+ * Single-flight in-memory refresh lock coordinating concurrent requests during token refresh.
+ * Guarantees that only ONE refresh network request runs at a time.
+ * All concurrent requests hitting 401 await the same refresh execution without deadlocks.
  */
-class SimpleMutex {
-  private _isLocked = false;
-  private _waitQueue: (() => void)[] = [];
+class SingleFlightRefresh {
+  private _refreshPromise: Promise<string | null> | null = null;
 
-  isLocked(): boolean {
-    return this._isLocked;
+  isRefreshing(): boolean {
+    return this._refreshPromise !== null;
   }
 
-  async acquire(): Promise<() => void> {
-    if (!this._isLocked) {
-      this._isLocked = true;
-      return () => this.release();
-    }
-
-    return new Promise<() => void>((resolve) => {
-      this._waitQueue.push(() => {
-        this._isLocked = true;
-        resolve(() => this.release());
-      });
-    });
-  }
-
-  async waitForUnlock(): Promise<void> {
-    if (!this._isLocked) {
-      return;
-    }
-    return new Promise<void>((resolve) => {
-      const check = () => {
-        if (!this._isLocked) {
-          resolve();
-        } else {
-          this._waitQueue.push(check);
-        }
-      };
-      this._waitQueue.push(check);
-    });
-  }
-
-  private release(): void {
-    if (this._waitQueue.length > 0) {
-      const next = this._waitQueue.shift();
-      if (next) {
-        next();
+  async waitForRefresh(): Promise<string | null> {
+    if (this._refreshPromise) {
+      try {
+        return await this._refreshPromise;
+      } catch {
+        return null;
       }
-    } else {
-      this._isLocked = false;
     }
+    return null;
+  }
+
+  async executeRefresh(
+    action: () => Promise<string | null>
+  ): Promise<string | null> {
+    if (this._refreshPromise) {
+      return this.waitForRefresh();
+    }
+
+    this._refreshPromise = (async () => {
+      try {
+        return await action();
+      } finally {
+        this._refreshPromise = null;
+      }
+    })();
+
+    return this._refreshPromise;
   }
 }
 
-const mutex = new SimpleMutex();
+const singleFlightRefresh = new SingleFlightRefresh();
 
 /**
  * Cross-tab leader synchronization mechanism using standard Web Locks API / BroadcastChannel.
@@ -119,8 +108,10 @@ export const baseQueryWithReauth: BaseQueryFn<
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  // Wait until any active refresh completes before issuing requests
-  await mutex.waitForUnlock();
+  // If a refresh is currently running, wait for it before firing the request
+  if (singleFlightRefresh.isRefreshing()) {
+    await singleFlightRefresh.waitForRefresh();
+  }
 
   let result = await rawBaseQuery(args, api, extraOptions);
 
@@ -131,15 +122,13 @@ export const baseQueryWithReauth: BaseQueryFn<
         : args.url.includes("/auth/refresh") || args.url.includes("/auth/login");
 
     if (!isAuthEndpoint) {
-      if (!mutex.isLocked()) {
-        const release = await mutex.acquire();
+      // Execute refresh through single-flight coordinator
+      const refreshedToken = await singleFlightRefresh.executeRefresh(async () => {
         try {
           // Coordinate cross-tab refresh via Web Locks API
           const refreshResult = await executeWithCrossTabLock(
             "phukettours_refresh_lock",
             async () => {
-              // Check if another tab refreshed right before we acquired the lock:
-              // Try refreshing with rotating cookie
               return await rawBaseQuery(
                 {
                   url: "/auth/refresh",
@@ -166,9 +155,7 @@ export const baseQueryWithReauth: BaseQueryFn<
                 payload: data.data,
               });
             }
-
-            // Retry the original query with the newly refreshed access token
-            result = await rawBaseQuery(args, api, extraOptions);
+            return newAccessToken || null;
           } else {
             const refreshErrorStatus = refreshResult.error?.status;
             // Only clear credentials if refresh specifically failed with an authentication failure (401/403).
@@ -176,13 +163,15 @@ export const baseQueryWithReauth: BaseQueryFn<
             if (refreshErrorStatus === 401 || refreshErrorStatus === 403) {
               api.dispatch({ type: "auth/clearCredentials" });
             }
+            return null;
           }
-        } finally {
-          release();
+        } catch {
+          return null;
         }
-      } else {
-        // Another refresh in this tab is in flight; wait for unlock then retry
-        await mutex.waitForUnlock();
+      });
+
+      if (refreshedToken) {
+        // Retry the original query with the newly refreshed access token
         result = await rawBaseQuery(args, api, extraOptions);
       }
     }
